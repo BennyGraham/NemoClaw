@@ -64,7 +64,7 @@ Sandbox name [my-assistant]: my-hermes
 
 Choose the inference provider that matches where you want Hermes model traffic to go.
 The provider options and credential environment variables are the same as the standard NemoClaw quickstart.
-For provider-specific prompts, refer to the [](quickstart.md#respond-to-the-onboard-wizard) section and the [Inference Options](../inference/inference-options.md) page.
+For provider-specific prompts, refer to the [Respond to the Onboard Wizard](quickstart.md#respond-to-the-onboard-wizard) section and the [Inference Options](../inference/inference-options.md) page.
 
 After provider and policy selection, review the summary and confirm the build.
 NemoClaw writes Hermes configuration into `/sandbox/.hermes`, routes model traffic through `inference.local`, and starts the Hermes gateway inside the sandbox.
