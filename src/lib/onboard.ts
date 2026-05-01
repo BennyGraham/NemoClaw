@@ -397,6 +397,7 @@ type OnboardOptions = {
   acceptThirdPartySoftware?: boolean;
   agent?: string | null;
   controlUiPort?: number | null;
+  gpu?: boolean;
 };
 // Non-interactive mode: set by --non-interactive flag or env var.
 // When active, all prompts use env var overrides or sensible defaults.
@@ -2992,7 +2993,7 @@ async function preflight(): Promise<ReturnType<typeof nim.detectGpu>> {
 /** Start the OpenShell gateway with retry logic and post-start health polling. */
 async function startGatewayWithOptions(
   _gpu: ReturnType<typeof nim.detectGpu>,
-  { exitOnFailure = true }: { exitOnFailure?: boolean } = {},
+  { exitOnFailure = true, gpuPassthrough = false }: { exitOnFailure?: boolean; gpuPassthrough?: boolean } = {},
 ) {
   step(2, 8, "Starting OpenShell gateway");
 
@@ -3036,11 +3037,13 @@ async function startGatewayWithOptions(
   }
 
   const gwArgs = ["--name", GATEWAY_NAME, "--port", String(GATEWAY_PORT)];
-  // Do NOT pass --gpu here. On DGX Spark (and most GPU hosts), inference is
-  // routed through a host-side provider (Ollama, vLLM, or cloud API) — the
-  // sandbox itself does not need direct GPU access. Passing --gpu causes
-  // FailedPrecondition errors when the gateway's k3s device plugin cannot
-  // allocate GPUs. See: https://build.nvidia.com/spark/nemoclaw/instructions
+  // By default, --gpu is omitted. On DGX Spark (and most GPU hosts), inference
+  // is routed through a host-side provider (Ollama, vLLM, or cloud API) — the
+  // sandbox itself does not need direct GPU access. Pass --gpu only when the
+  // user explicitly requests it for in-sandbox compute workloads (#1751).
+  if (gpuPassthrough) {
+    gwArgs.push("--gpu");
+  }
   const gatewayEnv = getGatewayStartEnv();
   if (gatewayEnv.OPENSHELL_CLUSTER_IMAGE) {
     console.log(`  Using pinned OpenShell gateway image: ${gatewayEnv.OPENSHELL_CLUSTER_IMAGE}`);
@@ -3170,8 +3173,11 @@ async function startGatewayWithOptions(
   process.env.OPENSHELL_GATEWAY = GATEWAY_NAME;
 }
 
-async function startGateway(_gpu: ReturnType<typeof nim.detectGpu>): Promise<void> {
-  return startGatewayWithOptions(_gpu, { exitOnFailure: true });
+async function startGateway(
+  _gpu: ReturnType<typeof nim.detectGpu>,
+  { gpuPassthrough = false }: { gpuPassthrough?: boolean } = {},
+): Promise<void> {
+  return startGatewayWithOptions(_gpu, { exitOnFailure: true, gpuPassthrough });
 }
 
 async function startGatewayForRecovery(_gpu: ReturnType<typeof nim.detectGpu>): Promise<void> {
@@ -3490,6 +3496,7 @@ async function createSandbox(
   fromDockerfile: string | null = null,
   agent: AgentDefinition | null = null,
   controlUiPort: number | null = null,
+  gpuPassthrough: boolean = false,
 ) {
   step(6, 8, "Creating sandbox");
 
@@ -3929,7 +3936,11 @@ async function createSandbox(
     "--policy",
     basePolicyPath,
   ];
-  // --gpu is intentionally omitted. See comment in startGateway().
+  // --gpu is omitted by default. Pass only when user explicitly requests it
+  // via `nemoclaw onboard --gpu` for in-sandbox compute workloads (#1751).
+  if (gpuPassthrough) {
+    createArgs.push("--gpu");
+  }
 
   // Create OpenShell providers for messaging credentials so they flow through
   // the provider/placeholder system instead of raw env vars. The L7 proxy
@@ -4282,7 +4293,7 @@ async function createSandbox(
     name: sandboxName,
     model: model || null,
     provider: provider || null,
-    gpuEnabled: !!gpu,
+    gpuEnabled: gpuPassthrough,
     agent: agent ? agent.name : null,
     agentVersion: fromDockerfile ? null : effectiveAgent.expectedVersion || null,
     imageTag: resolvedImageTag,
@@ -7715,6 +7726,12 @@ async function onboard(opts: OnboardOptions = {}): Promise<void> {
       onboardSession.markStepComplete("preflight");
     }
 
+    if (opts.gpu && (!gpu || gpu.count === 0)) {
+      console.error("  --gpu requires an NVIDIA GPU. None detected by nvidia-smi.");
+      console.error("  Verify drivers are installed: nvidia-smi");
+      process.exit(1);
+    }
+
     const gatewayStatus = runCaptureOpenshell(["status"], { ignoreError: true });
     const gatewayInfo = runCaptureOpenshell(["gateway", "info", "-g", GATEWAY_NAME], {
       ignoreError: true,
@@ -7746,6 +7763,24 @@ async function onboard(opts: OnboardOptions = {}): Promise<void> {
     if (resumeGateway) {
       skippedStepMessage("gateway", "running");
     } else if (!resume && canReuseHealthyGateway) {
+      if (opts.gpu) {
+        // Check if the running gateway has GPU enabled. If not, the user must
+        // destroy and recreate — we don't auto-recreate because it's destructive
+        // (wipes providers, inference config, and all sandboxes).
+        const container = `openshell-cluster-${GATEWAY_NAME}`;
+        const gpuCheck = docker.dockerInspect(
+          ["--type", "container", "--format", "{{json .HostConfig.DeviceRequests}}", container],
+          { ignoreError: true, suppressOutput: true },
+        );
+        const gpuOutput = String(gpuCheck.stdout || "").trim();
+        const gatewayHasGpu = gpuCheck.status === 0 && gpuOutput !== "null" && gpuOutput !== "[]";
+        if (!gatewayHasGpu) {
+          console.error("  Existing gateway was started without GPU passthrough.");
+          console.error("  To enable GPU, destroy the existing sandbox and gateway, then re-onboard:");
+          console.error(`    nemoclaw <name> destroy --yes && nemoclaw onboard --gpu`);
+          process.exit(1);
+        }
+      }
       skippedStepMessage("gateway", "running", "reuse");
       note("  Reusing healthy NemoClaw gateway.");
     } else {
@@ -7761,7 +7796,7 @@ async function onboard(opts: OnboardOptions = {}): Promise<void> {
         }
       }
       startRecordedStep("gateway");
-      await startGateway(gpu);
+      await startGateway(gpu, { gpuPassthrough: opts.gpu === true });
       onboardSession.markStepComplete("gateway");
     }
 
@@ -7966,6 +8001,7 @@ async function onboard(opts: OnboardOptions = {}): Promise<void> {
         fromDockerfile,
         agent,
         opts.controlUiPort || null,
+        opts.gpu === true,
       );
       webSearchConfig = nextWebSearchConfig;
       // Persist model and provider after the sandbox entry exists in the registry.
