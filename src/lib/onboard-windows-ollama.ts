@@ -37,7 +37,10 @@ async function installOllamaOnWindowsHost(): Promise<{ ok: boolean; path: string
     child.stdout.on("data", (chunk: Buffer) => process.stdout.write(chunk));
     child.stderr.on("data", (chunk: Buffer) => process.stderr.write(chunk));
     child.on("close", () => resolve());
-    child.on("error", () => resolve());
+    child.on("error", (err: NodeJS.ErrnoException) => {
+      console.error(`  Failed to spawn powershell.exe: ${err.message}`);
+      resolve();
+    });
   });
   const installedPath = runCapture(
     [

@@ -105,6 +105,7 @@ const {
 const localInference: typeof import("./local-inference") = require("./local-inference");
 const {
   findReachableOllamaHost,
+  resetOllamaHostCache,
   getDefaultOllamaModel,
   getBootstrapOllamaModelOptions,
   getLocalProviderBaseUrl,
@@ -5403,7 +5404,13 @@ async function setupNim(
             requestedModel,
             recoveredModel: null,
           });
-          if (result.outcome === "back-to-selection") continue selectionLoop;
+          if (result.outcome === "back-to-selection") {
+            // The Windows-host action pinned resolved host to
+            // host.docker.internal. Clear it so a subsequent provider pick
+            // (e.g. plain WSL Ollama) starts from a fresh probe.
+            resetOllamaHostCache();
+            continue selectionLoop;
+          }
           model = result.model;
           preferredInferenceApi = "openai-completions";
         }
@@ -5417,18 +5424,33 @@ async function setupNim(
           console.log("  Installing Ollama via official installer...");
           runShell("set -o pipefail; curl -fsSL https://ollama.com/install.sh | sh");
         }
-        console.log("  Starting Ollama...");
+        // On WSL the official installer enabled and started ollama.service
+        // with the default 127.0.0.1 binding (which is what we want). Skip
+        // our own `ollama serve` so systemd owns the daemon and journalctl
+        // logs stay intact. On Linux native we still need the manual start
+        // because systemd's default 127.0.0.1 isn't reachable from the
+        // sandbox via host-gateway; we override with OLLAMA_HOST=0.0.0.0.
+        // On macOS, brew install doesn't auto-start.
         // Shell required: backgrounding (&), env var prefix, output redirection.
-        runShell(`OLLAMA_HOST=0.0.0.0:${OLLAMA_PORT} ollama serve > /dev/null 2>&1 &`, {
-          ignoreError: true,
-        });
-        sleep(2);
-        if (!startOllamaAuthProxy()) {
-          process.exit(1);
+        const installerStartedDaemon = isWsl() && !!findReachableOllamaHost();
+        if (!installerStartedDaemon) {
+          console.log("  Starting Ollama...");
+          const ollamaEnv = isWsl() ? "" : `OLLAMA_HOST=0.0.0.0:${OLLAMA_PORT} `;
+          runShell(`${ollamaEnv}ollama serve > /dev/null 2>&1 &`, { ignoreError: true });
+          sleep(2);
         }
-        console.log(
-          `  ✓ Using Ollama on localhost:${OLLAMA_PORT} (proxy on :${OLLAMA_PROXY_PORT})`,
-        );
+        if (isWsl()) {
+          // WSL2 doesn't need the proxy — Docker reaches the host directly.
+          console.log(`  ✓ Using Ollama on localhost:${OLLAMA_PORT}`);
+        } else {
+          printOllamaExposureWarning();
+          if (!startOllamaAuthProxy()) {
+            process.exit(1);
+          }
+          console.log(
+            `  ✓ Using Ollama on localhost:${OLLAMA_PORT} (proxy on :${OLLAMA_PROXY_PORT})`,
+          );
+        }
         provider = "ollama-local";
         // See above ollama branch — internal proxy token, no user API key.
         credentialEnv = null;
