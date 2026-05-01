@@ -21,6 +21,7 @@ import {
   SandboxStatusCommand,
 } from "./sandbox-inspection-cli-command";
 import SandboxLogsCommand from "./sandbox-logs-cli-command";
+import SkillInstallCliCommand from "./skill-install-cli-command";
 import StatusCommand from "./status-command";
 import {
   DeprecatedStartCommand,
@@ -41,6 +42,7 @@ export default {
   "sandbox:config:get": SandboxConfigGetCommand,
   "sandbox:logs": SandboxLogsCommand,
   "sandbox:policy-list": SandboxPolicyListCommand,
+  "sandbox:skill:install": SkillInstallCliCommand,
   "sandbox:status": SandboxStatusCommand,
   status: StatusCommand,
   start: DeprecatedStartCommand,

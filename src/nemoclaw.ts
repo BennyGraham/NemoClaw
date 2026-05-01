@@ -577,6 +577,7 @@ exports.runOpenshell = runOpenshell;
 exports.sandboxChannelsList = sandboxChannelsList;
 exports.sandboxLogs = sandboxLogs;
 exports.sandboxPolicyList = sandboxPolicyList;
+exports.sandboxSkillInstall = sandboxSkillInstall;
 exports.sandboxStatus = sandboxStatus;
 exports.upgradeSandboxes = upgradeSandboxes;
 
@@ -4092,9 +4093,22 @@ const [cmd, ...args] = process.argv.slice(2);
         }
         await runOclif("sandbox:gateway-token", [cmd, ...actionArgs]);
         break;
-      case "skill":
-        await sandboxSkillInstall(cmd, actionArgs);
+      case "skill": {
+        const skillSub = actionArgs[0];
+        const skillArgs = actionArgs.slice(1);
+        if (!skillSub || skillSub === "help" || skillSub === "--help" || skillSub === "-h") {
+          await sandboxSkillInstall(cmd, actionArgs);
+        } else if (skillSub === "install") {
+          if (hasHelpFlag(skillArgs)) {
+            await sandboxSkillInstall(cmd, actionArgs);
+          } else {
+            await runOclif("sandbox:skill:install", [cmd, ...skillArgs]);
+          }
+        } else {
+          await sandboxSkillInstall(cmd, actionArgs);
+        }
         break;
+      }
       case "rebuild":
         await sandboxRebuild(cmd, actionArgs);
         break;
