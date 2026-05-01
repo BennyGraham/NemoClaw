@@ -2673,6 +2673,24 @@ const { setupInference } = require(${onboardPath});
     assert.doesNotMatch(source, /\["sandbox",\s*"exec",\s*sandboxName,\s*"cat"/);
   });
 
+  it("re-establishes the agent dashboard forward after agent setup health checks", () => {
+    const source = fs.readFileSync(
+      path.join(import.meta.dirname, "..", "src", "lib", "onboard.ts"),
+      "utf-8",
+    );
+    const setupPos = source.indexOf("await agentOnboard.handleAgentSetup");
+    const forwardPos = source.indexOf(
+      "ensureDashboardForward(sandboxName, agentDashboardUrl)",
+      setupPos,
+    );
+
+    assert.ok(setupPos !== -1, "agent setup call not found");
+    assert.ok(
+      forwardPos > setupPos,
+      "agent dashboard forward should be re-established after agent health checks",
+    );
+  });
+
   it("starts the sandbox step before prompting for the sandbox name", () => {
     const source = fs.readFileSync(
       path.join(import.meta.dirname, "..", "src", "lib", "onboard.ts"),

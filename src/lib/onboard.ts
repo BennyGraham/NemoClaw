@@ -8160,6 +8160,12 @@ async function onboard(opts: OnboardOptions = {}): Promise<void> {
         startRecordedStep,
         skippedStepMessage,
       });
+      const agentDashboardPort = agent.forwardPort || CONTROL_UI_PORT;
+      const agentDashboardUrl = process.env.CHAT_UI_URL || `http://127.0.0.1:${agentDashboardPort}`;
+      const actualAgentDashboardPort = ensureDashboardForward(sandboxName, agentDashboardUrl);
+      if (actualAgentDashboardPort !== Number(getDashboardForwardPort(agentDashboardUrl))) {
+        process.env.CHAT_UI_URL = `http://127.0.0.1:${actualAgentDashboardPort}`;
+      }
       onboardSession.markStepSkipped("openclaw");
     } else {
       const resumeOpenclaw = resume && sandboxName && isOpenclawReady(sandboxName);
