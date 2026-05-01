@@ -8,7 +8,7 @@ import { describe, it, expect } from "vitest";
 
 const START_SCRIPT = path.join(import.meta.dirname, "..", "scripts", "nemoclaw-start.sh");
 
-describe("Nemotron inference fix preload (#1193, #2051)", () => {
+describe("NVIDIA endpoint inference fix preload (#1193, #2051)", () => {
   const src = fs.readFileSync(START_SCRIPT, "utf-8");
 
   it("defines _NEMOTRON_FIX_SCRIPT path variable", () => {
@@ -61,6 +61,14 @@ describe("Nemotron inference fix preload (#1193, #2051)", () => {
     expect(script).toMatch(/nemotron\/i/);
   });
 
+  it("preload matches DeepSeek V4 Pro exactly", () => {
+    const heredoc = src.match(/<<'NEMOTRON_FIX_EOF'\n([\s\S]*?)\nNEMOTRON_FIX_EOF/);
+    expect(heredoc).not.toBeNull();
+    const script = heredoc[1];
+    expect(script).toContain("DEEPSEEK_V4_PRO_RE");
+    expect(script).toContain("^deepseek-ai\\/deepseek-v4-pro$");
+  });
+
   it("preload injects force_nonempty_content into chat_template_kwargs", () => {
     const heredoc = src.match(/<<'NEMOTRON_FIX_EOF'\n([\s\S]*?)\nNEMOTRON_FIX_EOF/);
     expect(heredoc).not.toBeNull();
@@ -69,11 +77,18 @@ describe("Nemotron inference fix preload (#1193, #2051)", () => {
     expect(script).toContain("force_nonempty_content");
   });
 
-  it("preload passes through non-Nemotron models unmodified", () => {
+  it("preload injects thinking false for DeepSeek V4 Pro", () => {
     const heredoc = src.match(/<<'NEMOTRON_FIX_EOF'\n([\s\S]*?)\nNEMOTRON_FIX_EOF/);
     expect(heredoc).not.toBeNull();
     const script = heredoc[1];
-    // The else branch sends original bytes
+    expect(script).toContain("chat_template_kwargs.thinking = false");
+  });
+
+  it("preload passes through unaffected models unmodified", () => {
+    const heredoc = src.match(/<<'NEMOTRON_FIX_EOF'\n([\s\S]*?)\nNEMOTRON_FIX_EOF/);
+    expect(heredoc).not.toBeNull();
+    const script = heredoc[1];
+    // The else branch sends original bytes.
     expect(script).toContain("origWrite.call(req, raw)");
   });
 

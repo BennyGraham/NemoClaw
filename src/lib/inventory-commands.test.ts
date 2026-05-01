@@ -449,7 +449,7 @@ describe("inventory commands", () => {
         ],
         defaultSandbox: "alpha",
       }),
-      getLiveInference: () => ({ provider: "nvidia-prod", model: "minimaxai/minimax-m2.5" }),
+      getLiveInference: () => ({ provider: "nvidia-prod", model: "minimaxai/minimax-m2.7" }),
       showServiceStatus,
       log: (message = "") => lines.push(message),
     });
@@ -457,7 +457,7 @@ describe("inventory commands", () => {
     expect(lines).toContain("  Sandboxes:");
     // Default sandbox shows the live gateway model (#2369), annotated with
     // the onboarded model when they differ.
-    expect(lines).toContain("    alpha * (minimaxai/minimax-m2.5)");
+    expect(lines).toContain("    alpha * (minimaxai/minimax-m2.7)");
     expect(lines).toContain("      (onboarded: nvidia/nemotron-3-super-120b-a12b)");
     // Non-default sandbox keeps its stored model — the gateway only applies
     // to whichever sandbox is currently connected.
@@ -508,12 +508,12 @@ describe("inventory commands", () => {
         sandboxes: [{ name: "alpha" }],
         defaultSandbox: "alpha",
       }),
-      getLiveInference: () => ({ provider: "nvidia-prod", model: "minimaxai/minimax-m2.5" }),
+      getLiveInference: () => ({ provider: "nvidia-prod", model: "minimaxai/minimax-m2.7" }),
       showServiceStatus: vi.fn(),
       log: (message = "") => lines.push(message),
     });
 
-    expect(lines).toContain("    alpha * (minimaxai/minimax-m2.5)");
+    expect(lines).toContain("    alpha * (minimaxai/minimax-m2.7)");
     expect(lines).toContain("      (onboarded: unknown)");
   });
 });

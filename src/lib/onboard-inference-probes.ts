@@ -109,12 +109,12 @@ function probeResponsesToolCalling(endpointUrl, model, apiKey, options = {}) {
   const useQueryParam = options.authMode === "query-param";
   const normalizedKey = apiKey ? normalizeCredentialValue(apiKey) : "";
   const baseUrl = String(endpointUrl).replace(/\/+$/, "");
-  const authHeader = !useQueryParam && normalizedKey
-    ? ["-H", `Authorization: Bearer ${normalizedKey}`]
-    : [];
-  const url = useQueryParam && normalizedKey
-    ? `${baseUrl}/responses?key=${encodeURIComponent(normalizedKey)}`
-    : `${baseUrl}/responses`;
+  const authHeader =
+    !useQueryParam && normalizedKey ? ["-H", `Authorization: Bearer ${normalizedKey}`] : [];
+  const url =
+    useQueryParam && normalizedKey
+      ? `${baseUrl}/responses?key=${encodeURIComponent(normalizedKey)}`
+      : `${baseUrl}/responses`;
   const result = runCurlProbe([
     "-sS",
     ...getValidationProbeCurlArgs(),
@@ -162,23 +162,49 @@ function probeResponsesToolCalling(endpointUrl, model, apiKey, options = {}) {
 }
 
 // ── OpenAI-like probe ────────────────────────────────────────────
+function isDeepSeekV4ProModel(model) {
+  return String(model || "").toLowerCase() === "deepseek-ai/deepseek-v4-pro";
+}
+
+function getChatCompletionsProbePayload(model) {
+  const payload = {
+    model,
+    messages: [{ role: "user", content: "Reply with exactly: OK" }],
+  };
+
+  if (isDeepSeekV4ProModel(model)) {
+    return {
+      ...payload,
+      temperature: 1,
+      top_p: 0.95,
+      max_tokens: 8192,
+      chat_template_kwargs: { thinking: false },
+      stream: true,
+    };
+  }
+
+  return payload;
+}
+
 // eslint-disable-next-line complexity
 function probeOpenAiLikeEndpoint(endpointUrl, model, apiKey, options = {}) {
   const useQueryParam = options.authMode === "query-param";
   const normalizedKey = apiKey ? normalizeCredentialValue(apiKey) : "";
   const baseUrl = String(endpointUrl).replace(/\/+$/, "");
-  const authHeader = !useQueryParam && normalizedKey
-    ? ["-H", `Authorization: Bearer ${normalizedKey}`]
-    : [];
+  const authHeader =
+    !useQueryParam && normalizedKey ? ["-H", `Authorization: Bearer ${normalizedKey}`] : [];
   const appendKey = (urlPath) =>
-    useQueryParam && normalizedKey ? `${baseUrl}${urlPath}?key=${encodeURIComponent(normalizedKey)}` : `${baseUrl}${urlPath}`;
+    useQueryParam && normalizedKey
+      ? `${baseUrl}${urlPath}?key=${encodeURIComponent(normalizedKey)}`
+      : `${baseUrl}${urlPath}`;
 
   const responsesProbe =
     options.requireResponsesToolCalling === true
       ? {
           name: "Responses API with tool calling",
           api: "openai-responses",
-          execute: () => probeResponsesToolCalling(endpointUrl, model, apiKey, { authMode: options.authMode }),
+          execute: () =>
+            probeResponsesToolCalling(endpointUrl, model, apiKey, { authMode: options.authMode }),
         }
       : {
           name: "Responses API",
@@ -210,10 +236,7 @@ function probeOpenAiLikeEndpoint(endpointUrl, model, apiKey, options = {}) {
         "Content-Type: application/json",
         ...authHeader,
         "-d",
-        JSON.stringify({
-          model,
-          messages: [{ role: "user", content: "Reply with exactly: OK" }],
-        }),
+        JSON.stringify(getChatCompletionsProbePayload(model)),
         appendKey("/chat/completions"),
       ]),
   };
@@ -302,9 +325,7 @@ function probeOpenAiLikeEndpoint(endpointUrl, model, apiKey, options = {}) {
   if (failures.length > 0 && isTimeoutOrConnFailure(failures[0].curlStatus)) {
     retriedAfterTimeout = true;
     const baseArgs = getValidationProbeCurlArgs();
-    const doubledArgs = baseArgs.map((arg) =>
-      /^\d+$/.test(arg) ? String(Number(arg) * 2) : arg,
-    );
+    const doubledArgs = baseArgs.map((arg) => (/^\d+$/.test(arg) ? String(Number(arg) * 2) : arg));
     const retryResult = runCurlProbe([
       "-sS",
       ...doubledArgs,
@@ -312,10 +333,7 @@ function probeOpenAiLikeEndpoint(endpointUrl, model, apiKey, options = {}) {
       "Content-Type: application/json",
       ...(apiKey ? ["-H", `Authorization: Bearer ${normalizeCredentialValue(apiKey)}`] : []),
       "-d",
-      JSON.stringify({
-        model,
-        messages: [{ role: "user", content: "Reply with exactly: OK" }],
-      }),
+      JSON.stringify(getChatCompletionsProbePayload(model)),
       `${String(endpointUrl).replace(/\/+$/, "")}/chat/completions`,
     ]);
     if (retryResult.ok) {
@@ -395,6 +413,7 @@ module.exports = {
   shouldRequireResponsesToolCalling,
   getProbeAuthMode,
   getValidationProbeCurlArgs,
+  getChatCompletionsProbePayload,
   probeResponsesToolCalling,
   probeOpenAiLikeEndpoint,
   probeAnthropicEndpoint,
