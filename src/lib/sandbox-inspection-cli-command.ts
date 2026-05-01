@@ -7,6 +7,7 @@ import { Args, Command, Flags } from "@oclif/core";
 
 import { CLI_NAME } from "./branding";
 import { getNemoClawRuntimeBridge } from "./nemoclaw-runtime-bridge";
+import { showSandboxStatus } from "./sandbox-runtime-actions";
 import * as sandboxConfig from "./sandbox-config";
 
 const sandboxNameArg = Args.string({
@@ -30,7 +31,7 @@ export class SandboxStatusCommand extends Command {
 
   public async run(): Promise<void> {
     const { args } = await this.parse(SandboxStatusCommand);
-    await getNemoClawRuntimeBridge().sandboxStatus(args.sandboxName);
+    await showSandboxStatus(args.sandboxName);
   }
 }
 
