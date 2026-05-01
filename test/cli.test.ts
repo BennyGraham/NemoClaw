@@ -734,6 +734,15 @@ describe("CLI dispatch", () => {
     ]);
   });
 
+  it("rejects -n without a line count", () => {
+    const setup = createLogsTestSetup("nemoclaw-cli-logs-n-missing-");
+    const r = setup.runLogs("alpha logs -n 2>&1");
+
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("-n requires a positive line count");
+    expect(setup.readCalls()).toEqual([]);
+  });
+
   it("passes --since to OpenShell logs without an unfiltered gateway tail", () => {
     const setup = createLogsTestSetup("nemoclaw-cli-logs-since-");
     const r = setup.runLogs("alpha logs --since 5m");
