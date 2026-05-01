@@ -1132,6 +1132,35 @@ install_vllm() {
     [[ -n "$v" ]] && printf "%s" "$v"
   }
 
+  # Validate against HF whoami. Returns:
+  #   0  token is valid (HTTP 200)
+  #   1  token is explicitly invalid/revoked (HTTP 401 or 403)
+  #   2  could not determine (no curl, network error, transient HTTP, etc.)
+  _validate_hf_token() {
+    local token="${1:-}"
+    [[ -z "$token" ]] && return 2
+    command -v curl >/dev/null 2>&1 || return 2
+    local code
+    code=$(curl -s -o /dev/null -w '%{http_code}' \
+      --max-time 10 \
+      -H "Authorization: Bearer ${token}" \
+      "https://huggingface.co/api/whoami-v2" 2>/dev/null || echo "000")
+    case "$code" in
+      200)     return 0 ;;
+      401|403) return 1 ;;
+      *)       return 2 ;;
+    esac
+  }
+
+  # Wipe a token from the on-disk caches we know about. Env vars are
+  # untouched; the caller should warn the user separately.
+  _purge_stale_token_files() {
+    local f
+    for f in "${hf_home}/token" "${hf_home}/stored_tokens" "${HOME}/.huggingface/token"; do
+      [[ -e "$f" ]] && rm -f "$f" 2>/dev/null
+    done
+  }
+
   if [[ -n "${HUGGING_FACE_HUB_TOKEN:-}" ]]; then
     hf_token="$HUGGING_FACE_HUB_TOKEN"
     hf_token_source="HUGGING_FACE_HUB_TOKEN env var"
@@ -1183,41 +1212,90 @@ PY
     [[ -n "$hf_token" ]] && hf_token_source="huggingface_hub library (HfFolder.get_token)"
   fi
 
+  # If discovery surfaced a token, validate it. A 401/403 means the cached
+  # value is stale (revoked / rotated) — clear it and fall through to the
+  # interactive re-prompt below so the user doesn't have to abort and rerun.
   if [[ -n "$hf_token" ]]; then
-    info "HuggingFace token: using ${hf_token_source} — gated models and faster downloads enabled"
-  else
-    # Interactive prompt — give the user a chance to paste a token in-place
-    # rather than abort or fall through to slow/anonymous downloads. Skip the
-    # prompt in non-interactive mode (CI / piped installs).
-    if [[ -t 0 ]] && [[ -z "${NEMOCLAW_NON_INTERACTIVE:-}" ]]; then
+    info "HuggingFace token discovered (${hf_token_source}). Validating against HF…"
+    _validate_hf_token "$hf_token"
+    case $? in
+      0)
+        ok "HuggingFace token: valid (${hf_token_source})"
+        ;;
+      1)
+        warn "HuggingFace token from ${hf_token_source} is invalid or revoked (HTTP 401/403)."
+        # Only purge files — never modify the caller's environment vars.
+        if [[ "$hf_token_source" != *"env var"* ]]; then
+          _purge_stale_token_files
+          warn "  Removed stale token files from ${hf_home}/. Will re-prompt below."
+        else
+          warn "  The stale token came from a shell env var; unset it and re-export a fresh one."
+        fi
+        hf_token=""
+        hf_token_source=""
+        ;;
+      *)
+        warn "Could not validate HuggingFace token (network error or HF unreachable)."
+        warn "  Proceeding with the discovered token anyway; vLLM will surface 401 if it is bad."
+        ;;
+    esac
+  fi
+
+  # Interactive prompt — runs both for "no token found" and for "discovered
+  # token failed validation". Loop a few times so a typo is recoverable.
+  if [[ -z "$hf_token" ]] && [[ -t 0 ]] && [[ -z "${NEMOCLAW_NON_INTERACTIVE:-}" ]]; then
+    local _attempts=0 _max_attempts=3 hf_token_input=""
+    while (( _attempts < _max_attempts )); do
+      (( ++_attempts ))
       printf "\n"
-      printf "  ${C_YELLOW}No HuggingFace token found.${C_RESET}\n"
-      printf "  Gated models (Nemotron, Llama, etc.) require a token; open models will\n"
-      printf "  download faster with one. Get a token at https://huggingface.co/settings/tokens\n"
-      printf "  Paste your hf_... token now (or press Enter to continue without one): "
-      # -s hides the input so it doesn't end up in scrollback
+      if (( _attempts == 1 )); then
+        printf "  ${C_YELLOW}No valid HuggingFace token found.${C_RESET}\n"
+        printf "  Gated models (Nemotron, Llama, etc.) require a token; open models will\n"
+        printf "  download faster with one. Get a token at https://huggingface.co/settings/tokens\n"
+      fi
+      printf "  Paste your hf_... token (attempt %d/%d, Enter to skip): " "$_attempts" "$_max_attempts"
       read -r -s hf_token_input
       printf "\n"
       hf_token_input="${hf_token_input//[[:space:]]/}"
-      if [[ -n "$hf_token_input" ]]; then
-        if [[ ! "$hf_token_input" =~ ^hf_ ]]; then
-          warn "Token does not start with 'hf_' — saving anyway, but it may be invalid."
-        fi
-        # Persist to the canonical HF cache file so future installs find it
-        # automatically (matches what `huggingface-cli login` writes).
-        printf '%s' "$hf_token_input" > "${hf_home}/token"
-        chmod 600 "${hf_home}/token" 2>/dev/null || true
-        hf_token="$hf_token_input"
-        hf_token_source="user-provided (saved to ${hf_home}/token)"
-        ok "HuggingFace token saved to ${hf_home}/token (mode 600)"
+      if [[ -z "$hf_token_input" ]]; then
+        # User chose to continue without a token.
+        break
       fi
-    fi
+      if [[ ! "$hf_token_input" =~ ^hf_ ]]; then
+        warn "Token does not start with 'hf_' — try again."
+        continue
+      fi
+      info "Validating token against HuggingFace…"
+      _validate_hf_token "$hf_token_input"
+      case $? in
+        0)
+          # Persist to the canonical HF cache file so every future install
+          # picks it up automatically (matches `huggingface-cli login`).
+          printf '%s' "$hf_token_input" > "${hf_home}/token"
+          chmod 600 "${hf_home}/token" 2>/dev/null || true
+          hf_token="$hf_token_input"
+          hf_token_source="user-provided (saved to ${hf_home}/token)"
+          ok "HuggingFace token validated and saved to ${hf_home}/token (mode 600)"
+          break
+          ;;
+        1)
+          warn "Token rejected by HuggingFace (HTTP 401/403). Try again."
+          ;;
+        *)
+          warn "Could not reach HuggingFace to validate the token. Saving it anyway."
+          printf '%s' "$hf_token_input" > "${hf_home}/token"
+          chmod 600 "${hf_home}/token" 2>/dev/null || true
+          hf_token="$hf_token_input"
+          hf_token_source="user-provided, unvalidated (saved to ${hf_home}/token)"
+          break
+          ;;
+      esac
+    done
   fi
 
-  # Final outcome banner — use the result of env discovery + optional prompt.
-  if [[ -n "$hf_token" ]]; then
-    info "HuggingFace token: ${hf_token_source} — gated models and faster downloads enabled"
-  else
+  # Final outcome banner. Validation/save messages are already on-screen, so
+  # only print the loud no-token warning when we ended up without one.
+  if [[ -z "$hf_token" ]]; then
     printf "\n"
     printf "${C_RED}════════════════════════════════════════════════════════════════════${C_RESET}\n"
     printf "${C_RED}[WARN]  PROCEEDING WITHOUT A HUGGINGFACE TOKEN${C_RESET}\n"
