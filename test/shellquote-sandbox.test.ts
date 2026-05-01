@@ -36,6 +36,7 @@ try {
   process.exit(2);
 } catch (error) {
   console.log(JSON.stringify({ message: error && error.message ? error.message : String(error), commands }));
+  process.exit(0);
 }
 `,
       { mode: 0o700 },

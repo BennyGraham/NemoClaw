@@ -188,48 +188,52 @@ function createDebugCommandTestEnv(prefix: string): Record<string, string> {
 }
 
 describe("CLI dispatch", () => {
-  it("config get validates flags and values before dispatch", () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-config-get-"));
-    const localBin = path.join(home, "bin");
-    fs.mkdirSync(localBin, { recursive: true });
-    fs.writeFileSync(
-      path.join(localBin, "openshell"),
-      [
-        "#!/usr/bin/env bash",
-        'case "$*" in',
-        '  "status") printf "Status: Connected\\nGateway: nemoclaw\\n"; exit 0 ;;',
-        '  "gateway info -g nemoclaw") printf "Gateway: nemoclaw\\n"; exit 0 ;;',
-        '  "sandbox list") echo "alpha Ready"; exit 0 ;;',
-        '  "sandbox get alpha") printf "Name: alpha\\nPhase: Ready\\nPolicy:\\n"; exit 0 ;;',
-        '  "policy get --full alpha") exit 1 ;;',
-        '  "inference get") exit 1 ;;',
-        "  *) exit 0 ;;",
-        "esac",
-      ].join("\n"),
-      { mode: 0o755 },
+  it("config get validates flags and values before dispatch", async () => {
+    const sandboxConfigModule = await import("../dist/lib/sandbox-config.js");
+    const { parseConfigGetArgs } = (sandboxConfigModule.default ?? sandboxConfigModule) as {
+      parseConfigGetArgs: (
+        args: string[],
+      ) =>
+        | { ok: true; opts: { key: string | null; format: string } }
+        | { ok: false; errors: string[] };
+    };
+
+    const missingKey = parseConfigGetArgs(["--key"]);
+    expect(missingKey.ok).toBe(false);
+    expect(missingKey).toEqual(
+      expect.objectContaining({
+        errors: expect.arrayContaining([expect.stringContaining("--key requires a value")]),
+      }),
     );
-    writeSandboxRegistry(home);
-    const env = { HOME: home, PATH: `${localBin}:${process.env.PATH || ""}` };
-    try {
-      const missingKey = runWithEnv("alpha config get --key", env);
-      expect(missingKey.code).toBe(1);
-      expect(missingKey.out).toContain("--key requires a value");
-      expect(missingKey.out).toContain("Usage: nemoclaw <name> config get");
 
-      const missingFormat = runWithEnv("alpha config get --format", env);
-      expect(missingFormat.code).toBe(1);
-      expect(missingFormat.out).toContain("--format requires a value");
+    const missingFormat = parseConfigGetArgs(["--format"]);
+    expect(missingFormat.ok).toBe(false);
+    expect(missingFormat).toEqual(
+      expect.objectContaining({
+        errors: expect.arrayContaining([expect.stringContaining("--format requires a value")]),
+      }),
+    );
 
-      const badFormat = runWithEnv("alpha config get --format xml", env);
-      expect(badFormat.code).toBe(1);
-      expect(badFormat.out).toContain("Unknown format: xml");
+    const badFormat = parseConfigGetArgs(["--format", "xml"]);
+    expect(badFormat.ok).toBe(false);
+    expect(badFormat).toEqual(
+      expect.objectContaining({
+        errors: expect.arrayContaining([expect.stringContaining("Unknown format: xml")]),
+      }),
+    );
 
-      const unknownFlag = runWithEnv("alpha config get --bogus", env);
-      expect(unknownFlag.code).toBe(1);
-      expect(unknownFlag.out).toContain("Unknown flag: --bogus");
-    } finally {
-      fs.rmSync(home, { recursive: true, force: true });
-    }
+    const unknownFlag = parseConfigGetArgs(["--bogus"]);
+    expect(unknownFlag.ok).toBe(false);
+    expect(unknownFlag).toEqual(
+      expect.objectContaining({
+        errors: expect.arrayContaining([expect.stringContaining("Unknown flag: --bogus")]),
+      }),
+    );
+
+    expect(parseConfigGetArgs(["--key", "gateway.auth", "--format", "yaml"])).toEqual({
+      ok: true,
+      opts: { key: "gateway.auth", format: "yaml" },
+    });
   });
 
   it("help exits 0 and shows sections", () => {

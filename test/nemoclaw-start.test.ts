@@ -1131,6 +1131,7 @@ describe("NC-2227-01: legacy migration behavior", () => {
       expect(fs.existsSync(sentinel)).toBe(true);
       expect((fs.statSync(sentinel).mode & 0o777).toString(8)).toBe("444");
     } finally {
+      spawnSync("chmod", ["-R", "u+rwx", tmpDir], { encoding: "utf-8" });
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });

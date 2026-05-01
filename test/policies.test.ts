@@ -1537,6 +1537,7 @@ setImmediate(() => process.stdin.emit("data", ${JSON.stringify(input)}));
 promptResult
   .then((selected) => {
     console.log(JSON.stringify({ selected, counts }));
+    process.exit(0);
   })
   .catch((err) => {
     console.error(err && err.stack ? err.stack : String(err));
