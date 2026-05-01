@@ -1085,7 +1085,7 @@ function upsertProvider(
       // openshell receives `--credential <ENV>` and reads the value from the
       // `env` block passed here, falling back to the inherited process.env.
       // Use getCredential() for the env-fallback branch (per the
-      // no-direct-credential-env eslint rule from PR #2306) — it mirrors
+      // direct credential env guard from PR #2306) — it mirrors
       // openshell's resolution order while the staging contract has
       // already populated the same value into process.env.
       const upsertedValue = env[credentialEnv] ?? getCredential(credentialEnv);
@@ -2497,7 +2497,6 @@ function waitForSandboxReady(sandboxName: string, attempts = 10, delaySeconds = 
 
 // ── Step 1: Preflight ────────────────────────────────────────────
 
-// eslint-disable-next-line complexity
 async function preflight(): Promise<ReturnType<typeof nim.detectGpu>> {
   step(1, 8, "Preflight checks");
 
@@ -3606,7 +3605,6 @@ function formatOnboardConfigSummary({
   ].join("\n");
 }
 
-// eslint-disable-next-line complexity
 async function createSandbox(
   gpu: ReturnType<typeof nim.detectGpu>,
   model: string,
@@ -4570,7 +4568,6 @@ async function createSandbox(
 
 // ── Step 3: Inference selection ──────────────────────────────────
 
-// eslint-disable-next-line complexity
 type ProviderChoice = { key: string; label: string };
 
 function providerNameToOptionKey(
@@ -4957,7 +4954,7 @@ async function setupNim(
           // Check raw process.env first — NEMOCLAW_PROVIDER_KEY is a user-facing
           // override that should take precedence before resolving from credentials.json.
           const _nvProviderKey = (process.env.NEMOCLAW_PROVIDER_KEY || "").trim();
-          // eslint-disable-next-line nemoclaw/no-direct-credential-env -- intentional: checking if env is already set before applying NEMOCLAW_PROVIDER_KEY override
+          // check-direct-credential-env-ignore -- intentional: checking if env is already set before applying NEMOCLAW_PROVIDER_KEY override
           if (_nvProviderKey && !process.env.NVIDIA_API_KEY) {
             process.env.NVIDIA_API_KEY = _nvProviderKey;
           }
@@ -4996,7 +4993,7 @@ async function setupNim(
           // isn't already set, use NEMOCLAW_PROVIDER_KEY as the API key for this provider.
           // Check raw process.env — the override must apply before resolving from credentials.json.
           const _providerKeyHint = (process.env.NEMOCLAW_PROVIDER_KEY || "").trim();
-          // eslint-disable-next-line nemoclaw/no-direct-credential-env -- intentional: checking if env is already set before applying NEMOCLAW_PROVIDER_KEY override
+          // check-direct-credential-env-ignore -- intentional: checking if env is already set before applying NEMOCLAW_PROVIDER_KEY override
           if (_providerKeyHint && credentialEnv && !process.env[credentialEnv]) {
             process.env[credentialEnv] = _providerKeyHint;
           }
@@ -5575,7 +5572,6 @@ async function setupNim(
 
 // ── Step 4: Inference provider ───────────────────────────────────
 
-// eslint-disable-next-line complexity
 async function setupInference(
   sandboxName: string | null,
   model: string,
@@ -6211,7 +6207,6 @@ async function setupOpenclaw(sandboxName: string, model: string, provider: strin
 
 // ── Step 7: Policy presets ───────────────────────────────────────
 
-// eslint-disable-next-line complexity
 async function _setupPolicies(
   sandboxName: string,
   options: {
@@ -6835,7 +6830,6 @@ function computeSetupPresetSuggestions(
   return suggestions;
 }
 
-// eslint-disable-next-line complexity
 async function setupPoliciesWithSelection(
   sandboxName: string,
   options: {
@@ -7681,7 +7675,6 @@ function skippedStepMessage(
 
 // ── Main ─────────────────────────────────────────────────────────
 
-// eslint-disable-next-line complexity
 async function onboard(opts: OnboardOptions = {}): Promise<void> {
   setOnboardBrandingAgent(opts.agent || process.env.NEMOCLAW_AGENT || null);
   NON_INTERACTIVE = opts.nonInteractive || process.env.NEMOCLAW_NON_INTERACTIVE === "1";
