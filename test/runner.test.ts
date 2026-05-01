@@ -638,7 +638,7 @@ describe("regression guards", () => {
     it("setupSpark is a compatibility alias that does not shell out to sudo", () => {
       const fs = require("fs");
       const src = fs.readFileSync(
-        path.join(import.meta.dirname, "..", "src", "nemoclaw.ts"),
+        path.join(import.meta.dirname, "..", "src", "lib", "onboard-action.ts"),
         "utf-8",
       );
       expect(src).toContain("runDeprecatedOnboardAliasCommand");
