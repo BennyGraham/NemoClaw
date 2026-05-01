@@ -983,7 +983,7 @@ select_station_model() {
   printf "  2) DeepSeek-R1 Distill 70B      (open weights, no HF token required)\n"
   printf "  3) Nemotron-3 Super 120B NVFP4  (gated — requires HF token)  [default]\n"
   printf "  ──────────────────────────────────────────────────\n"
-  printf "  Choose [3]: "
+  printf "  Choose 1-3 (Enter for default 3): "
   read -r choice
   choice="${choice:-3}"
 
