@@ -1030,7 +1030,9 @@ describe("nemoclaw-start gateway launch signal handling", () => {
         "start_auto_pair() { sleep 30 & AUTO_PAIR_PID=$!; }",
         "cleanup_on_signal() { :; }",
         launchBlock(kind, gatewayLog),
-        "sleep 0.5",
+        kind === "root"
+          ? `for _ in {1..20}; do [ -s ${JSON.stringify(gosuLog)} ] && break; sleep 0.1; done`
+          : `for _ in {1..20}; do [ -s ${JSON.stringify(openclawLog)} ] && break; sleep 0.1; done`,
         'printf "GATEWAY_PID=%s\\n" "$GATEWAY_PID"',
         'printf "AUTO_PAIR_PID=%s\\n" "${AUTO_PAIR_PID:-}"',
         'printf "TAIL_PID=%s\\n" "${GATEWAY_LOG_TAIL_PID:-}"',
@@ -1070,10 +1072,10 @@ describe("nemoclaw-start gateway launch signal handling", () => {
   });
 
   it("launches the root gateway through gosu with the configured port and tracks child PIDs", () => {
-    const { result, openclaw, gosu } = runLaunchBlock("root");
+    const { result, gosu } = runLaunchBlock("root");
     expect(result.status).toBe(0);
     expect(gosu).toContain("user=gateway");
-    expect(openclaw).toContain("gateway run --port 19000");
+    expect(gosu).toContain("gateway run --port 19000");
     const gatewayPid = result.stdout.match(/GATEWAY_PID=(\d+)/)?.[1];
     expect(gatewayPid).toBeTruthy();
     expect(result.stdout).toContain(`WAIT_PID=${gatewayPid}`);
@@ -1442,6 +1444,7 @@ describe("Telegram diagnostics (#2766)", () => {
         'verify_no_slack_secrets_on_disk() { :; }',
         'write_auth_profile() { :; }',
         'harden_auth_profiles() { :; }',
+        'normalize_mutable_config_perms() { :; }',
         'chown() { :; }',
         'chown_tree_no_symlink_follow() { :; }',
         'gosu() { shift; "$@"; }',

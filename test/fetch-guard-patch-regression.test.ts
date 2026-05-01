@@ -23,7 +23,12 @@ function dockerRunCommandBetween(startMarker: string, endMarker: string): string
   return dockerfile
     .slice(runIndex, end)
     .trim()
-    .replace(/^RUN\s+/, "");
+    .replace(/^RUN\s+/, "")
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("#"))
+    .join("\n")
+    .replace(/\\\n/g, " ")
+    .replace(/\\\s*$/, "");
 }
 
 function runOpenClawUpgradeBlock(currentVersion: string) {

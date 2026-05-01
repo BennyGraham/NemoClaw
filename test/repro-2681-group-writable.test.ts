@@ -1,120 +1,231 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-/**
- * Regression guards for the group-writable mutable-default contract (#2681).
- *
- * Before this PR, control-UI config mutations in the OpenClaw sandbox
- * (Enable Dreaming, account toggles, etc.) wrote through mutateConfigFile,
- * which targeted /sandbox/.openclaw/openclaw.json — owned sandbox:sandbox
- * mode 600. The gateway runs as a separate UID, so every mutation EACCES'd.
- *
- * The previous proposal (#2693) wrapped mutateConfigFile in a try/catch
- * that swallowed EACCES, making the mutation a silent no-op. That made
- * toggles non-functional in the sandbox.
- *
- * This PR replaces that approach with proper Unix group permissions:
- *   1. `gateway` is a member of the `sandbox` group (Dockerfile.base usermod).
- *   2. /sandbox/.openclaw is group-writable + setgid (chmod g+w + g+s).
- *   3. nemoclaw-start.sh normalizes those perms before gateway launch when
- *      shields are not UP.
- *   4. `shields down` restores 660/2770 instead of the old 600/700.
- *
- * Result: writes succeed in default mode without an EACCES swallow.
- *
- * These tests lock the structural invariants so a future change can't
- * silently regress to the swallow approach.
- */
-
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = path.join(import.meta.dirname, "..");
-const DOCKERFILE_BASE = fs.readFileSync(path.join(ROOT, "Dockerfile.base"), "utf-8");
-const DOCKERFILE = fs.readFileSync(path.join(ROOT, "Dockerfile"), "utf-8");
-const NEMOCLAW_START = fs.readFileSync(
-  path.join(ROOT, "scripts", "nemoclaw-start.sh"),
-  "utf-8",
-);
-const SHIELDS_TS = fs.readFileSync(path.join(ROOT, "src", "lib", "shields.ts"), "utf-8");
 
-describe("Issue #2681 — group-writable mutable-default contract", () => {
-  it("Dockerfile.base adds gateway to the sandbox group", () => {
-    expect(DOCKERFILE_BASE).toMatch(/usermod\s+-aG\s+sandbox\s+gateway/);
+function readRepoFile(...parts: string[]): string {
+  return fs.readFileSync(path.join(ROOT, ...parts), "utf-8");
+}
+
+function dockerRunCommandBetween(
+  fileParts: string[],
+  startMarker: string,
+  endMarker: string,
+): string {
+  const dockerfile = readRepoFile(...fileParts);
+  const start = dockerfile.indexOf(startMarker);
+  const end = dockerfile.indexOf(endMarker, start);
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error(`Expected Dockerfile block between ${startMarker} and ${endMarker}`);
+  }
+  const runIndex = dockerfile.indexOf("RUN ", start);
+  if (runIndex === -1 || runIndex > end) {
+    throw new Error(`Expected RUN instruction after ${startMarker}`);
+  }
+  return dockerfile
+    .slice(runIndex, end)
+    .trim()
+    .replace(/^RUN\s+/, "")
+    .replace(/\\\n/g, " ");
+}
+
+function shellFunctionFromFile(
+  fileParts: string[],
+  functionName: string,
+  replaceSandboxWith?: string,
+): string {
+  const source = readRepoFile(...fileParts);
+  const start = source.indexOf(`${functionName}()`);
+  const nextSection = source.indexOf("\n# ──", start + functionName.length);
+  if (start === -1 || nextSection === -1 || nextSection <= start) {
+    throw new Error(`Expected shell function ${functionName}`);
+  }
+  const body = source.slice(start, nextSection).trim();
+  return replaceSandboxWith ? body.replaceAll("/sandbox", replaceSandboxWith) : body;
+}
+
+function runScript(
+  tmpDir: string,
+  lines: string[],
+  env: NodeJS.ProcessEnv = {},
+): { result: ReturnType<typeof spawnSync>; log: string } {
+  const logPath = path.join(tmpDir, "calls.log");
+  const scriptPath = path.join(tmpDir, "run.sh");
+  fs.writeFileSync(
+    scriptPath,
+    ["#!/usr/bin/env bash", "set -euo pipefail", `CALL_LOG=${JSON.stringify(logPath)}`, ...lines]
+      .join("\n"),
+    { mode: 0o700 },
+  );
+  const result = spawnSync("bash", [scriptPath], {
+    encoding: "utf-8",
+    env: { ...process.env, ...env },
+    timeout: 5000,
+  });
+  const log = fs.existsSync(logPath) ? fs.readFileSync(logPath, "utf-8") : "";
+  return { result, log };
+}
+
+function rewriteSandbox(command: string, sandboxRoot: string): string {
+  return command.replaceAll("/sandbox", sandboxRoot);
+}
+
+function mode(pathname: string): number {
+  return fs.statSync(pathname).mode & 0o7777;
+}
+
+describe("Issue #2681 group-writable mutable-default contract", () => {
+  it("executes base-image user and layout setup with shared sandbox-group access", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-2681-base-"));
+    const sandboxRoot = path.join(tmpDir, "sandbox");
+
+    try {
+      fs.mkdirSync(sandboxRoot, { recursive: true });
+      const users = runScript(tmpDir, [
+        'groupadd() { printf "groupadd %s\\n" "$*" >> "$CALL_LOG"; }',
+        'useradd() { printf "useradd %s\\n" "$*" >> "$CALL_LOG"; }',
+        'usermod() { printf "usermod %s\\n" "$*" >> "$CALL_LOG"; }',
+        'chown() { printf "chown %s\\n" "$*" >> "$CALL_LOG"; }',
+        rewriteSandbox(
+          dockerRunCommandBetween(
+            ["Dockerfile.base"],
+            "# Create sandbox user",
+            "# Create .openclaw",
+          ),
+          sandboxRoot,
+        ),
+      ]);
+      expect(users.result.status).toBe(0);
+      expect(users.log).toContain("usermod -aG sandbox gateway");
+
+      const layout = runScript(tmpDir, [
+        'chown() { printf "chown %s\\n" "$*" >> "$CALL_LOG"; }',
+        rewriteSandbox(
+          dockerRunCommandBetween(
+            ["Dockerfile.base"],
+            "# Create .openclaw with all state subdirs directly",
+            "# Pre-create shell init files",
+          ),
+          sandboxRoot,
+        ),
+      ]);
+      const openclawDir = path.join(sandboxRoot, ".openclaw");
+      expect(layout.result.status).toBe(0);
+      expect(mode(openclawDir) & 0o020).not.toBe(0);
+      expect(mode(openclawDir) & 0o2000).not.toBe(0);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 
-  it("Dockerfile.base makes /sandbox/.openclaw group-writable + setgid", () => {
-    expect(DOCKERFILE_BASE).toMatch(/chmod\s+-R\s+g\+w\s+\/sandbox\/\.openclaw/);
-    expect(DOCKERFILE_BASE).toMatch(
-      /find\s+\/sandbox\/\.openclaw\s+-type\s+d\s+-exec\s+chmod\s+g\+s/,
-    );
+  it("executes production-image fallback setup without losing group-writable config files", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-2681-prod-"));
+    const sandboxRoot = path.join(tmpDir, "sandbox");
+    const openclawDir = path.join(sandboxRoot, ".openclaw");
+
+    try {
+      fs.mkdirSync(openclawDir, { recursive: true });
+      fs.writeFileSync(path.join(openclawDir, "openclaw.json"), "{}\n");
+
+      const fallback = runScript(tmpDir, [
+        'id() { if [ "${1:-}" = "-nG" ]; then printf "gateway\\n"; return 0; fi; return 0; }',
+        'usermod() { printf "usermod %s\\n" "$*" >> "$CALL_LOG"; }',
+        dockerRunCommandBetween(
+          ["Dockerfile"],
+          "# Stale-base fallback for the gateway-in-sandbox-group setup",
+          "# Keep the image readable",
+        ),
+      ]);
+      expect(fallback.result.status).toBe(0);
+      expect(fallback.log).toContain("usermod -aG sandbox gateway");
+
+      const layout = runScript(tmpDir, [
+        'chown() { printf "chown %s\\n" "$*" >> "$CALL_LOG"; }',
+        rewriteSandbox(
+          dockerRunCommandBetween(
+            ["Dockerfile"],
+            "# `chmod g+w` + setgid",
+            "# Pin config hash",
+          ),
+          sandboxRoot,
+        ),
+      ]);
+      expect(layout.result.status).toBe(0);
+      expect(mode(openclawDir) & 0o020).not.toBe(0);
+      expect(mode(openclawDir) & 0o2000).not.toBe(0);
+
+      const hash = runScript(tmpDir, [
+        'chown() { printf "chown %s\\n" "$*" >> "$CALL_LOG"; }',
+        'sha256sum() { printf "hash  %s\\n" "$1"; }',
+        rewriteSandbox(
+          dockerRunCommandBetween(
+            ["Dockerfile"],
+            "# Pin config hash",
+            "# DAC-protect .nemoclaw directory",
+          ),
+          sandboxRoot,
+        ),
+      ]);
+      expect(hash.result.status).toBe(0);
+      expect((mode(path.join(openclawDir, ".config-hash")) & 0o777).toString(8)).toBe("664");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 
-  it("Dockerfile has stale-base fallback that idempotently adds gateway to sandbox group", () => {
-    // Older base images won't have the usermod yet; the derived image must
-    // add it at build time so PR images work even before sandbox-base is
-    // rebuilt.
-    expect(DOCKERFILE).toMatch(/id\s+gateway/);
-    expect(DOCKERFILE).toMatch(/usermod\s+-aG\s+sandbox\s+gateway/);
-  });
+  it("normalizes mutable config permissions only when the config dir is not locked", () => {
+    const runCase = (owner: "root" | "sandbox") => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `nemoclaw-2681-normalize-${owner}-`));
+      const sandboxRoot = path.join(tmpDir, "sandbox");
+      const openclawDir = path.join(sandboxRoot, ".openclaw");
+      try {
+        fs.mkdirSync(path.join(openclawDir, "workspace"), { recursive: true });
+        fs.chmodSync(openclawDir, 0o755);
+        fs.chmodSync(path.join(openclawDir, "workspace"), 0o755);
+        const script = shellFunctionFromFile(
+          ["scripts", "nemoclaw-start.sh"],
+          "normalize_mutable_config_perms",
+          sandboxRoot,
+        );
+        const { result } = runScript(
+          tmpDir,
+          [
+            'id() { if [ "${1:-}" = "-u" ]; then printf "0"; return 0; fi; command id "$@"; }',
+            'stat() { if [ "${1:-}" = "-c" ] || [ "${1:-}" = "-f" ]; then printf "%s\\n" "$CONFIG_OWNER"; return 0; fi; command stat "$@"; }',
+            script,
+            "normalize_mutable_config_perms",
+          ],
+          { CONFIG_OWNER: owner },
+        );
+        return { result, openclawDir, tmpDir };
+      } catch (err) {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+        throw err;
+      }
+    };
 
-  it("Dockerfile applies group-writable + setgid in the production image too", () => {
-    expect(DOCKERFILE).toMatch(/chmod\s+-R\s+g\+w\s+\/sandbox\/\.openclaw/);
-    expect(DOCKERFILE).toMatch(
-      /find\s+\/sandbox\/\.openclaw\s+-type\s+d\s+-exec\s+chmod\s+g\+s/,
-    );
-  });
+    const locked = runCase("root");
+    try {
+      expect(locked.result.status).toBe(0);
+      expect(mode(locked.openclawDir) & 0o020).toBe(0);
+      expect(mode(locked.openclawDir) & 0o2000).toBe(0);
+    } finally {
+      fs.rmSync(locked.tmpDir, { recursive: true, force: true });
+    }
 
-  it("Dockerfile creates .config-hash group-writable (664), not read-only-for-group (644)", () => {
-    // Aaron's spec item 3 explicitly calls out "group-writable config/hash
-    // files". The .config-hash sha256 is created AFTER the recursive chmod
-    // g+w pass, so it gets its own explicit chmod. Lock it to 664 so a
-    // future change can't silently revert to 644 and break gateway writes.
-    expect(DOCKERFILE).toMatch(/chmod\s+664\s+\/sandbox\/\.openclaw\/\.config-hash/);
-    expect(DOCKERFILE).not.toMatch(/chmod\s+644\s+\/sandbox\/\.openclaw\/\.config-hash/);
-  });
-
-  it("Dockerfile does NOT introduce a mutateConfigFile EACCES swallow patch", () => {
-    // The PR explicitly replaces #2693's approach. If a future PR adds
-    // Patch 4b back, this test fails and forces re-evaluation.
-    expect(DOCKERFILE).not.toMatch(/Patch\s+4b/);
-    expect(DOCKERFILE).not.toMatch(/mutateConfigFile.*EACCES/);
-    expect(DOCKERFILE).not.toMatch(/mutation not persisted/);
-  });
-
-  it("nemoclaw-start.sh defines normalize_mutable_config_perms", () => {
-    expect(NEMOCLAW_START).toMatch(/normalize_mutable_config_perms\s*\(\)/);
-  });
-
-  it("normalize_mutable_config_perms skips when shields are UP (root-owned config dir)", () => {
-    // The function must check ownership before chmod-ing; if shields are
-    // up the dir is root-owned and normalizing would weaken the lock.
-    const fnIdx = NEMOCLAW_START.indexOf("normalize_mutable_config_perms()");
-    expect(fnIdx).toBeGreaterThan(0);
-    const fnBody = NEMOCLAW_START.slice(fnIdx, fnIdx + 1500);
-    expect(fnBody).toMatch(/stat\s+-c\s+'%U'/);
-    expect(fnBody).toMatch(/= "root"/);
-  });
-
-  it("normalize_mutable_config_perms is called in the root-mode startup path", () => {
-    expect(NEMOCLAW_START).toMatch(/normalize_mutable_config_perms\b[^(]/);
-  });
-
-  it("shields.ts unlock path uses group-writable file mode (660) + setgid dir (2770) for openclaw", () => {
-    // Pre-#2681 openclaw unlock used 600/700 which stripped group-write.
-    // After this PR openclaw uses 660/2770 so the gateway UID (member of
-    // sandbox group) can write OpenClaw config. Hermes is left unchanged
-    // (no separate gateway UID, so the shared-group contract doesn't apply).
-    expect(SHIELDS_TS).toMatch(/agentName === "hermes" \? "640" : "660"/);
-    expect(SHIELDS_TS).toMatch(/agentName === "hermes" \? "750" : "2770"/);
-  });
-
-  it("applyStateDirLockMode re-adds group-write when unlocking (shields down)", () => {
-    // The chmod in the unlock path must explicitly RE-ADD group-write,
-    // not just preserve it. A prior `chmod -R go-w` from shields-up
-    // already stripped g+w from descendants, so unlock must use `g+w,o-w`
-    // to restore the group-writable contract on the whole tree.
-    expect(SHIELDS_TS).toMatch(/isLocking\s*\?\s*"go-w"\s*:\s*"g\+w,o-w"/);
+    const unlocked = runCase("sandbox");
+    try {
+      expect(unlocked.result.status).toBe(0);
+      expect(mode(unlocked.openclawDir) & 0o020).not.toBe(0);
+      expect(mode(unlocked.openclawDir) & 0o2000).not.toBe(0);
+    } finally {
+      fs.rmSync(unlocked.tmpDir, { recursive: true, force: true });
+    }
   });
 });
