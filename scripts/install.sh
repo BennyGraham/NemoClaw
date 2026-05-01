@@ -951,6 +951,63 @@ print(tags[0] if tags else '')
   fi
 }
 
+# Returns the --model value from the running vLLM container's CMD, or empty string.
+get_running_vllm_model() {
+  local container_name="${1:-nemoclaw-vllm}"
+  docker inspect --format '{{join .Config.Cmd " "}}' "$container_name" 2>/dev/null \
+    | grep -oP '(?<=--model )\S+' || true
+}
+
+# Interactive model picker for Station platform.
+# Sets NEMOCLAW_VLLM_MODEL and exports it if the user makes a selection.
+# Falls through silently when non-interactive or when NEMOCLAW_VLLM_MODEL is
+# already set by the caller.
+select_station_model() {
+  # Honour an already-explicit caller choice.
+  if [[ -n "${NEMOCLAW_VLLM_MODEL:-}" ]]; then
+    return 0
+  fi
+
+  # Non-interactive mode (CI / scripted install): skip the prompt and leave
+  # NEMOCLAW_VLLM_MODEL unset so install_vllm() applies its VRAM-based default.
+  if [[ -n "${NEMOCLAW_NON_INTERACTIVE:-}" ]] || ! [[ -t 0 ]]; then
+    return 0
+  fi
+
+  local choice=""
+  printf "\n"
+  printf "  ──────────────────────────────────────────────────\n"
+  printf "  Select inference model for this DGX Station\n"
+  printf "  ──────────────────────────────────────────────────\n"
+  printf "  1) Qwen2.5 72B Instruct         (open weights, no HF token required)\n"
+  printf "  2) DeepSeek-R1 Distill 70B      (open weights, no HF token required)\n"
+  printf "  3) Nemotron-3 Super 120B NVFP4  (gated — requires HF token)  [default]\n"
+  printf "  ──────────────────────────────────────────────────\n"
+  printf "  Choose [3]: "
+  read -r choice
+  choice="${choice:-3}"
+
+  case "$choice" in
+    1)
+      export NEMOCLAW_VLLM_MODEL="Qwen/Qwen2.5-72B-Instruct"
+      info "Selected model: ${NEMOCLAW_VLLM_MODEL}"
+      ;;
+    2)
+      export NEMOCLAW_VLLM_MODEL="deepseek-ai/DeepSeek-R1-Distill-Llama-70B"
+      info "Selected model: ${NEMOCLAW_VLLM_MODEL}"
+      ;;
+    3|"")
+      export NEMOCLAW_VLLM_MODEL="nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4"
+      info "Selected model: ${NEMOCLAW_VLLM_MODEL}"
+      ;;
+    *)
+      warn "Unrecognised choice '${choice}' — using default (Nemotron-3 Super 120B NVFP4)"
+      export NEMOCLAW_VLLM_MODEL="nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4"
+      ;;
+  esac
+  printf "\n"
+}
+
 install_vllm() {
   local force="${1:-}"
   local container_name="nemoclaw-vllm"
@@ -967,37 +1024,8 @@ install_vllm() {
     fi
   fi
 
-  if _port_listening "$port" && _proc_running vllm; then
-    info "vLLM already running on :${port} — skipping pull"
-    return 0
-  fi
-
-  # Remove any existing container (running or stopped) before creating a new one.
-  maybe_sudo docker stop "$container_name" 2>/dev/null || true
-  maybe_sudo docker rm   "$container_name" 2>/dev/null || true
-
-  info "Pulling vLLM container (${image})…"
-  maybe_sudo docker pull "$image"
-
-  local vram_mb vram_gb model_id hf_token hf_cache
-  vram_mb=$(get_vram_mb)
-  vram_gb=$((vram_mb / 1024))
-
-  hf_token="${HUGGING_FACE_HUB_TOKEN:-${HF_TOKEN:-}}"
-  if [[ -z "$hf_token" ]]; then
-    warn "HUGGING_FACE_HUB_TOKEN is not set. Gated models (Nemotron, Llama, etc.) will fail to download."
-    warn "Export HUGGING_FACE_HUB_TOKEN=<your-token> and re-run with --force-reinstall to retry."
-  fi
-
-  hf_cache="${HOME}/.cache/huggingface"
-  mkdir -p "$hf_cache"
-
-  # On mixed-GPU systems (e.g. workstation GPU + GB300) restrict the container
-  # to the highest-VRAM GPU so vLLM subprocess workers don't try to init a
-  # display adapter. Use --gpus "device=N" rather than --gpus all +
-  # CUDA_VISIBLE_DEVICES=N: combining those two flags remaps the device inside
-  # the container to index 0 while the env var still says N, which causes
-  # NVMLError_InvalidArgument in vLLM's worker processes.
+  # Resolve GPU and model_id early so we can compare against a running container
+  # before deciding whether to reuse or replace it.
   local best_gpu_idx=""
   local best_gpu_vram_mb=0
   local gpus_arg="all"
@@ -1015,6 +1043,7 @@ install_vllm() {
   # but only 32 GB per card).
   local best_gpu_vram_gb=$(( best_gpu_vram_mb / 1024 ))
 
+  local model_id
   if [[ -n "${NEMOCLAW_VLLM_MODEL:-}" ]]; then
     model_id="${NEMOCLAW_VLLM_MODEL}"
   elif (( best_gpu_vram_gb >= 120 )); then
@@ -1023,6 +1052,41 @@ install_vllm() {
   else
     model_id="Qwen/Qwen2.5-7B-Instruct"
   fi
+
+  # Check if vLLM is already running. If the model matches, reuse it.
+  # If a different model is loaded, tear it down and re-launch with the new one.
+  if _port_listening "$port" && _proc_running vllm; then
+    local running_model=""
+    running_model=$(get_running_vllm_model "$container_name")
+    if [[ -z "$running_model" || "$running_model" == "$model_id" ]]; then
+      info "vLLM already running on :${port} with model '${model_id}' — skipping pull"
+      return 0
+    fi
+    printf "${C_RED}[WARN]  vLLM is running a different model — replacing it:${C_RESET}\n"
+    printf "${C_RED}        Loaded:    %s${C_RESET}\n" "$running_model"
+    printf "${C_RED}        Requested: %s${C_RESET}\n" "$model_id"
+    printf "${C_RED}        Stopping container '%s'...${C_RESET}\n" "$container_name"
+    maybe_sudo docker stop "$container_name" 2>/dev/null || true
+    maybe_sudo docker rm   "$container_name" 2>/dev/null || true
+  fi
+
+  # Remove any remaining stopped container before creating a new one.
+  maybe_sudo docker stop "$container_name" 2>/dev/null || true
+  maybe_sudo docker rm   "$container_name" 2>/dev/null || true
+
+  info "Pulling vLLM container (${image})…"
+  maybe_sudo docker pull "$image"
+
+  local hf_token hf_cache
+
+  hf_token="${HUGGING_FACE_HUB_TOKEN:-${HF_TOKEN:-}}"
+  if [[ -z "$hf_token" ]]; then
+    warn "HUGGING_FACE_HUB_TOKEN is not set. Gated models (Nemotron, Llama, etc.) will fail to download."
+    warn "Export HUGGING_FACE_HUB_TOKEN=<your-token> and re-run with --force-reinstall to retry."
+  fi
+
+  hf_cache="${HOME}/.cache/huggingface"
+  mkdir -p "$hf_cache"
 
   # Use --network host so that:
   # (a) the host's _port_listening check sees the port only when Uvicorn is
@@ -1390,6 +1454,7 @@ select_backend() {
   #    Ollama is already present, since the GB300 has enough VRAM for vLLM.
   if [[ "${NEMOCLAW_DETECTED_PLATFORM:-}" == "station" ]] && detect_gpu; then
     info "Backend: Station platform — installing vLLM (preferred over Ollama)"
+    select_station_model
     install_vllm
     NEMOCLAW_SELECTED_BACKEND="vllm"
     NEMOCLAW_SELECTED_BACKEND_ENDPOINT="http://127.0.0.1:8000"
