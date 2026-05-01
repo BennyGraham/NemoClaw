@@ -1327,6 +1327,25 @@ _decide_action() {
   fi
 }
 
+# Translate a HuggingFace model ID into a short label for the dependency table.
+# Falls back to the raw ID for anything not in the curated Station picker list.
+_friendly_model_name() {
+  case "${1:-}" in
+    *Nemotron-3-Super-120B*A12B-NVFP4*) printf "Nemotron-3 Super 120B NVFP4" ;;
+    *Qwen2.5-72B-Instruct*)             printf "Qwen2.5 72B Instruct" ;;
+    *DeepSeek-R1-Distill-Llama-70B*)    printf "DeepSeek-R1 Distill 70B" ;;
+    "")                                  printf "-" ;;
+    *)                                   printf "%s" "${1}" ;;
+  esac
+}
+
+# Read the --model flag from the running vLLM container. Empty if absent.
+_running_vllm_model_id() {
+  command -v docker >/dev/null 2>&1 || return 0
+  docker inspect --format '{{join .Config.Cmd " "}}' nemoclaw-vllm 2>/dev/null \
+    | grep -oP '(?<=--model )\S+' 2>/dev/null || true
+}
+
 print_dependency_table() {
   local title="${1:-Dependency status}"
 
@@ -1403,7 +1422,25 @@ print_dependency_table() {
   _row "npm" ">= ${MIN_NPM_MAJOR}.x" "${npm_ver}" "$npm_act"
   _row "OpenShell" ">= ${MIN_OPENSHELL_VERSION}" "${openshell_ver}" "$openshell_act"
   _row "OpenClaw CLI" "bundled w/ NemoClaw" "-" "BUNDLED"
-  _row "Nemotron-3" "auto by VRAM" "-" "PULL" "(background)"
+
+  # Model row — show what was actually selected/loaded rather than a hardcoded
+  # "Nemotron-3" placeholder. Priority: NEMOCLAW_VLLM_MODEL (Station picker
+  # choice) > running vLLM container > pre-install placeholder.
+  local _model_id="${NEMOCLAW_VLLM_MODEL:-}"
+  local _model_req="auto by VRAM" _model_act="PULL" _model_extra="(background)"
+  if [[ -z "$_model_id" ]]; then
+    _model_id="$(_running_vllm_model_id)"
+  fi
+  if [[ -n "$_model_id" ]]; then
+    _model_req="user-selected"
+    if _port_listening 8000 && _proc_running vllm; then
+      _model_act="REUSE"
+    else
+      _model_act="PULL"
+    fi
+    _model_extra=""
+  fi
+  _row "Model" "$_model_req" "$(_friendly_model_name "$_model_id")" "$_model_act" "$_model_extra"
   _row "Backend" "vLLM > SGL > Ollama" "${backend_present}" "$backend_act" \
     "${NEMOCLAW_SELECTED_BACKEND:+-> ${NEMOCLAW_SELECTED_BACKEND}}"
 
