@@ -2355,7 +2355,12 @@ if [ "$(id -u)" -ne 0 ]; then
   export_gateway_token
   write_runtime_shell_env
   ensure_runtime_shell_env_shim
-  lock_rc_files "$_SANDBOX_HOME"
+  lock_rc_files "$_SANDBOX_HOME" || true
+
+  if [ ${#NEMOCLAW_CMD[@]} -gt 0 ]; then
+    exec "${NEMOCLAW_CMD[@]}"
+  fi
+
   configure_messaging_channels
   install_telegram_diagnostics
   install_slack_token_rewriter
@@ -2384,10 +2389,6 @@ if [ "$(id -u)" -ne 0 ]; then
   fix_openclaw_ownership
   write_auth_profile
   harden_auth_profiles
-
-  if [ ${#NEMOCLAW_CMD[@]} -gt 0 ]; then
-    exec "${NEMOCLAW_CMD[@]}"
-  fi
 
   # In non-root mode, detach gateway stdout/stderr from the sandbox-create
   # stream so openshell sandbox create can return once the container is ready.

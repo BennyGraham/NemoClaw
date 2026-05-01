@@ -35,6 +35,14 @@ function runtimeShellEnvShimBlock(src: string): string {
   return src.slice(start, end);
 }
 
+function nonRootFallbackBlock(src: string): string {
+  const start = src.indexOf("# ── Non-root fallback");
+  const end = src.indexOf("# ── Root path", start);
+  expect(start).toBeGreaterThan(-1);
+  expect(end).toBeGreaterThan(start);
+  return src.slice(start, end);
+}
+
 function startScriptHeredoc(src: string, marker: string): string {
   const match = src.match(new RegExp(`<<'${marker}'\\n([\\s\\S]*?)\\n${marker}`));
   expect(match).toBeTruthy();
@@ -75,10 +83,9 @@ describe("nemoclaw-start non-root fallback", () => {
   it("exits on locked config integrity failure in non-root mode", () => {
     const src = fs.readFileSync(START_SCRIPT, "utf-8");
 
-    const nonRootBlock = src.match(/if \[ "\$\(id -u\)" -ne 0 \]; then([\s\S]*?)# ── Root path/);
-    expect(nonRootBlock).toBeTruthy();
+    const nonRootBlock = nonRootFallbackBlock(src);
     // Non-root block must call the locked-aware verifier and exit 1 on failure.
-    expect(nonRootBlock[1]).toMatch(/if ! verify_config_integrity_if_locked\b.*; then\s+.*exit 1/s);
+    expect(nonRootBlock).toMatch(/if ! verify_config_integrity_if_locked\b.*; then\s+.*exit 1/s);
     // Must not contain the old "proceeding anyway" fallback
     expect(src).not.toMatch(/proceeding anyway/i);
   });
@@ -101,9 +108,7 @@ describe("nemoclaw-start non-root fallback", () => {
     // Using ^fi$ would match the first nested fi inside helper functions,
     // truncating the block and including file-writing echo lines that
     // intentionally omit >&2 (e.g., proxy-env.sh generation).
-    const nonRootBlock = src.match(/if \[ "\$\(id -u\)" -ne 0 \]; then([\s\S]*?)# ── Root path/);
-    expect(nonRootBlock).toBeTruthy();
-    const block = nonRootBlock[1];
+    const block = nonRootFallbackBlock(src);
 
     // Only check top-level echo lines that are NOT inside { } > file redirects
     // or { } | emit_sandbox_sourced_file pipe patterns (proxy-env.sh, etc.)
@@ -132,6 +137,17 @@ describe("nemoclaw-start non-root fallback", () => {
     expect(src).toContain('if [ "${1:-}" = "env" ]; then');
     expect(src).toContain('export "${_raw_args[$i]}"');
     expect(src).toContain('set -- "${_raw_args[@]:$((_self_wrapper_index + 1))}"');
+  });
+
+  it("executes explicit non-root commands before gateway startup setup", () => {
+    const src = fs.readFileSync(START_SCRIPT, "utf-8");
+    const block = nonRootFallbackBlock(src);
+
+    const commandExecIndex = block.indexOf("if [ ${#NEMOCLAW_CMD[@]} -gt 0 ]; then");
+    expect(commandExecIndex).toBeGreaterThan(-1);
+    expect(commandExecIndex).toBeLessThan(block.indexOf("configure_messaging_channels"));
+    expect(commandExecIndex).toBeLessThan(block.indexOf("install_telegram_diagnostics"));
+    expect(commandExecIndex).toBeLessThan(block.indexOf("fix_openclaw_ownership"));
   });
 
   it("repairs ownership for all writable OpenClaw state directories in non-root mode", () => {
