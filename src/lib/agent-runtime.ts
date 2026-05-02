@@ -56,10 +56,13 @@ function escapeCharClass(value: string): string {
   return value.replace(/[\\\]\[\^\-]/g, "\\$&");
 }
 
-function selfSafeGatewayProcessPattern(binaryName: string): string {
-  const [first = "", ...rest] = Array.from(binaryName);
+function selfSafeGatewayProcessPattern(command: string): string {
+  const [executable = "", ...args] = command.trim().split(/\s+/).filter(Boolean);
+  const [first = "", ...rest] = Array.from(executable);
   if (!first) return "";
-  return `[${escapeCharClass(first)}]${escapeEre(rest.join(""))}([ -]gateway| gateway run|$)`;
+  const executablePattern = `[${escapeCharClass(first)}]${escapeEre(rest.join(""))}`;
+  const commandPattern = [executablePattern, ...args.map(escapeEre)].join("[[:space:]]+");
+  return `${commandPattern}([[:space:]]|$)`;
 }
 
 /**
@@ -76,10 +79,7 @@ export function buildRecoveryScript(agent: AgentDefinition | null, port: number)
   const configuredGatewayCommand = agent.gateway_command?.trim() || defaultGatewayCommand;
   const usesValidatedBinary = configuredGatewayCommand === defaultGatewayCommand;
   const customGatewayExecutable = configuredGatewayCommand.split(/\s+/)[0] ?? binaryName;
-  const gatewayExecutableName = usesValidatedBinary
-    ? binaryName
-    : (customGatewayExecutable.split("/").pop() ?? customGatewayExecutable);
-  const staleGatewayPattern = selfSafeGatewayProcessPattern(gatewayExecutableName);
+  const staleGatewayPattern = selfSafeGatewayProcessPattern(configuredGatewayCommand);
   const validationSteps = usesValidatedBinary
     ? [
         `AGENT_BIN=${shellQuote(binaryPath)}; if [ ! -x "$AGENT_BIN" ]; then AGENT_BIN="$(command -v ${shellQuote(binaryName)})"; fi;`,
