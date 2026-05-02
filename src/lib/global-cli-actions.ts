@@ -55,12 +55,29 @@ export function showVersion(): void {
 }
 
 export async function recoverNamedGatewayRuntime(): Promise<{ recovered: boolean }> {
+  const runtime = getNemoClawRuntimeBridge() as {
+    recoverNamedGatewayRuntime?: () => Promise<{ recovered: boolean }>;
+  };
+  if (typeof runtime.recoverNamedGatewayRuntime === "function") {
+    return runtime.recoverNamedGatewayRuntime();
+  }
   return recoverNamedGatewayRuntimeAction();
 }
 
 export function runOpenshellProviderCommand(
   args: string[],
-  opts?: { ignoreError?: boolean; stdio?: import("node:child_process").StdioOptions },
+  opts?: {
+    env?: Record<string, string | undefined>;
+    ignoreError?: boolean;
+    stdio?: import("node:child_process").StdioOptions;
+    timeout?: number;
+  },
 ) {
+  const runtime = getNemoClawRuntimeBridge() as {
+    runOpenshell?: typeof runOpenshell;
+  };
+  if (typeof runtime.runOpenshell === "function") {
+    return runtime.runOpenshell(args, opts);
+  }
   return runOpenshell(args, opts);
 }
