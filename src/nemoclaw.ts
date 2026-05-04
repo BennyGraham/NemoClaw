@@ -406,10 +406,9 @@ function ensureSandboxPortForward(sandboxName: string): boolean {
  * with STATUS=running, false when the entry is missing or non-running,
  * and null when openshell is unreachable.
  *
- * #2042: callers must treat a healthy in-sandbox gateway and a healthy
- * host-side forward as independent dimensions. The forward can die
- * (e.g. host SSH session dropped, openshell forward list shows STATUS=dead)
- * while the in-sandbox gateway keeps listening on 127.0.0.1:<port>.
+ * The in-sandbox gateway and the host-side forward are independent
+ * dimensions: the forward can die (host SSH session dropped, list shows
+ * STATUS=dead) while the gateway keeps listening on 127.0.0.1:<port>.
  */
 function isSandboxForwardHealthy(sandboxName: string): boolean | null {
   const agent = agentRuntime.getSessionAgent(sandboxName);
@@ -434,7 +433,7 @@ function isSandboxForwardHealthy(sandboxName: string): boolean | null {
  * Detect and recover from a sandbox that survived a gateway restart but
  * whose OpenClaw processes are not running. Also re-establishes the
  * host-side dashboard port-forward when it has gone dead independently
- * of the gateway (#2042). Returns an object describing the outcome:
+ * of the gateway. Returns an object describing the outcome:
  * `{ checked, wasRunning, recovered, forwardRecovered }`.
  */
 function checkAndRecoverSandboxProcesses(
@@ -448,7 +447,7 @@ function checkAndRecoverSandboxProcesses(
   const _recoveryAgent = agentRuntime.getSessionAgent(sandboxName);
   if (running) {
     // Gateway is alive but the host-side forward can still be dead or
-    // owned by another sandbox (#2042). Probe and re-establish only when
+    // owned by another sandbox. Probe and re-establish only when
     // necessary so the live-and-healthy path stays a no-op.
     const forwardHealthy = isSandboxForwardHealthy(sandboxName);
     if (forwardHealthy === false) {

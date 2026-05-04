@@ -171,7 +171,7 @@ function runRecover(fixture: Fixture) {
   );
 }
 
-describe("nemoclaw <name> recover (#2042)", () => {
+describe("nemoclaw <name> recover", () => {
   it(
     "re-establishes the dashboard port-forward when the gateway is alive but the forward is dead",
     testTimeoutOptions(20_000),
