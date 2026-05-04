@@ -21,6 +21,14 @@ describe("resolveSandboxOclifDispatch", () => {
     });
   });
 
+  it("routes sandbox doctor through oclif", () => {
+    expect(resolveSandboxOclifDispatch("alpha", "doctor", ["--json"])).toEqual({
+      kind: "oclif",
+      commandId: "sandbox:doctor",
+      args: ["alpha", "--json"],
+    });
+  });
+
   it("keeps sandbox logs help public with supported filters", () => {
     expect(resolveSandboxOclifDispatch("alpha", "logs", ["--help"])).toEqual({
       kind: "help",
@@ -40,6 +48,35 @@ describe("resolveSandboxOclifDispatch", () => {
     expect(resolveSandboxOclifDispatch("alpha", "recover", ["--help"])).toEqual({
       kind: "help",
       usage: "recover",
+    });
+  });
+
+  it("routes policy-add missing-value errors through a raw oclif adapter", () => {
+    expect(resolveSandboxOclifDispatch("alpha", "policy-add", ["--from-file"])).toEqual({
+      kind: "oclif",
+      commandId: "sandbox:policy-add:raw",
+      args: ["alpha", "--from-file"],
+    });
+  });
+
+  it("routes skill help and unknown subcommands through oclif", () => {
+    expect(resolveSandboxOclifDispatch("alpha", "skill", ["--help"])).toEqual({
+      kind: "oclif",
+      commandId: "sandbox:skill",
+      args: ["alpha", "--help"],
+    });
+    expect(resolveSandboxOclifDispatch("alpha", "skill", ["bogus"])).toEqual({
+      kind: "oclif",
+      commandId: "sandbox:skill",
+      args: ["alpha", "bogus"],
+    });
+  });
+
+  it("routes snapshot unknown subcommands through oclif", () => {
+    expect(resolveSandboxOclifDispatch("alpha", "snapshot", ["bogus"])).toEqual({
+      kind: "oclif",
+      commandId: "sandbox:snapshot",
+      args: ["alpha", "bogus"],
     });
   });
 });
