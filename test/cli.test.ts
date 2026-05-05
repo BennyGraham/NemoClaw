@@ -12,6 +12,7 @@ import { execTimeout, testTimeout, testTimeoutOptions } from "./helpers/timeouts
 
 const CLI = path.join(import.meta.dirname, "..", "bin", "nemoclaw.js");
 const HERMES_CLI = path.join(import.meta.dirname, "..", "bin", "nemohermes.js");
+const PARSER_EXIT_CODE = 2;
 
 type CliRunResult = {
   code: number;
@@ -905,19 +906,19 @@ describe("CLI dispatch", () => {
 
   it("unknown onboard option exits 1", () => {
     const r = run("onboard --non-interactiv");
-    expect(r.code).not.toBe(0);
+    expect(r.code).toBe(PARSER_EXIT_CODE);
     expect(r.out).toContain("Nonexistent flag: --non-interactiv");
   });
 
   it("accepts onboard --resume in CLI parsing", () => {
     const r = run("onboard --resume --non-interactiv");
-    expect(r.code).not.toBe(0);
+    expect(r.code).toBe(PARSER_EXIT_CODE);
     expect(r.out).toContain("Nonexistent flag: --non-interactiv");
   });
 
   it("accepts the third-party software flag in onboard CLI parsing", () => {
     const r = run("onboard --yes-i-accept-third-party-software --non-interactiv");
-    expect(r.code).not.toBe(0);
+    expect(r.code).toBe(PARSER_EXIT_CODE);
     expect(r.out).toContain("Nonexistent flag: --non-interactiv");
   });
 
@@ -931,7 +932,7 @@ describe("CLI dispatch", () => {
 
   it("setup forwards unknown options into onboard parsing", () => {
     const r = run("setup --non-interactiv");
-    expect(r.code).not.toBe(0);
+    expect(r.code).toBe(PARSER_EXIT_CODE);
     expect(r.out).toContain("Nonexistent flag: --non-interactiv");
   });
 
