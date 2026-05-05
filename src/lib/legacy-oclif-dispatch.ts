@@ -143,6 +143,9 @@ export function resolveSandboxOclifDispatch(
     case "rebuild":
       if (hasHelpFlag(actionArgs)) return { kind: "help", usage: "rebuild [--yes|-y|--force] [--verbose|-v]" };
       return { kind: "oclif", commandId: "sandbox:rebuild", args: [sandboxName, ...actionArgs] };
+    case "recover":
+      if (hasHelpFlag(actionArgs)) return { kind: "help", usage: "recover" };
+      return { kind: "oclif", commandId: "sandbox:recover", args: [sandboxName, ...actionArgs] };
     case "share":
       return { kind: "oclif", commandId: "share", args: [sandboxName, ...actionArgs] };
     case "snapshot": {
@@ -206,8 +209,12 @@ export function resolveSandboxOclifDispatch(
         if (hasHelpFlag(actionArgs.slice(1))) return { kind: "help", usage: "config get [--key dotpath] [--format json|yaml]" };
         return { kind: "oclif", commandId: "sandbox:config:get", args: [sandboxName, ...actionArgs.slice(1)] };
       }
-      if (configSub === "--help" || configSub === "-h") return { kind: "help", usage: "config get [--key dotpath] [--format json|yaml]" };
-      return { kind: "usageError", lines: ["config get [--key dotpath] [--format json|yaml]"] };
+      if (configSub === "set") {
+        if (hasHelpFlag(actionArgs.slice(1))) return { kind: "help", usage: "config set --key <dotpath> --value <value> [--restart] [--config-accept-new-path]" };
+        return { kind: "oclif", commandId: "sandbox:config:set", args: [sandboxName, ...actionArgs.slice(1)] };
+      }
+      if (configSub === "--help" || configSub === "-h") return { kind: "help", usage: "config <get|set>" };
+      return { kind: "usageError", lines: ["config <get|set>", "get [--key dotpath] [--format json|yaml]", "set --key <dotpath> --value <value> [--restart] [--config-accept-new-path]"] };
     }
     default:
       return { kind: "unknownAction", action };
