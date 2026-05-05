@@ -16,7 +16,7 @@ const { loadAgent } = require("./agent-defs");
 
 const PRESETS_DIR = path.join(ROOT, "nemoclaw-blueprint", "policies", "presets");
 
-const MAX_PRESET_FILE_BYTES = 1 * 1024 * 1024;
+const MAX_PRESET_FILE_BYTES = 10_000_000;
 
 type PresetInfo = {
   file: string;
@@ -619,47 +619,55 @@ function applyPreset(
  */
 function loadPresetFromFile(filePath: string): { presetName: string; content: string } | null {
   const abs = path.resolve(filePath);
-  let stat: { isSymbolicLink: () => boolean; isFile: () => boolean; size: number };
-  try {
-    stat = fs.lstatSync(abs);
-  } catch {
-    console.error(`  Preset file not found: ${filePath}`);
-    return null;
-  }
-  if (stat.isSymbolicLink()) {
-    console.error(
-      `  Preset file must not be a symbolic link: ${filePath} (resolve with 'realpath' and pass the target path).`,
-    );
-    return null;
-  }
-  if (!stat.isFile()) {
-    console.error(`  Preset file not found: ${filePath}`);
-    return null;
-  }
-  if (stat.size > MAX_PRESET_FILE_BYTES) {
-    console.error(
-      `  Preset file too large: ${filePath} (${stat.size} bytes; max ${MAX_PRESET_FILE_BYTES} bytes).`,
-    );
-    return null;
-  }
   if (!/\.ya?ml$/i.test(abs)) {
     console.error(`  Preset file must be .yaml or .yml: ${filePath}`);
+    return null;
+  }
+  const NOFOLLOW = fs.constants.O_NOFOLLOW ?? 0;
+  let fd: number;
+  try {
+    fd = fs.openSync(abs, fs.constants.O_RDONLY | NOFOLLOW);
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException)?.code;
+    if (code === "ELOOP" || code === "EMLINK") {
+      console.error(
+        `  Preset file must not be a symbolic link: ${filePath} (resolve with 'realpath' and pass the target path).`,
+      );
+    } else if (code === "ENOENT" || code === "ENOTDIR") {
+      console.error(`  Preset file not found: ${filePath}`);
+    } else if (code === "EACCES" || code === "EPERM") {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`  Cannot read ${filePath}: ${message}`);
+    } else {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`  Cannot read ${filePath}: ${message}`);
+    }
     return null;
   }
   let content: string;
   let parsed: PolicyValue;
   try {
-    content = fs.readFileSync(abs, "utf-8");
-    parsed = YAML.parse(content);
-  } catch (err: unknown) {
-    const code = (err as NodeJS.ErrnoException)?.code;
-    const message = err instanceof Error ? err.message : String(err);
-    const msg =
-      code === "ENOENT" || code === "EACCES"
-        ? `Cannot read ${filePath}: ${message}`
-        : `Invalid YAML in ${filePath}: ${message}`;
-    console.error(`  ${msg}`);
-    return null;
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile()) {
+      console.error(`  Preset file not found: ${filePath}`);
+      return null;
+    }
+    if (stat.size > MAX_PRESET_FILE_BYTES) {
+      console.error(
+        `  Preset file too large: ${filePath} (${stat.size} bytes; max ${MAX_PRESET_FILE_BYTES} bytes).`,
+      );
+      return null;
+    }
+    try {
+      content = fs.readFileSync(fd, "utf-8");
+      parsed = YAML.parse(content);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`  Invalid YAML in ${filePath}: ${message}`);
+      return null;
+    }
+  } finally {
+    fs.closeSync(fd);
   }
   if (!isPolicyDocument(parsed)) {
     console.error(`  Preset must be a YAML mapping: ${filePath}`);

@@ -1401,7 +1401,7 @@ Promise.resolve(require(${CLI_PATH}).mainPromise).finally(() => {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-custom-preset-"));
       tmpDirs.push(dir);
       const file = path.join(dir, "huge.yaml");
-      const padding = "# ".repeat(1024 * 1024);
+      const padding = "# ".repeat(5_500_000);
       fs.writeFileSync(file, `preset:\n  name: huge\nnetwork_policies:\n  r:\n    name: r\n${padding}`);
       const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       try {
