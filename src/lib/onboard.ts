@@ -1262,8 +1262,7 @@ function getRecordedMessagingChannelsForResume(
   if (!resume || !isNonInteractive() || !Array.isArray(session?.messagingChannels)) {
     return null;
   }
-  const channels = getKnownMessagingChannels(session.messagingChannels);
-  return channels.length > 0 ? channels : null;
+  return getKnownMessagingChannels(session.messagingChannels);
 }
 
 /**
@@ -4227,7 +4226,8 @@ async function createSandbox(
   if (enabledChannels != null) {
     for (const { name, envKey, token } of messagingTokenDefs) {
       if (token) continue;
-      const channel = getMessagingChannelForEnvKey(envKey);
+      const channel =
+        envKey === "SLACK_APP_TOKEN" ? "slack" : getMessagingChannelForEnvKey(envKey);
       if (!channel || !enabledChannels.includes(channel)) continue;
       if (!providerExistsInGateway(name)) continue;
       reusableMessagingProviders.push(name);

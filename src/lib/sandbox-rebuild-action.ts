@@ -323,9 +323,13 @@ export async function rebuildSandbox(
     : null;
   const sessionMessagingChannels =
     sessionMatchesSandbox && Array.isArray(sessionBefore?.messagingChannels)
-      ? sessionBefore.messagingChannels
+      ? sessionBefore.messagingChannels.filter(
+          (value: unknown): value is string => typeof value === "string",
+        )
       : null;
   const rebuildMessagingChannels = registryMessagingChannels ?? sessionMessagingChannels ?? [];
+  const hasRebuildMessagingChannels =
+    registryMessagingChannels !== null || sessionMessagingChannels !== null;
   log(
     `Session before update: sandboxName=${sessionBefore?.sandboxName}, status=${sessionBefore?.status}, resumable=${sessionBefore?.resumable}, provider=${sessionBefore?.provider}, model=${sessionBefore?.model}, sessionMatch=${sessionMatchesSandbox}`,
   );
@@ -465,7 +469,7 @@ export async function rebuildSandbox(
   }
 
   const preservedRegistryFields = {
-    ...(Array.isArray(sb.messagingChannels) ? { messagingChannels: [...sb.messagingChannels] } : {}),
+    ...(hasRebuildMessagingChannels ? { messagingChannels: [...rebuildMessagingChannels] } : {}),
     ...(Array.isArray(sb.disabledChannels) && sb.disabledChannels.length > 0
       ? { disabledChannels: [...sb.disabledChannels] }
       : {}),

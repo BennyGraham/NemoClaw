@@ -3924,6 +3924,8 @@ runner.run = (command, opts = {}) => {
   const normalized = _n(command);
   commands.push({ command: normalized, env: opts.env || null });
   if (normalized.includes("provider get my-assistant-discord-bridge")) return { status: 0 };
+  if (normalized.includes("provider get my-assistant-slack-bridge")) return { status: 0 };
+  if (normalized.includes("provider get my-assistant-slack-app")) return { status: 0 };
   if (normalized.includes("provider get")) return { status: 1 };
   return { status: 0 };
 };
@@ -3975,7 +3977,7 @@ const { createSandbox } = require(${onboardPath});
   delete process.env.SLACK_APP_TOKEN;
   delete process.env.TELEGRAM_BOT_TOKEN;
   const sandboxName = await createSandbox(
-    null, "gpt-5.4", "nvidia-prod", null, "my-assistant", null, ["discord"],
+    null, "gpt-5.4", "nvidia-prod", null, "my-assistant", null, ["discord", "slack"],
   );
   console.log(JSON.stringify({ sandboxName, commands, registerCalls }));
 })().catch((error) => {
@@ -4010,10 +4012,14 @@ const { createSandbox } = require(${onboardPath});
       assert.ok(payloadLine, `expected JSON payload in stdout:\n${result.stdout}`);
       const payload = JSON.parse(payloadLine);
 
-      const providerCreateCommands = payload.commands.filter((entry: CommandEntry) =>
-        entry.command.includes("provider create"),
+      const providerMutationCommands = payload.commands.filter((entry: CommandEntry) =>
+        /\bprovider (create|update)\b/.test(entry.command),
       );
-      assert.equal(providerCreateCommands.length, 0, "tokenless rebuild should not create providers");
+      assert.equal(
+        providerMutationCommands.length,
+        0,
+        "tokenless rebuild should not mutate providers",
+      );
 
       const createCommand = payload.commands.find((entry: CommandEntry) =>
         entry.command.includes("sandbox create"),
@@ -4021,14 +4027,16 @@ const { createSandbox } = require(${onboardPath});
       assert.ok(createCommand, "expected sandbox create command");
       assert.equal(createCommand.dockerfileReadError, undefined);
       assert.match(createCommand.command, /--provider my-assistant-discord-bridge/);
+      assert.match(createCommand.command, /--provider my-assistant-slack-bridge/);
+      assert.match(createCommand.command, /--provider my-assistant-slack-app/);
 
       const channelsLine = createCommand.dockerfileContent
         ?.split("\n")
         .find((line: string) => line.startsWith("ARG NEMOCLAW_MESSAGING_CHANNELS_B64="));
       assert.ok(channelsLine, "expected messaging build arg in Dockerfile");
       const channels = JSON.parse(Buffer.from(channelsLine.split("=")[1], "base64").toString());
-      assert.deepEqual(channels, ["discord"]);
-      assert.deepEqual(payload.registerCalls[0]?.messagingChannels, ["discord"]);
+      assert.deepEqual(channels, ["discord", "slack"]);
+      assert.deepEqual(payload.registerCalls[0]?.messagingChannels, ["discord", "slack"]);
     },
   );
 
