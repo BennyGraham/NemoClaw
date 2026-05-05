@@ -49,7 +49,7 @@ You do not need to install local software for this flow.
 
 ## Get Your NVIDIA API Key
 
-Use this key during setup when you select the default NVIDIA Cloud provider.
+If you already have an NVIDIA API key skip this section. Otherwise, follow these steps to generate a new key:
 
 1. Go to [build.nvidia.com](https://build.nvidia.com).
 2. Sign in or create an account.
@@ -61,6 +61,8 @@ Use this key during setup when you select the default NVIDIA Cloud provider.
 Keep this key ready for the next step.
 
 ## Launch NemoClaw from Brev
+
+Use the [NemoClaw Brev launchable](https://brev.nvidia.com/launchable/deploy/now?launchableID=env-3Azt0aYgVNFEuz7opyx3gscmowS) to launch a NemoClaw sandbox from your browser.
 
 1. Open the [NemoClaw Brev launchable](https://brev.nvidia.com/launchable/deploy/now?launchableID=env-3Azt0aYgVNFEuz7opyx3gscmowS) and sign in if prompted.
 2. Review the instance type, cloud provider, and estimated hourly cost on the NemoClaw setup page.
