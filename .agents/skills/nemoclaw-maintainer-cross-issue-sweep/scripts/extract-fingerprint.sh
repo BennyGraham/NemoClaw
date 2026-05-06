@@ -30,14 +30,14 @@ if [ "${1:-}" = "--repo" ]; then
 fi
 
 # Touched files (drop test fixtures, lockfiles, generated outputs).
-files=$(gh pr view "$pr" "${repo_args[@]}" --json files --jq '[.files[].path] | map(select(
+files=$(gh pr view "$pr" "${repo_args[@]+"${repo_args[@]}"}" --json files --jq '[.files[].path] | map(select(
     test("/(fixtures|generated|node_modules)/") | not
   )) | map(select(
     (endswith("package-lock.json") or endswith("yarn.lock") or endswith("pnpm-lock.yaml")) | not
   ))' 2>/dev/null) || files='[]'
 
 # Diff for symbol + error-string extraction.
-diff=$(gh pr diff "$pr" "${repo_args[@]}" 2>/dev/null) || diff=""
+diff=$(gh pr diff "$pr" "${repo_args[@]+"${repo_args[@]}"}" 2>/dev/null) || diff=""
 
 # Touched symbols. Extract from added/modified lines (start with `+`, not `+++`).
 # Per-language regex; defaults match TypeScript/JavaScript/Python/Go/shell.
@@ -53,6 +53,8 @@ extract_symbols() {
   printf '%s' "$1" | grep -oE 'class [A-Za-z_$][A-Za-z0-9_$]*' | awk '{print $2}' || true
   printf '%s' "$1" | grep -oE 'def [A-Za-z_][A-Za-z0-9_]*' | awk '{print $2}' || true
   printf '%s' "$1" | grep -oE 'func [A-Z][A-Za-z0-9_]*' | awk '{print $2}' || true
+  # Go receiver methods: `func (r *Repo) GetIssue(...)` — capture the method name.
+  printf '%s' "$1" | grep -oE 'func \([^)]+\) [A-Z][A-Za-z0-9_]*' | awk '{print $NF}' || true
   printf '%s' "$1" | grep -oE 'const [A-Za-z_$][A-Za-z0-9_$]*' | awk '{print $2}' || true
   printf '%s' "$1" | grep -oE 'export default (function|class) [A-Za-z_$][A-Za-z0-9_$]*' | awk '{print $4}' || true
   printf '%s' "$1" | grep -oE 'export (function|class|const|let|var) [A-Za-z_$][A-Za-z0-9_$]*' | awk '{print $3}' || true
@@ -82,10 +84,10 @@ error_strings=$(extract_error_strings "$added_lines" \
   | jq -Rn '[inputs | select(length > 0)]')
 
 # Primary linked issue — first match in body for closes/fixes/resolves #N.
-body=$(gh pr view "$pr" "${repo_args[@]}" --json body --jq .body 2>/dev/null || echo "")
+body=$(gh pr view "$pr" "${repo_args[@]+"${repo_args[@]}"}" --json body --jq .body 2>/dev/null || echo "")
 primary_issue=$(printf '%s' "$body" \
-  | grep -oiE '(closes|fixes|resolves|fix)\s+#[0-9]+' \
-  | grep -oE '[0-9]+' \
+  | { grep -oiE '(closes|fixes|resolves|fix)\s+#[0-9]+' || true; } \
+  | { grep -oE '[0-9]+' || true; } \
   | head -n 1)
 primary_issue="${primary_issue:-null}"
 

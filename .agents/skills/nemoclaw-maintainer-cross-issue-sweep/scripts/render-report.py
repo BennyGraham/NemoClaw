@@ -46,14 +46,23 @@ CONFIDENCE_RANK = {"low": 0, "medium": 1, "high": 2}
 def _format_entry(c: dict[str, Any]) -> str:
     """Render one classification line with evidence summary."""
     boost_marker = " [boosted from reverse-link]" if c.get("reverse_link_boosted") else ""
-    evidence = c.get("evidence", {})
+    evidence = c.get("evidence") or {}
+    if not isinstance(evidence, dict):
+        evidence = {}
     diff_line = evidence.get("pr_diff_line", "?")
     symptom = evidence.get("issue_symptom", "?")
+    issue_number = c.get("issue_number", "?")
+    confidence = c.get("confidence", "low")
     return (
-        f"- **#{c['issue_number']}** ({c['confidence']}{boost_marker}) "
+        f"- **#{issue_number}** ({confidence}{boost_marker}) "
         f"— {diff_line} matches {symptom}\n"
         f"  → {evidence.get('reasoning', '')}"
     )
+
+
+def _is_valid_classification(c: Any) -> bool:
+    """Skip null entries and entries missing the keys downstream code reads."""
+    return isinstance(c, dict) and "issue_number" in c and "class" in c
 
 
 def main() -> int:
@@ -81,12 +90,13 @@ def main() -> int:
         print("Invalid spec: 'suppressed' must be a JSON object", file=sys.stderr)
         return 64
 
+    valid = [c for c in classifications if _is_valid_classification(c)]
     adjacent = sorted(
-        [c for c in classifications if c.get("class") == "ADJACENT_FIX"],
+        [c for c in valid if c.get("class") == "ADJACENT_FIX"],
         key=lambda c: -CONFIDENCE_RANK.get(c.get("confidence", "low"), 0),
     )
     contradicting = sorted(
-        [c for c in classifications if c.get("class") == "CONTRADICTING"],
+        [c for c in valid if c.get("class") == "CONTRADICTING"],
         key=lambda c: -CONFIDENCE_RANK.get(c.get("confidence", "low"), 0),
     )
 

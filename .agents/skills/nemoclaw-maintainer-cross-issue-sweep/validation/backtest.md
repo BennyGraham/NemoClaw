@@ -7,7 +7,7 @@ Run the sweep retroactively on PRs that turned out to fix or break other issues,
 Find merged PRs that retroactively closed adjacent issues:
 
 ```bash
-gh search prs --repo OWNER/REPO --merged --in:body "closes #" --limit 50 \
+gh search prs --repo OWNER/REPO --merged "closes # in:body" --limit 50 \
   --json number,title,body
 ```
 
