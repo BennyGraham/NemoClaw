@@ -10,8 +10,8 @@
   "oclif": {
     "bin": "nemoclaw",
     "commands": {
-      "strategy": "explicit",
-      "target": "./dist/lib/commands/index.js"
+      "strategy": "pattern",
+      "target": "./dist/commands"
     }
   },
   "scripts": {
