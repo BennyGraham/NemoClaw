@@ -166,7 +166,7 @@ export function buildOpenClawRecoveryScript(port: number): string {
     "if [ -r /tmp/nemoclaw-proxy-env.sh ]; then . /tmp/nemoclaw-proxy-env.sh; _PE_MISSING=0; else _PE_MISSING=1; fi;",
     "[ -f ~/.bashrc ] && . ~/.bashrc;",
     'if [ "$_PE_MISSING" = "0" ]; then case "${NODE_OPTIONS:-}" in *nemoclaw-sandbox-safety-net*) _SN_MISSING=0 ;; *) _SN_MISSING=1 ;; esac; case "${NODE_OPTIONS:-}" in *nemoclaw-ciao-network-guard*) _CIAO_MISSING=0 ;; *) _CIAO_MISSING=1 ;; esac; if [ "$_SN_MISSING" = "0" ] && [ "$_CIAO_MISSING" = "0" ]; then _GUARDS_MISSING=0; else _GUARDS_MISSING=1; fi; else _GUARDS_MISSING=0; fi;',
-    `if curl -sf --max-time 3 http://127.0.0.1:${port}/ > /dev/null 2>&1; then echo ALREADY_RUNNING; exit 0; fi;`,
+    `_GW_CODE=$(curl -so /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:${port}/health 2>/dev/null || echo 000); case "$_GW_CODE" in 200|401) echo ALREADY_RUNNING; exit 0 ;; esac;`,
     "rm -rf /tmp/openclaw-*/gateway.*.lock 2>/dev/null;",
     ...buildGatewayLogSetup(true, "gateway"),
     buildGatewayLogSelection(),
@@ -231,7 +231,7 @@ export function buildRecoveryScript(agent: AgentDefinition | null, port: number)
   return [
     "[ -f ~/.bashrc ] && . ~/.bashrc;",
     hermesHome,
-    `if curl -sf --max-time 3 ${shellQuote(probeUrl)} > /dev/null 2>&1; then echo ALREADY_RUNNING; exit 0; fi;`,
+    `_GW_CODE=$(curl -so /dev/null -w '%{http_code}' --max-time 3 ${shellQuote(probeUrl)} 2>/dev/null || echo 000); case "$_GW_CODE" in 200|401) echo ALREADY_RUNNING; exit 0 ;; esac;`,
     ...buildGatewayLogSetup(false),
     buildGatewayLogSelection(),
     `_GATEWAY_PROC_PATTERN=${shellQuote(staleGatewayPattern)};`,
