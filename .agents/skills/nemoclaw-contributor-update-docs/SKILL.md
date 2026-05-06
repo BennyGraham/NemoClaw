@@ -159,9 +159,8 @@ After drafting all updates, present a summary to the user:
 
 If the user invoked this skill for release prep, finish the release-specific doc work before verification:
 
-1. Make any requested doc version bumps in release notes, install instructions, or command examples.
+1. Make any requested doc version bumps in `versions1.json` and `project.json` in the `docs/` directory.
 2. Re-read changed pages after the version bump and ensure the new version appears consistently.
-3. Do not create a separate "refresh user skills" task. The user-skill refresh is the generated output step for this documentation workflow.
 
 Skip this step when the user only asked for ordinary doc catch-up and no release prep is involved.
 

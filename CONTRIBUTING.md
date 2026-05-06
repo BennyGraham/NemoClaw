@@ -86,7 +86,7 @@ All git hooks are managed by [prek](https://prek.j178.dev/), a fast, single-bina
 
 | Hook | What runs |
 |------|-----------|
-| **pre-commit** | File fixers, formatters, linters, doc-to-skills regeneration, Vitest (plugin) |
+| **pre-commit** | File fixers, formatters, linters, docs-to-skills dry-run validation, Vitest (plugin) |
 | **commit-msg** | commitlint (Conventional Commits) |
 | **pre-push** | TypeScript type check (`tsc --noEmit` for plugin, JS, and CLI) |
 
@@ -146,58 +146,7 @@ See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for the full style guide and wr
 
 ### Doc-to-Skills Pipeline
 
-The `docs/` directory is the source of truth for user-facing documentation.
-The script `scripts/docs-to-skills.py` converts doc pages into agent skills under `.agents/skills/`.
-These generated skills let AI agents answer user questions and walk through procedures without reading raw doc pages.
-
-Always edit pages in `docs/`.
-Do not hand-edit generated skill files under `.agents/skills/nemoclaw-user-*/` — regenerate them from the source docs.
-
-Pull requests that change docs must include both the source pages under `docs/` and the generated `.agents/skills/nemoclaw-user-*` output. Local hooks regenerate the skills before commit so generated updates stay inside the human-authored PR, where branch protection can verify the commit signature and DCO sign-off.
-
-For daily release prep, use this sequence:
-
-1. Run the `nemoclaw-contributor-update-docs` skill for the day's release prep.
-2. Make doc version bumps.
-3. Run `python scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw-user`.
-4. Create the PR with both docs and generated user skills.
-
-To regenerate skills manually before committing a docs PR, run from the repo root:
-
-```bash
-python scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw-user
-```
-
-Always use this exact output path (`.agents/skills/`) and prefix (`nemoclaw-user`) so skill names and locations stay consistent.
-
-Preview what would change before writing files:
-
-```bash
-python scripts/docs-to-skills.py docs/ .agents/skills/ --prefix nemoclaw-user --dry-run
-```
-
-Other useful flags:
-
-| Flag | Purpose |
-|------|---------|
-| `--strategy <name>` | Grouping strategy: `smart` (default), `grouped`, or `individual`. |
-| `--name-map CAT=NAME` | Override a generated skill name (e.g. `--name-map about=overview`). |
-| `--exclude <file>` | Skip specific files (e.g. `--exclude "release-notes.md"`). |
-
-#### Generated skill structure
-
-Each skill directory contains:
-
-```text
-.agents/skills/<skill-name>/
-├── SKILL.md              # Frontmatter + procedures + related skills
-└── references/           # Detailed concept and reference content (loaded on demand)
-    ├── <concept-page>.md
-    └── <reference-page>.md
-```
-
-Agents load the `references/` directory only when needed (progressive disclosure).
-The `SKILL.md` itself stays under 500 lines so agents can read it quickly.
+For user-skill definitions, docs-to-skills validation, release-prep regeneration, and script flags, see [Doc-to-Skills Pipeline](docs/CONTRIBUTING.md#doc-to-skills-pipeline).
 
 ## Pull Requests
 
