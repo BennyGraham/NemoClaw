@@ -32,7 +32,7 @@ const {
   parseSandboxConnectArgs,
   printSandboxConnectHelp,
 } = require("./lib/actions/sandbox/connect");
-const { runRegisteredOclifCommand } = require("./lib/cli/oclif-runner");
+const { runOclifArgv, runRegisteredOclifCommand } = require("./lib/cli/oclif-runner");
 const {
   canonicalUsageList,
   globalCommandTokens,
@@ -153,6 +153,15 @@ async function runDispatchResult(
 
 // eslint-disable-next-line complexity
 async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
+  if (argv[0] === "internal") {
+    await runOclifArgv(argv, {
+      rootDir: ROOT,
+      error: console.error,
+      exit: (code: number) => process.exit(code),
+    });
+    return;
+  }
+
   const normalized = normalizeArgv(argv, {
     globalCommands: GLOBAL_COMMANDS,
     isSandboxConnectFlag,
