@@ -10232,6 +10232,27 @@ async function onboard(opts: OnboardOptions = {}): Promise<void> {
       ensureAgentDashboardForward(sandboxName, agent);
     }
 
+    // Final mutable-default permission normalization (#2681).
+    // The OpenClaw gateway atomically rewrites openclaw.json during its
+    // init sequence, resetting file permissions from 660 to 600. By the
+    // time we reach this point all startup writes (Step 7 config sync,
+    // Step 8 policy presets, gateway init) have landed, so a single
+    // trailing chmod pass is sufficient to restore the group-writable
+    // contract before the user's first interaction.
+    runOpenshell(
+      [
+        "sandbox",
+        "exec",
+        "-n",
+        sandboxName,
+        "--",
+        "sh",
+        "-lc",
+        'cd=/sandbox/.openclaw; [ -d "$cd" ] && o="$(stat -c %U "$cd" 2>/dev/null || echo unknown)" && [ "$o" != root ] && { chmod -R g+rwX,o-rwx "$cd" 2>/dev/null; find "$cd" -type d -exec chmod g+s {} + 2>/dev/null; chmod 2770 "$cd" 2>/dev/null; chmod 660 "$cd/openclaw.json" "$cd/.config-hash" 2>/dev/null; } || true',
+      ],
+      { ignoreError: true, suppressOutput: true, stdio: ["ignore", "ignore", "ignore"], timeout: 15_000 },
+    );
+
     onboardSession.completeSession(toSessionUpdates({ sandboxName, provider, model }));
     completed = true;
     // Onboarding finished successfully. Delete the legacy plaintext

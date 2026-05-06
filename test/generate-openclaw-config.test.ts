@@ -300,12 +300,12 @@ describe("generate-openclaw-config.py: config generation", () => {
     expect(config.plugins.entries.xai.enabled).toBe(false);
   });
 
-  it("creates file with 0600 permissions", () => {
+  it("creates file with 0660 (group-writable mutable-default) permissions", () => {
     runConfigScript();
     const configPath = path.join(tmpDir, ".openclaw", "openclaw.json");
     const stats = fs.statSync(configPath);
-    // 0o600 = owner read/write only (octal 600 = decimal 384)
-    expect(stats.mode & 0o777).toBe(0o600);
+    // 0o660 = owner + group read/write (mutable-default contract, #2681)
+    expect(stats.mode & 0o777).toBe(0o660);
   });
 });
 

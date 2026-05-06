@@ -350,10 +350,16 @@ def main() -> None:
     """Generate openclaw.json from environment variables."""
     config = build_config()
     path = os.path.expanduser("~/.openclaw/openclaw.json")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    config_dir = os.path.dirname(path)
+    os.makedirs(config_dir, exist_ok=True)
     with open(path, "w") as f:
         json.dump(config, f, indent=2)
-    os.chmod(path, 0o600)
+    # Mutable-default contract (#2681): config files are group-writable (660)
+    # and directories are setgid (2770) so the sandbox group can read/write
+    # them at runtime. The Dockerfile's final chmod layer reinforces this,
+    # but keeping the generator consistent avoids a window of wrong perms.
+    os.chmod(path, 0o660)
+    os.chmod(config_dir, 0o2770)
 
 
 if __name__ == "__main__":

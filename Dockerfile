@@ -383,7 +383,7 @@ path = os.path.expanduser('~/.openclaw/openclaw.json'); \
 cfg = json.load(open(path)); \
 cfg.setdefault('gateway', {}).setdefault('auth', {})['token'] = ''; \
 json.dump(cfg, open(path, 'w'), indent=2); \
-os.chmod(path, 0o600)"
+os.chmod(path, 0o660)"
 
 # Flatten stale published base images that still contain the old
 # .openclaw-data symlink bridge. OpenShell starts the sandbox as the sandbox
