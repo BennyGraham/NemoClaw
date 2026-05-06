@@ -33,18 +33,18 @@ const {
   dockerInspect,
   dockerRemoveVolumesByPrefix,
   dockerRmi,
-} = require("./lib/docker");
+} = require("./lib/adapters/docker");
 const { resolveOpenshell } = require("./lib/adapters/openshell/resolve");
 const { hydrateCredentialEnv, isNonInteractive } = require("./lib/onboard");
-const registry = require("./lib/registry");
-import type { SandboxEntry } from "./lib/registry";
+const registry = require("./lib/state/registry");
+import type { SandboxEntry } from "./lib/state/registry";
 const nim = require("./lib/nim");
 const shields = require("./lib/shields");
 const { parseGatewayInference } = require("./lib/inference-config");
 const policies = require("./lib/policies");
 const { probeProviderHealth } = require("./lib/inference-health");
 const { buildStatusCommandDeps } = require("./lib/status-command-deps");
-const { help, version } = require("./lib/root-help-action");
+const { help, version } = require("./lib/actions/root-help");
 const onboardSession = require("./lib/onboard-session");
 import type { Session } from "./lib/onboard-session";
 const { stripAnsi } = require("./lib/adapters/openshell/client");
@@ -67,17 +67,16 @@ const {
 const {
   getSandboxDeleteOutcome,
 } = require("./lib/actions/sandbox/destroy");
-const { runRegisteredOclifCommand } = require("./lib/cli/oclif-runner");
+const { runOclifArgv, runRegisteredOclifCommand } = require("./lib/cli/oclif-runner");
 const { isErrnoException }: typeof import("./lib/errno") = require("./lib/errno");
 const agentRuntime = require("../bin/lib/agent-runtime");
-const sandboxState = require("./lib/sandbox-state");
+const sandboxState = require("./lib/state/sandbox");
 const { parseRestoreArgs } = sandboxState;
 const {
   getActiveSandboxSessions,
   createSystemDeps: createSessionDeps,
   parseForwardList,
-} = require("./lib/sandbox-session-state");
-
+} = require("./lib/state/sandbox-session");
 const {
   canonicalUsageList,
   globalCommandTokens,
@@ -232,6 +231,15 @@ async function runDispatchResult(
 
 // eslint-disable-next-line complexity
 async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
+  if (argv[0] === "internal") {
+    await runOclifArgv(argv, {
+      rootDir: ROOT,
+      error: console.error,
+      exit: (code: number) => process.exit(code),
+    });
+    return;
+  }
+
   const normalized = normalizeArgv(argv, {
     globalCommands: GLOBAL_COMMANDS,
     isSandboxConnectFlag,
