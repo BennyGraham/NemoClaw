@@ -144,6 +144,17 @@ export function getGatewayReuseState(
   return "missing";
 }
 
+export function shouldSelectNamedGatewayForReuse(
+  statusOutput = "",
+  gwInfoOutput = "",
+  activeGatewayInfoOutput = "",
+): boolean {
+  return (
+    getGatewayReuseState(statusOutput, gwInfoOutput, activeGatewayInfoOutput) === "foreign-active" &&
+    hasStaleGateway(gwInfoOutput)
+  );
+}
+
 export function parseSandboxPhase(getOutput: string): string | null {
   if (typeof getOutput !== "string") return null;
   const clean = stripAnsi(getOutput);

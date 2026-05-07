@@ -8,8 +8,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { DASHBOARD_PORT } from "../../ports";
-import { ROOT, shellQuote } from "../../runner";
 import {
   captureOpenshell,
   captureOpenshellForStatus,
@@ -18,6 +16,9 @@ import {
   runOpenshell,
 } from "../../adapters/openshell/runtime";
 import { OPENSHELL_PROBE_TIMEOUT_MS } from "../../adapters/openshell/timeouts";
+import { DASHBOARD_PORT } from "../../ports";
+import { ROOT, shellQuote } from "../../runner";
+import * as registry from "../../state/registry";
 import { parseForwardList } from "../../state/sandbox-session";
 import { G, R } from "../../terminal-style";
 import { sleepSeconds } from "../../wait";
@@ -30,8 +31,42 @@ export type SandboxCommandResult = {
   stderr: string;
 };
 
+type SandboxPortDeps = {
+  getSandbox?: typeof registry.getSandbox;
+  getSessionAgent?: typeof agentRuntime.getSessionAgent;
+};
+
 const SANDBOX_EXEC_STARTED_MARKER = "__NEMOCLAW_SANDBOX_EXEC_STARTED__";
-const DASHBOARD_FORWARD_PORT = String(DASHBOARD_PORT);
+
+function isValidPort(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 65535
+  );
+}
+
+export function resolveSandboxDashboardPort(
+  sandboxName: string,
+  deps: SandboxPortDeps = {},
+): number {
+  const getSessionAgent = deps.getSessionAgent ?? agentRuntime.getSessionAgent;
+  const agent = getSessionAgent(sandboxName);
+  if (agent) {
+    return agent.forwardPort ?? DASHBOARD_PORT;
+  }
+
+  const getSandbox = deps.getSandbox ?? registry.getSandbox;
+  const sandbox = getSandbox(sandboxName);
+  return isValidPort(sandbox?.dashboardPort) ? sandbox.dashboardPort : DASHBOARD_PORT;
+}
+
+function getSandboxHealthProbeUrl(sandboxName: string): string {
+  const agent = agentRuntime.getSessionAgent(sandboxName);
+  if (agent) return agentRuntime.getHealthProbeUrl(agent);
+  return `http://127.0.0.1:${resolveSandboxDashboardPort(sandboxName)}/health`;
+}
 
 /**
  * Run a command inside the sandbox via SSH and return { status, stdout, stderr }.
@@ -163,8 +198,7 @@ function parseSandboxGatewayProbe(result: SandboxCommandResult | null): boolean 
  * "Health Offline" readings.
  */
 function isSandboxGatewayRunning(sandboxName: string): boolean | null {
-  const agent = agentRuntime.getSessionAgent(sandboxName);
-  const probeUrl = agentRuntime.getHealthProbeUrl(agent);
+  const probeUrl = getSandboxHealthProbeUrl(sandboxName);
   const command = `HTTP_CODE=$(curl -so /dev/null -w '%{http_code}' --max-time 3 ${shellQuote(probeUrl)} 2>/dev/null || echo 000); case "$HTTP_CODE" in 200|401) echo RUNNING ;; *) echo STOPPED ;; esac`;
   const execProbe = parseSandboxGatewayProbe(executeSandboxExecCommand(sandboxName, command));
   if (execProbe !== null) return execProbe;
@@ -174,8 +208,7 @@ function isSandboxGatewayRunning(sandboxName: string): boolean | null {
 export async function isSandboxGatewayRunningForStatus(
   sandboxName: string,
 ): Promise<boolean | null> {
-  const agent = agentRuntime.getSessionAgent(sandboxName);
-  const probeUrl = agentRuntime.getHealthProbeUrl(agent);
+  const probeUrl = getSandboxHealthProbeUrl(sandboxName);
   const command = `HTTP_CODE=$(curl -so /dev/null -w '%{http_code}' --max-time 3 ${shellQuote(probeUrl)} 2>/dev/null || echo 000); case "$HTTP_CODE" in 200|401) echo RUNNING ;; *) echo STOPPED ;; esac`;
   return parseSandboxGatewayProbe(await executeSandboxExecCommandForStatus(sandboxName, command));
 }
@@ -187,7 +220,8 @@ export async function isSandboxGatewayRunningForStatus(
  */
 function recoverSandboxProcesses(sandboxName: string): boolean {
   const agent = agentRuntime.getSessionAgent(sandboxName);
-  const agentScript = agentRuntime.buildRecoveryScript(agent, agent?.forwardPort ?? DASHBOARD_PORT);
+  const dashboardPort = resolveSandboxDashboardPort(sandboxName);
+  const agentScript = agentRuntime.buildRecoveryScript(agent, dashboardPort);
   const hasRecoveryMarker = (result: SandboxCommandResult | null) =>
     !!(
       result &&
@@ -203,7 +237,7 @@ function recoverSandboxProcesses(sandboxName: string): boolean {
     return recoveredSsh(executeSandboxCommand(sandboxName, agentScript));
   }
 
-  const script = agentRuntime.buildOpenClawRecoveryScript(DASHBOARD_PORT);
+  const script = agentRuntime.buildOpenClawRecoveryScript(dashboardPort);
   const execResult = executeSandboxExecCommand(sandboxName, script, 30000);
   if (hasRecoveryMarker(execResult)) return true;
   if (execResult !== null) return false;
@@ -241,13 +275,13 @@ function waitForRecoveredSandboxGateway(sandboxName: string): boolean {
 
 /**
  * Re-establish the dashboard port forward to the sandbox.
- * Uses the agent's forward port when a non-OpenClaw agent is active.
+ * Uses the recorded dashboard port for OpenClaw sandboxes, or the agent's
+ * declared forward port when a non-OpenClaw agent is active.
  * Returns true when `forward start` succeeded and a follow-up probe
  * confirms the new entry is running, false otherwise.
  */
 function ensureSandboxPortForward(sandboxName: string): boolean {
-  const agent = agentRuntime.getSessionAgent(sandboxName);
-  const port = agent ? String(agent.forwardPort) : DASHBOARD_FORWARD_PORT;
+  const port = String(resolveSandboxDashboardPort(sandboxName));
   runOpenshell(["forward", "stop", port], { ignoreError: true });
   const startResult = runOpenshell(["forward", "start", "--background", port, sandboxName], {
     ignoreError: true,
@@ -267,8 +301,7 @@ function ensureSandboxPortForward(sandboxName: string): boolean {
  * STATUS=dead) while the gateway keeps listening on 127.0.0.1:<port>.
  */
 function isSandboxForwardHealthy(sandboxName: string): boolean | null {
-  const agent = agentRuntime.getSessionAgent(sandboxName);
-  const port = agent ? String(agent.forwardPort) : DASHBOARD_FORWARD_PORT;
+  const port = String(resolveSandboxDashboardPort(sandboxName));
   const result = captureOpenshell(["forward", "list"], {
     ignoreError: true,
     timeout: OPENSHELL_PROBE_TIMEOUT_MS,
@@ -301,7 +334,7 @@ export function checkAndRecoverSandboxProcesses(
     return { checked: false, wasRunning: null, recovered: false, forwardRecovered: false };
   }
   const recoveryAgent = agentRuntime.getSessionAgent(sandboxName);
-  const recoveryPort = recoveryAgent?.forwardPort ?? DASHBOARD_PORT;
+  const recoveryPort = resolveSandboxDashboardPort(sandboxName);
   if (running) {
     // Gateway is alive but the host-side forward can still be dead or
     // owned by another sandbox. Probe and re-establish only when

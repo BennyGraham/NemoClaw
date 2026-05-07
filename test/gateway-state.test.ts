@@ -13,6 +13,7 @@ import {
   hasStaleGateway,
   hasActiveGatewayInfo,
   getReportedGatewayName,
+  shouldSelectNamedGatewayForReuse,
   parseSandboxPhase,
 } from "../src/lib/state/gateway.js";
 
@@ -243,5 +244,21 @@ describe("getGatewayReuseState", () => {
 
   it("returns 'missing' when all outputs are empty", () => {
     expect(getGatewayReuseState("", "", "")).toBe("missing");
+  });
+});
+
+describe("shouldSelectNamedGatewayForReuse", () => {
+  it("returns true when another gateway is active but the named NemoClaw gateway exists", () => {
+    expect(shouldSelectNamedGatewayForReuse(STATUS_FOREIGN, GW_INFO_NAMED, "")).toBe(true);
+  });
+
+  it("returns false when the named NemoClaw gateway is already active", () => {
+    expect(shouldSelectNamedGatewayForReuse(STATUS_CONNECTED, GW_INFO_NAMED, GW_INFO_ACTIVE)).toBe(
+      false,
+    );
+  });
+
+  it("returns false when no named NemoClaw gateway metadata exists", () => {
+    expect(shouldSelectNamedGatewayForReuse(STATUS_FOREIGN, GW_INFO_MISSING, "")).toBe(false);
   });
 });
