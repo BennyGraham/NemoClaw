@@ -13,6 +13,7 @@ export const NOTICE_CONFIG_FILE = path.join(
   __dirname,
   "..",
   "..",
+  "..",
   "bin",
   "lib",
   "usage-notice.json",
