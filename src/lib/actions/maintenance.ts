@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-import { prompt as askPrompt } from "../credentials";
+import { prompt as askPrompt } from "../credentials/store";
 import {
   type GarbageCollectImagesOptions,
   normalizeGarbageCollectImagesOptions,

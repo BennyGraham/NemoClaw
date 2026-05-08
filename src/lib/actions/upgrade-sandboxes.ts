@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-import { CLI_NAME } from "../branding";
-import { prompt as askPrompt } from "../credentials";
+import { CLI_NAME } from "../cli/branding";
+import { prompt as askPrompt } from "../credentials/store";
 import {
   normalizeUpgradeSandboxesOptions,
   type UpgradeSandboxesOptions,
@@ -13,7 +13,7 @@ import * as registry from "../state/registry";
 import { parseLiveSandboxNames } from "../runtime-recovery";
 import { rebuildSandbox } from "./sandbox/rebuild";
 import * as sandboxVersion from "../sandbox-version";
-import { B, D, G, R, YW } from "../terminal-style";
+import { B, D, G, R, YW } from "../cli/terminal-style";
 import {
   classifyUpgradeableSandboxes,
   shouldSkipUpgradeConfirmation,

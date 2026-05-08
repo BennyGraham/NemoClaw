@@ -153,6 +153,21 @@ describe("nim", () => {
   });
 
   describe("detectGpu", () => {
+    function withGenericLinuxFirmware(fn: () => void): void {
+      const fs = require("fs");
+      const origReadFileSync = fs.readFileSync;
+      fs.readFileSync = (p: string, ...args: unknown[]) => {
+        if (p === "/sys/class/dmi/id/product_name") return "Generic Linux Workstation";
+        if (p === "/sys/firmware/devicetree/base/model") return "";
+        return origReadFileSync(p, ...args);
+      };
+      try {
+        fn();
+      } finally {
+        fs.readFileSync = origReadFileSync;
+      }
+    }
+
     it("returns object or null", () => {
       const gpu = nim.detectGpu();
       if (gpu !== null) {
@@ -319,17 +334,17 @@ describe("nim", () => {
     });
 
     it("detects Orin unified-memory GPUs without marking them as Spark", () => {
-      withFirmwareModel("Generic Linux", () => {
-        const runCapture = vi.fn((cmd: string | string[]) => {
-          if (!Array.isArray(cmd)) throw new Error("expected argv array");
-          if (cmd.some((a: string) => a.includes("memory.total"))) return "";
-          if (cmd.some((a: string) => a.includes("query-gpu=name"))) return "NVIDIA Jetson AGX Orin";
-          if (cmd[0] === "free" && cmd[1] === "-m") return "              total        used        free      shared  buff/cache   available\nMem:          32768        5120       20000         512       7148       27136\nSwap:             0           0           0";
-          return "";
-        });
-        const { nimModule, restore } = loadNimWithMockedRunner(runCapture);
+      const runCapture = vi.fn((cmd: string | string[]) => {
+        if (!Array.isArray(cmd)) throw new Error("expected argv array");
+        if (cmd.some((a: string) => a.includes("memory.total"))) return "";
+        if (cmd.some((a: string) => a.includes("query-gpu=name"))) return "NVIDIA Jetson AGX Orin";
+        if (cmd[0] === "free" && cmd[1] === "-m") return "              total        used        free      shared  buff/cache   available\nMem:          32768        5120       20000         512       7148       27136\nSwap:             0           0           0";
+        return "";
+      });
+      const { nimModule, restore } = loadNimWithMockedRunner(runCapture);
 
-        try {
+      try {
+        withGenericLinuxFirmware(() => {
           expect(nimModule.detectGpu()).toMatchObject({
             type: "nvidia",
             name: "NVIDIA Jetson AGX Orin",
@@ -340,24 +355,24 @@ describe("nim", () => {
             unifiedMemory: true,
             spark: false,
           });
-        } finally {
-          restore();
-        }
-      });
+        });
+      } finally {
+        restore();
+      }
     });
 
     it("marks low-memory unified-memory NVIDIA devices as not NIM-capable", () => {
-      withFirmwareModel("Generic Linux", () => {
-        const runCapture = vi.fn((cmd: string | string[]) => {
-          if (!Array.isArray(cmd)) throw new Error("expected argv array");
-          if (cmd.some((a: string) => a.includes("memory.total"))) return "";
-          if (cmd.some((a: string) => a.includes("query-gpu=name"))) return "NVIDIA Xavier";
-          if (cmd[0] === "free" && cmd[1] === "-m") return "              total        used        free      shared  buff/cache   available\nMem:           4096        1024        2048         256       1024        2816\nSwap:             0           0           0";
-          return "";
-        });
-        const { nimModule, restore } = loadNimWithMockedRunner(runCapture);
+      const runCapture = vi.fn((cmd: string | string[]) => {
+        if (!Array.isArray(cmd)) throw new Error("expected argv array");
+        if (cmd.some((a: string) => a.includes("memory.total"))) return "";
+        if (cmd.some((a: string) => a.includes("query-gpu=name"))) return "NVIDIA Xavier";
+        if (cmd[0] === "free" && cmd[1] === "-m") return "              total        used        free      shared  buff/cache   available\nMem:           4096        1024        2048         256       1024        2816\nSwap:             0           0           0";
+        return "";
+      });
+      const { nimModule, restore } = loadNimWithMockedRunner(runCapture);
 
-        try {
+      try {
+        withGenericLinuxFirmware(() => {
           expect(nimModule.detectGpu()).toMatchObject({
             type: "nvidia",
             name: "NVIDIA Xavier",
@@ -366,10 +381,10 @@ describe("nim", () => {
             unifiedMemory: true,
             spark: false,
           });
-        } finally {
-          restore();
-        }
-      });
+        });
+      } finally {
+        restore();
+      }
     });
   });
 
@@ -459,6 +474,9 @@ describe("nim", () => {
 
           expect(st).toMatchObject({ running: true, healthy: true, container: "foo", state: "running" });
           expect(commands.some((c) => c[0] === "docker" && c.includes("port"))).toBe(true);
+          expect(commands.some((c) => c.includes("http://127.0.0.1:9000/v1/models"))).toBe(
+            true,
+          );
           expect(
             timeoutForCommand(
               runCapture,
@@ -489,7 +507,13 @@ describe("nim", () => {
 
       try {
         const st = nimModule.nimStatusByName("foo");
+        const commands = runCapture.mock.calls.map(([c]: [string | string[]]) => c);
+
         expect(st).toMatchObject({ running: true, healthy: true, container: "foo", state: "running" });
+        expect(commands.some((c) => c[0] === "docker" && c.includes("port"))).toBe(true);
+        expect(commands.some((c) => c.includes("http://127.0.0.1:8000/v1/models"))).toBe(
+          true,
+        );
       } finally {
         restore();
       }

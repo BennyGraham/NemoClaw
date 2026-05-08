@@ -18,6 +18,9 @@ const SCAN_ROOTS = ["bin", "src", "scripts", "test", "nemoclaw/src"];
 const SOURCE_EXTENSIONS = new Set([".cjs", ".js", ".mjs", ".ts", ".tsx"]);
 const SKIP_DIRS = new Set([".git", "coverage", "dist", "node_modules"]);
 const FORBIDDEN_DIRECTIVE = ["v8", "ignore"].join(" ");
+const FORBIDDEN_DIRECTIVE_PATTERN = new RegExp(
+  String.raw`(?:\/\/|\/\*)\s*${FORBIDDEN_DIRECTIVE}\b`,
+);
 
 export interface CoverageIgnoreViolation {
   filePath: string;
@@ -32,12 +35,12 @@ export function findCoverageIgnoreDirectives(
 ): CoverageIgnoreViolation[] {
   const violations: CoverageIgnoreViolation[] = [];
   for (const [index, lineText] of sourceText.split(/\r?\n/).entries()) {
-    const column = lineText.indexOf(FORBIDDEN_DIRECTIVE);
-    if (column !== -1) {
+    const match = FORBIDDEN_DIRECTIVE_PATTERN.exec(lineText);
+    if (match) {
       violations.push({
         filePath,
         line: index + 1,
-        column: column + 1,
+        column: match.index + 1,
         text: lineText.trim(),
       });
     }
