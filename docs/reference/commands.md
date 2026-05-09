@@ -187,6 +187,7 @@ If the installed OpenShell version falls outside this range, onboarding exits wi
 
 When an existing gateway is detected for reuse, NemoClaw probes the host gateway HTTP endpoint (`http://127.0.0.1:${NEMOCLAW_GATEWAY_PORT}/`) before declaring it reusable, so a gateway whose container is running but whose upstream is still warming up (e.g. immediately after a Docker daemon restart) is rebuilt instead of trusted.
 Tune the wait via `NEMOCLAW_REUSE_HEALTH_POLL_COUNT` (default `6`) and `NEMOCLAW_REUSE_HEALTH_POLL_INTERVAL` (default `5` seconds).
+The poll count is clamped to a minimum of `1` so the probe always runs at least once, and the interval is clamped to a minimum of `0` (no sleep between attempts).
 
 #### `--from <Dockerfile>`
 
