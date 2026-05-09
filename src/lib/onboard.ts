@@ -42,6 +42,11 @@ const {
   createWebSearchConfigHelpers,
 }: typeof import("./onboard/web-search-config") = require("./onboard/web-search-config");
 const {
+  buildGatewayBootstrapSecretsScript,
+  createGatewayBootstrapRepairHelpers,
+  getGatewayBootstrapRepairPlan,
+}: typeof import("./onboard/gateway-bootstrap") = require("./onboard/gateway-bootstrap");
+const {
   verifyWebSearchInsideSandbox: verifyWebSearchInsideSandboxWithDeps,
 }: typeof import("./onboard/web-search-verify") = require("./onboard/web-search-verify");
 const {
@@ -355,12 +360,6 @@ const DIM = USE_COLOR ? "\x1b[2m" : "";
 const RESET = USE_COLOR ? "\x1b[0m" : "";
 let OPENSHELL_BIN: string | null = null;
 const GATEWAY_NAME = "nemoclaw";
-const GATEWAY_BOOTSTRAP_SECRET_NAMES = [
-  "openshell-server-tls",
-  "openshell-server-client-ca",
-  "openshell-client-tls",
-  "openshell-ssh-handshake",
-];
 const BACK_TO_SELECTION = "__NEMOCLAW_BACK_TO_SELECTION__";
 
 /**
@@ -2577,117 +2576,17 @@ function getGatewayLocalEndpoint(): string {
   return `https://127.0.0.1:${GATEWAY_PORT}`;
 }
 
-function getGatewayBootstrapRepairPlan(missingSecrets: string[] = []) {
-  const allowed = new Set(GATEWAY_BOOTSTRAP_SECRET_NAMES);
-  const normalized = [
-    ...new Set((missingSecrets || []).map((name) => String(name).trim()).filter(Boolean)),
-  ].filter((name) => allowed.has(name));
-  const missing = new Set(normalized);
-  const needsClientBundle =
-    missing.has("openshell-server-client-ca") || missing.has("openshell-client-tls");
-
-  return {
-    missingSecrets: normalized,
-    needsRepair: normalized.length > 0,
-    needsServerTls: missing.has("openshell-server-tls"),
-    needsClientBundle,
-    needsHandshake: missing.has("openshell-ssh-handshake"),
-  };
-}
-
-function buildGatewayBootstrapSecretsScript(missingSecrets: string[] = []): string {
-  const plan = getGatewayBootstrapRepairPlan(missingSecrets);
-  if (!plan.needsRepair) return "exit 0";
-
-  return `
-set -eu
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-kubectl get namespace openshell >/dev/null 2>&1
-kubectl -n openshell get statefulset/openshell >/dev/null 2>&1
-TMPDIR="$(mktemp -d)"
-cleanup() {
-  rm -rf "$TMPDIR"
-}
-trap cleanup EXIT
-if ${plan.needsServerTls ? "true" : "false"}; then
-  cat >"$TMPDIR/server-ext.cnf" <<'EOF'
-subjectAltName=DNS:openshell,DNS:openshell.openshell,DNS:openshell.openshell.svc,DNS:openshell.openshell.svc.cluster.local,DNS:localhost,IP:127.0.0.1
-extendedKeyUsage=serverAuth
-EOF
-  openssl req -nodes -newkey rsa:2048 -keyout "$TMPDIR/server.key" -out "$TMPDIR/server.csr" -subj "/CN=openshell.openshell.svc.cluster.local" >/dev/null 2>&1
-  openssl x509 -req -in "$TMPDIR/server.csr" -signkey "$TMPDIR/server.key" -out "$TMPDIR/server.crt" -days 3650 -sha256 -extfile "$TMPDIR/server-ext.cnf" >/dev/null 2>&1
-  kubectl create secret tls -n openshell openshell-server-tls --cert="$TMPDIR/server.crt" --key="$TMPDIR/server.key" --dry-run=client -o yaml | kubectl apply -f -
-fi
-if ${plan.needsClientBundle ? "true" : "false"}; then
-  cat >"$TMPDIR/client-ext.cnf" <<'EOF'
-extendedKeyUsage=clientAuth
-EOF
-  openssl req -x509 -nodes -newkey rsa:2048 -keyout "$TMPDIR/client-ca.key" -out "$TMPDIR/client-ca.crt" -subj "/CN=openshell-client-ca" -days 3650 >/dev/null 2>&1
-  openssl req -nodes -newkey rsa:2048 -keyout "$TMPDIR/client.key" -out "$TMPDIR/client.csr" -subj "/CN=openshell-client" >/dev/null 2>&1
-  openssl x509 -req -in "$TMPDIR/client.csr" -CA "$TMPDIR/client-ca.crt" -CAkey "$TMPDIR/client-ca.key" -CAcreateserial -out "$TMPDIR/client.crt" -days 3650 -sha256 -extfile "$TMPDIR/client-ext.cnf" >/dev/null 2>&1
-  kubectl create secret generic -n openshell openshell-server-client-ca --from-file=ca.crt="$TMPDIR/client-ca.crt" --dry-run=client -o yaml | kubectl apply -f -
-  kubectl create secret generic -n openshell openshell-client-tls --from-file=tls.crt="$TMPDIR/client.crt" --from-file=tls.key="$TMPDIR/client.key" --from-file=ca.crt="$TMPDIR/client-ca.crt" --dry-run=client -o yaml | kubectl apply -f -
-fi
-if ${plan.needsHandshake ? "true" : "false"}; then
-  kubectl create secret generic -n openshell openshell-ssh-handshake --from-literal=secret="$(openssl rand -hex 32)" --dry-run=client -o yaml | kubectl apply -f -
-fi
-`;
-}
-
-function runGatewayClusterCapture(script: string, opts: RunnerOptions = {}) {
-  return runCapture(buildGatewayClusterExecArgv(script), opts);
-}
-
-function runGatewayCluster(script: string, opts: RunnerOptions = {}) {
-  return run(buildGatewayClusterExecArgv(script), opts);
-}
-
-function listMissingGatewayBootstrapSecrets() {
-  const output = runGatewayClusterCapture(
-    `
-set -eu
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-kubectl get namespace openshell >/dev/null 2>&1 || exit 0
-kubectl -n openshell get statefulset/openshell >/dev/null 2>&1 || exit 0
-for name in ${GATEWAY_BOOTSTRAP_SECRET_NAMES.map((name) => shellQuote(name)).join(" ")}; do
-  kubectl -n openshell get secret "$name" >/dev/null 2>&1 || printf '%s\\n' "$name"
-done
-`,
-    { ignoreError: true },
-  );
-  return output
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
-function gatewayClusterHealthcheckPassed(): boolean {
-  const result = runGatewayCluster("/usr/local/bin/cluster-healthcheck.sh", {
-    ignoreError: true,
-    suppressOutput: true,
-  });
-  return result.status === 0;
-}
-
-function repairGatewayBootstrapSecrets(): { repaired: boolean; missingSecrets: string[] } {
-  const missingSecrets = listMissingGatewayBootstrapSecrets();
-  const plan = getGatewayBootstrapRepairPlan(missingSecrets);
-  if (!plan.needsRepair) return { repaired: false, missingSecrets };
-
-  console.log(
-    `  OpenShell bootstrap secrets missing: ${plan.missingSecrets.join(", ")}. Repairing...`,
-  );
-  const repairResult = runGatewayCluster(buildGatewayBootstrapSecretsScript(plan.missingSecrets), {
-    ignoreError: true,
-    suppressOutput: true,
-  });
-  const remainingSecrets = listMissingGatewayBootstrapSecrets();
-  if (repairResult.status === 0 && remainingSecrets.length === 0) {
-    console.log("  ✓ OpenShell bootstrap secrets created");
-    return { repaired: true, missingSecrets: remainingSecrets };
-  }
-  return { repaired: false, missingSecrets: remainingSecrets };
-}
+const {
+  runGatewayClusterCapture,
+  runGatewayCluster,
+  listMissingGatewayBootstrapSecrets,
+  gatewayClusterHealthcheckPassed,
+  repairGatewayBootstrapSecrets,
+} = createGatewayBootstrapRepairHelpers({
+  buildGatewayClusterExecArgv,
+  run,
+  runCapture,
+});
 
 function attachGatewayMetadataIfNeeded({
   forceRefresh = false,
