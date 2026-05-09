@@ -16,9 +16,9 @@ import {
 
 describe("dashboard access helpers", () => {
   it("derives forward port and target from chat UI URLs", () => {
-    expect(getDashboardForwardPort("http://127.0.0.1:18789")).toBe("18789");
-    expect(getDashboardForwardTarget("http://127.0.0.1:18789")).toBe("18789");
-    expect(getDashboardForwardTarget("http://10.0.0.25:18789")).toBe("0.0.0.0:18789");
+    expect(getDashboardForwardPort("http://127.0.0.1:18789", { isWsl: false })).toBe("18789");
+    expect(getDashboardForwardTarget("http://127.0.0.1:18789", { isWsl: false })).toBe("18789");
+    expect(getDashboardForwardTarget("http://10.0.0.25:18789", { isWsl: false })).toBe("0.0.0.0:18789");
   });
 
   it("builds the OpenShell forward start command with the resolved target", () => {
