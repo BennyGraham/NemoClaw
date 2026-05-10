@@ -1472,6 +1472,55 @@ migrate_legacy_layout() {
 
   echo "[migration] Completed ${label} layout migration (${data_dir} removed)" >&2
 }
+
+# Seed default OpenClaw workspace template files when the workspace is
+# pristine. OpenClaw normally writes these from bundled templates at first
+# agent boot via ensureAgentWorkspace(), but when
+# `agents.defaults.skipBootstrap=true` (set by NemoClaw to suppress the
+# interactive identity-setup turn) that path short-circuits before any
+# template is written, leaving /sandbox/.openclaw/workspace/ empty.
+# Reuse OpenClaw's own bundled templates so seeded content matches what
+# upstream would have produced. BOOTSTRAP.md is intentionally excluded —
+# its presence is what triggers the interactive turn we are skipping.
+# Ref: https://github.com/NVIDIA/NemoClaw/issues/3240
+seed_default_workspace_templates() {
+  local workspace_dir="${1:-/sandbox/.openclaw/workspace}"
+  local templates_dir="${2:-}"
+  [ -e "$workspace_dir" ] || return 0
+  if [ -L "$workspace_dir" ]; then
+    echo "[SECURITY] refusing to seed symlinked workspace dir: $workspace_dir" >&2
+    return 0
+  fi
+  [ -d "$workspace_dir" ] || return 0
+  # Only seed pristine workspaces — never clobber user content.
+  if [ -n "$(ls -A "$workspace_dir" 2>/dev/null)" ]; then
+    return 0
+  fi
+  if [ -z "$templates_dir" ]; then
+    local npm_root
+    npm_root="$(npm root -g 2>/dev/null)" || return 0
+    [ -n "$npm_root" ] || return 0
+    templates_dir="${npm_root}/openclaw/dist/docs/reference/templates"
+  fi
+  if [ ! -d "$templates_dir" ]; then
+    echo "[setup] openclaw templates dir not found at ${templates_dir}; skipping workspace seed" >&2
+    return 0
+  fi
+  local file src dst seeded=0
+  for file in AGENTS.md SOUL.md IDENTITY.md USER.md TOOLS.md HEARTBEAT.md; do
+    src="$templates_dir/$file"
+    dst="$workspace_dir/$file"
+    if [ -f "$src" ] && [ ! -e "$dst" ]; then
+      if cp "$src" "$dst" 2>/dev/null; then
+        seeded=$((seeded + 1))
+      fi
+    fi
+  done
+  if [ "$seeded" -gt 0 ]; then
+    echo "[setup] seeded ${seeded} default workspace template(s) into ${workspace_dir}" >&2
+  fi
+}
+
 # ── Main ─────────────────────────────────────────────────────────
 
 # Migrate legacy symlink layout before anything else reads .openclaw
@@ -1536,6 +1585,7 @@ if [ "$(id -u)" -ne 0 ]; then
   }
   fix_openclaw_ownership
   normalize_mutable_config_perms
+  seed_default_workspace_templates
   write_auth_profile
   harden_auth_profiles
 
@@ -1706,6 +1756,12 @@ NODE
   done
 }
 provision_agent_workspaces
+
+# Seed default workspace templates if the default workspace is empty.
+# Run as the sandbox user so the seeded files inherit sandbox:sandbox
+# ownership (the function's own cp calls would otherwise produce
+# root-owned files in this branch). See function comment for context.
+gosu sandbox bash -c "$(declare -f seed_default_workspace_templates); seed_default_workspace_templates"
 
 # Defence-in-depth: verify /tmp file permissions before launching services.
 # Pass the HTTP proxy-fix path so it is validated alongside proxy-env.sh
