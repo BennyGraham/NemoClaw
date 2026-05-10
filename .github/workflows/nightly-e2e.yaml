@@ -69,7 +69,7 @@ on:
           credential-sanitization-e2e, telegram-injection-e2e,
           overlayfs-autofix-e2e, device-auth-health-e2e,
           launchable-smoke-e2e, gpu-e2e, gpu-double-onboard-e2e,
-          brave-search-e2e (manual-dispatch only; needs secrets.BRAVE_API_KEY)
+          brave-search-e2e
         required: false
         type: string
         default: ""
@@ -322,24 +322,16 @@ jobs:
   # ── Brave Search E2E (#2687) ─────────────────────────────────
   # Validates the full Brave Search path with a real BRAVE_API_KEY:
   # non-interactive onboard auto-enables web search, the brave network
-  # policy preset is applied, the real key never lands in the sandbox-
-  # readable openclaw.json (placeholder only), and the openclaw agent's
-  # web-search tool returns real Brave results through OpenShell's L7
-  # placeholder substitution.
-  #
-  # Manual-dispatch only — never runs on the nightly schedule. This is
-  # deliberate so:
-  #   1. We don't burn paid Brave API quota every night, and
-  #   2. The test only fires when a maintainer explicitly opts in via
-  #      `gh workflow run nightly-e2e.yaml --ref <branch> -f jobs=brave-search-e2e`.
-  # The script also self-skips gracefully if BRAVE_API_KEY is empty
-  # (acceptance criterion #3 in the issue), so enabling the secret
-  # later does not require a code change.
+  # policy preset is applied, the real key never lands on disk in the
+  # sandbox-readable openclaw.json (placeholder only), and the openclaw
+  # agent + a placeholder-header curl each return real Brave results.
+  # ~3 Brave queries per run (1 onboard validation + 1 agent + 1 curl).
   brave-search-e2e:
     if: >-
       github.repository == 'NVIDIA/NemoClaw' &&
-      github.event_name == 'workflow_dispatch' &&
-      contains(format(',{0},', inputs.jobs), ',brave-search-e2e,')
+      (github.event_name != 'workflow_dispatch' ||
+       inputs.jobs == '' ||
+       contains(format(',{0},', inputs.jobs), ',brave-search-e2e,'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
