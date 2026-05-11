@@ -282,6 +282,12 @@ export function detectGpu(): GpuDetection | null {
       }
       const count = unifiedGpuNames.length;
       const perGpuMB = count > 0 ? Math.floor(totalMemoryMB / count) : totalMemoryMB;
+      const firstUnifiedName = unifiedGpuNames[0] ?? "";
+      // Mirror the primary path: only surface a single name when every GPU
+      // reports the same model. Otherwise a hypothetical mixed unified-memory
+      // host (e.g. Spark + Orin) would be misrendered as `Nx <first model>`.
+      const allUnifiedSameName =
+        !!firstUnifiedName && unifiedGpuNames.every((n: string) => n === firstUnifiedName);
       // Cross-check the firmware model against the GPU name. Spark must have
       // a GB10; falling through to firmware lets us classify Station too.
       const firmwarePlatform = detectNvidiaPlatform();
@@ -297,7 +303,7 @@ export function detectGpu(): GpuDetection | null {
       // Approximation, but the only number nvidia-smi gives us in this path.
       return {
         type: "nvidia",
-        name: unifiedGpuNames[0],
+        ...(allUnifiedSameName ? { name: firstUnifiedName } : {}),
         gpus: unifiedGpuNames.map((name: string) => ({ name, memoryMB: perGpuMB })),
         count,
         totalMemoryMB,

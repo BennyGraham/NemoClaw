@@ -222,7 +222,7 @@ describe("nim", () => {
       }
     });
 
-    it("aggregates totalMemoryMB across multiple GPUs from primary path", () => {
+    it("aggregates fields and populates gpus for N homogeneous GPUs on the primary path", () => {
       const runCapture = vi.fn((cmd: string | string[]) => {
         if (!Array.isArray(cmd)) throw new Error("expected argv array");
         if (
@@ -242,6 +242,10 @@ describe("nim", () => {
           count: 2,
           totalMemoryMB: 163840,
           perGpuMB: 81920,
+          gpus: [
+            { name: "NVIDIA H100 80GB HBM3", memoryMB: 81920 },
+            { name: "NVIDIA H100 80GB HBM3", memoryMB: 81920 },
+          ],
         });
       } finally {
         restore();
@@ -278,40 +282,11 @@ describe("nim", () => {
       }
     });
 
-    it("drops name on mixed-model multi-GPU hosts so we don't attribute one model to the others", () => {
-      const runCapture = vi.fn((cmd: string | string[]) => {
-        if (!Array.isArray(cmd)) throw new Error("expected argv array");
-        if (
-          cmd[0] === "nvidia-smi" &&
-          cmd.some((a: string) => a.includes("name,memory.total"))
-        ) {
-          return "NVIDIA H100 80GB HBM3, 81920\nNVIDIA A100-SXM4-80GB, 81920\n";
-        }
-        return "";
-      });
-      const { nimModule, restore } = loadNimWithMockedRunner(runCapture);
-
-      try {
-        const result = nimModule.detectGpu();
-        expect(result).toMatchObject({
-          type: "nvidia",
-          count: 2,
-          totalMemoryMB: 163840,
-        });
-        // Mixed-model hosts must not pin a single name; the preflight line
-        // would otherwise read "2x NVIDIA H100" on a host that's actually
-        // half H100 and half A100.
-        expect(result?.name).toBeUndefined();
-      } finally {
-        restore();
-      }
-    });
-
     // Regression #2669: the previous fix added `name` only for homogeneous
-    // hosts, so mixed-GPU machines (e.g. RTX PRO 6000 + GB300 on the QA
-    // verification host) lost the model info entirely. We now also surface
-    // the per-GPU breakdown via `gpus` so the preflight line can render it.
-    it("populates the gpus breakdown on mixed-model hosts (regression #2669)", () => {
+    // hosts, so mixed-GPU machines (RTX PRO 6000 + GB300 on the QA verification
+    // host) dropped the model info entirely. We keep `name` undefined to avoid
+    // misattribution but now surface the per-GPU breakdown via `gpus`.
+    it("drops name and populates gpus breakdown on mixed-model hosts (regression #2669)", () => {
       const runCapture = vi.fn((cmd: string | string[]) => {
         if (!Array.isArray(cmd)) throw new Error("expected argv array");
         if (
@@ -326,59 +301,16 @@ describe("nim", () => {
 
       try {
         const result = nimModule.detectGpu();
+        expect(result).toMatchObject({
+          type: "nvidia",
+          count: 2,
+          totalMemoryMB: 354590,
+        });
         expect(result?.name).toBeUndefined();
         expect(result?.gpus).toEqual([
           { name: "NVIDIA RTX PRO 6000 Blackwell Max-Q", memoryMB: 97887 },
           { name: "NVIDIA GB300", memoryMB: 256703 },
         ]);
-      } finally {
-        restore();
-      }
-    });
-
-    it("populates the gpus breakdown on homogeneous hosts too", () => {
-      const runCapture = vi.fn((cmd: string | string[]) => {
-        if (!Array.isArray(cmd)) throw new Error("expected argv array");
-        if (
-          cmd[0] === "nvidia-smi" &&
-          cmd.some((a: string) => a.includes("name,memory.total"))
-        ) {
-          return "NVIDIA H100 80GB HBM3, 81920\nNVIDIA H100 80GB HBM3, 81920\n";
-        }
-        return "";
-      });
-      const { nimModule, restore } = loadNimWithMockedRunner(runCapture);
-
-      try {
-        const result = nimModule.detectGpu();
-        expect(result?.gpus).toEqual([
-          { name: "NVIDIA H100 80GB HBM3", memoryMB: 81920 },
-          { name: "NVIDIA H100 80GB HBM3", memoryMB: 81920 },
-        ]);
-      } finally {
-        restore();
-      }
-    });
-
-    it("populates the gpus breakdown on the unified-memory fallback path (#2669 GB10)", () => {
-      // Spark / Jetson don't have memory.total per GPU — host RAM is split
-      // evenly across the named devices. Used by the original GB10 reporter.
-      const runCapture = vi.fn((cmd: string | string[]) => {
-        if (!Array.isArray(cmd)) throw new Error("expected argv array");
-        if (cmd.some((a: string) => a.includes("memory.total"))) return "";
-        if (cmd.some((a: string) => a.includes("query-gpu=name"))) {
-          return "NVIDIA GB10\n";
-        }
-        if (cmd[0] === "free" && cmd[1] === "-m") {
-          return "              total        used        free\nMem:         131072       10240       90000\nSwap:             0           0           0";
-        }
-        return "";
-      });
-      const { nimModule, restore } = loadNimWithMockedRunner(runCapture);
-
-      try {
-        const result = nimModule.detectGpu();
-        expect(result?.gpus).toEqual([{ name: "NVIDIA GB10", memoryMB: 131072 }]);
       } finally {
         restore();
       }
@@ -404,6 +336,11 @@ describe("nim", () => {
           nimCapable: true,
           unifiedMemory: true,
           spark: true,
+          // Regression #2669: the unified-memory fallback path now also
+          // populates `gpus` so the preflight breakdown works when the
+          // primary --query-gpu=memory.total path is unavailable (Jetson /
+          // Spark / Orin).
+          gpus: [{ name: "NVIDIA GB10", memoryMB: 131072 }],
         });
       } finally {
         restore();
@@ -438,6 +375,37 @@ describe("nim", () => {
       }
     });
 
+    // Same invariant as the primary-path mixed-model test: don't pin a
+    // single name on hosts with multiple distinct GPU models, even on the
+    // unified-memory fallback. Hypothetical today (no shipping platform mixes
+    // unified-memory NVIDIA devices), but the previous version of this code
+    // would silently misattribute the first GPU's name to all of them.
+    it("drops name on mixed-model unified-memory hosts but keeps the gpus breakdown", () => {
+      const runCapture = vi.fn((cmd: string | string[]) => {
+        if (!Array.isArray(cmd)) throw new Error("expected argv array");
+        if (cmd.some((a: string) => a.includes("memory.total"))) return "";
+        if (cmd.some((a: string) => a.includes("query-gpu=name"))) {
+          return "NVIDIA GB10\nNVIDIA Jetson AGX Orin";
+        }
+        if (cmd[0] === "free" && cmd[1] === "-m") {
+          return "              total        used        free\nMem:         163840       10240      120000\nSwap:             0           0           0";
+        }
+        return "";
+      });
+      const { nimModule, restore } = loadNimWithMockedRunner(runCapture);
+
+      try {
+        const result = nimModule.detectGpu();
+        expect(result?.name).toBeUndefined();
+        expect(result?.gpus).toEqual([
+          { name: "NVIDIA GB10", memoryMB: 81920 },
+          { name: "NVIDIA Jetson AGX Orin", memoryMB: 81920 },
+        ]);
+      } finally {
+        restore();
+      }
+    });
+
     it("marks low-memory unified-memory NVIDIA devices as not NIM-capable", () => {
       const runCapture = vi.fn((cmd: string | string[]) => {
         if (!Array.isArray(cmd)) throw new Error("expected argv array");
@@ -466,15 +434,6 @@ describe("nim", () => {
   });
 
   describe("groupGpusByName", () => {
-    it("groups identical names and sums their memory", () => {
-      expect(
-        nim.groupGpusByName([
-          { name: "NVIDIA H100 80GB HBM3", memoryMB: 81920 },
-          { name: "NVIDIA H100 80GB HBM3", memoryMB: 81920 },
-        ]),
-      ).toEqual([{ name: "NVIDIA H100 80GB HBM3", count: 2, memoryMB: 163840 }]);
-    });
-
     it("preserves first-appearance order across distinct names", () => {
       expect(
         nim.groupGpusByName([
