@@ -20,6 +20,11 @@ function runBash(script: string, env: Record<string, string> = {}): SpawnSyncRet
   });
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Phase 1 helpers (logging, sandbox-exec, fixtures, assertions, install
+// splits) — extends the pre-existing e2e shell helper coverage.
+// ──────────────────────────────────────────────────────────────────────────
+
 describe("E2E shell helpers", () => {
   it("env_helper_should_set_standard_noninteractive_env", () => {
     const r = runBash(`
@@ -119,5 +124,301 @@ describe("E2E shell helpers", () => {
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 1.A — Logging helpers (lib/logging.sh)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Phase 1.A logging helpers", () => {
+  it("logging_should_emit_stable_pass_marker_when_e2e_pass_called", () => {
+    const r = runBash(`
+      set -euo pipefail
+      . "${LIB}/logging.sh"
+      e2e_pass "assertion X"
+    `);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/^PASS:.*assertion X/m);
+  });
+
+  it("logging_should_emit_stable_fail_marker_and_nonzero_exit_when_e2e_fail_called", () => {
+    const r = runBash(`
+      . "${LIB}/logging.sh"
+      ( e2e_fail "assertion Y" )
+    `);
+    expect(r.status).not.toBe(0);
+    expect(r.stdout + r.stderr).toMatch(/FAIL:.*assertion Y/);
+  });
+
+  it("logging_should_include_phase_prefix_when_e2e_section_called", () => {
+    const r = runBash(`
+      set -euo pipefail
+      . "${LIB}/logging.sh"
+      e2e_section "Phase 2: onboarding"
+    `);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/^=== Phase 2:.*onboarding/m);
+  });
+
+  it("logging_should_autosource_logging_when_env_sh_sourced", () => {
+    const r = runBash(`
+      set -euo pipefail
+      . "${LIB}/env.sh"
+      # e2e_pass must be defined after sourcing env.sh alone.
+      e2e_pass "from env.sh"
+    `);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/^PASS:.*from env.sh/m);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 1.B — Sandbox exec helper (lib/sandbox-exec.sh)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Phase 1.B sandbox-exec helper", () => {
+  it("sandbox_exec_should_propagate_exit_code_when_command_fails", () => {
+    // Use a fake nemoclaw on PATH that exits 1.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "e2e-sbex-fail-"));
+    try {
+      const bin = path.join(tmp, "bin");
+      fs.mkdirSync(bin);
+      fs.writeFileSync(
+        path.join(bin, "nemoclaw"),
+        "#!/usr/bin/env bash\nexit 1\n",
+        { mode: 0o755 },
+      );
+      const r = runBash(
+        `
+        . "${LIB}/sandbox-exec.sh"
+        e2e_sandbox_exec sb1 -- false
+        echo "rc=$?"
+      `,
+        { PATH: `${bin}:${process.env.PATH}` },
+      );
+      expect(r.stdout).toMatch(/rc=1/);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("sandbox_exec_should_dry_run_short_circuit_when_e2e_dry_run_set", () => {
+    const r = runBash(
+      `
+        set -euo pipefail
+        . "${LIB}/sandbox-exec.sh"
+        e2e_sandbox_exec sb1 -- rm -rf /
+      `,
+      { E2E_DRY_RUN: "1", PATH: "/does-not-exist" },
+    );
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout + r.stderr).toMatch(/dry[- ]run/i);
+  });
+
+  it("sandbox_exec_stdin_should_quote_args_safely_when_piped", () => {
+    // Verify that $TOKEN is NOT expanded on the host side before being
+    // delivered to the sandbox. We stub nemoclaw to echo back stdin.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "e2e-sbex-stdin-"));
+    try {
+      const bin = path.join(tmp, "bin");
+      fs.mkdirSync(bin);
+      // Fake nemoclaw: when called as `nemoclaw shell sb1 -- cat` read
+      // stdin and print it verbatim so the test can see what the sandbox
+      // would have received.
+      fs.writeFileSync(
+        path.join(bin, "nemoclaw"),
+        '#!/usr/bin/env bash\ncat\n',
+        { mode: 0o755 },
+      );
+      const r = runBash(
+        `
+          set -euo pipefail
+          . "${LIB}/sandbox-exec.sh"
+          printf 'hello $TOKEN' | e2e_sandbox_exec_stdin sb1 -- cat
+        `,
+        { PATH: `${bin}:${process.env.PATH}`, TOKEN: "SHOULD_NOT_EXPAND" },
+      );
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.stdout).toContain("hello $TOKEN");
+      expect(r.stdout).not.toContain("SHOULD_NOT_EXPAND");
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 1.C — Fixtures (lib/fixtures/)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Phase 1.C fixtures", () => {
+  it("fake_openai_should_start_and_stop_cleanly_and_serve_chat_completions", () => {
+    const r = runBash(`
+      set -euo pipefail
+      . "${LIB}/fixtures/fake-openai.sh"
+      fake_openai_start
+      : "\${FAKE_OPENAI_PORT:?not exported}"
+      URL="http://127.0.0.1:\${FAKE_OPENAI_PORT}/v1/chat/completions"
+      body='{"model":"x","messages":[{"role":"user","content":"hi"}]}'
+      out=$(curl -fsS -H 'Content-Type: application/json' -d "$body" "$URL")
+      echo "$out"
+      fake_openai_stop
+    `);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/choices/);
+    expect(r.stdout).toMatch(/content/);
+  });
+
+  it("older_base_image_should_emit_dockerfile_pointing_at_tagged_base", () => {
+    const r = runBash(`
+      set -euo pipefail
+      . "${LIB}/fixtures/older-base-image.sh"
+      df="$(older_base_image_prepare v0.0.1-test)"
+      echo "DF=$df"
+      head -n1 "$df"
+    `);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/^FROM .*:v0\.0\.1-test/m);
+  });
+
+  it("fake_messaging_fixtures_should_bind_a_port_and_accept_stub_requests", () => {
+    for (const provider of ["telegram", "discord", "slack"]) {
+      const r = runBash(`
+        set -euo pipefail
+        . "${LIB}/fixtures/fake-${provider}.sh"
+        fake_${provider}_start
+        : "\${FAKE_${provider.toUpperCase()}_PORT:?port not exported}"
+        URL="http://127.0.0.1:\${FAKE_${provider.toUpperCase()}_PORT}/ping"
+        code=$(curl -fsS -o /dev/null -w '%{http_code}' "$URL" || echo failed)
+        echo "code=$code"
+        fake_${provider}_stop
+      `);
+      expect(r.status, `${provider}: ${r.stderr}`).toBe(0);
+      expect(r.stdout).toMatch(/code=200/);
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 1.D — Assertion helpers (lib/assert/)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Phase 1.D assertion helpers", () => {
+  it("inference_works_should_pass_when_round_trip_returns_ok", () => {
+    const r = runBash(`
+      set -euo pipefail
+      . "${LIB}/fixtures/fake-openai.sh"
+      . "${LIB}/assert/inference-works.sh"
+      fake_openai_start
+      URL="http://127.0.0.1:\${FAKE_OPENAI_PORT}"
+      e2e_assert_inference_works "$URL"
+      rc=$?
+      fake_openai_stop
+      exit $rc
+    `);
+    expect(r.status, r.stderr).toBe(0);
+  });
+
+  it("no_credentials_leaked_should_fail_when_pattern_leaks_in_bundle", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "e2e-creds-"));
+    try {
+      const bundle = path.join(tmp, "bundle");
+      fs.mkdirSync(bundle);
+      fs.writeFileSync(path.join(bundle, "leak.txt"), "token=sk-abc123DEADBEEFCAFE0000111122223333");
+      const r = runBash(`
+        . "${LIB}/assert/no-credentials-leaked.sh"
+        e2e_assert_no_credentials_leaked "${bundle}"
+      `);
+      expect(r.status).not.toBe(0);
+      expect(r.stdout + r.stderr).toMatch(/FAIL:/);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("policy_preset_applied_should_pass_when_active_presets_match_declared_set", () => {
+    // Stub `nemoclaw policies list` to emit a known set.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "e2e-pol-"));
+    try {
+      const bin = path.join(tmp, "bin");
+      fs.mkdirSync(bin);
+      fs.writeFileSync(
+        path.join(bin, "nemoclaw"),
+        '#!/usr/bin/env bash\nif [[ "$1" == "policies" && "$2" == "list" ]]; then\n  printf "slack\\ndiscord\\n"\nfi\n',
+        { mode: 0o755 },
+      );
+      const r = runBash(
+        `
+          set -euo pipefail
+          . "${LIB}/assert/policy-preset-applied.sh"
+          e2e_assert_policy_preset_applied slack discord
+        `,
+        { PATH: `${bin}:${process.env.PATH}` },
+      );
+      expect(r.status, r.stderr).toBe(0);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("messaging_bridge_reachable_should_pass_when_provider_endpoint_alive", () => {
+    const r = runBash(`
+      set -euo pipefail
+      . "${LIB}/fixtures/fake-telegram.sh"
+      . "${LIB}/assert/messaging-bridge-reachable.sh"
+      fake_telegram_start
+      export MESSAGING_BRIDGE_URL="http://127.0.0.1:\${FAKE_TELEGRAM_PORT}"
+      e2e_assert_messaging_bridge_reachable telegram
+      rc=$?
+      fake_telegram_stop
+      exit $rc
+    `);
+    expect(r.status, r.stderr).toBe(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 1.E — Install-method dispatcher splits
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Phase 1.E install dispatcher splits", () => {
+  function dispatchDryRun(profile: string): SpawnSyncReturns<string> {
+    return runBash(
+      `
+        set -euo pipefail
+        . "${LIB}/setup/install.sh"
+        e2e_install "${profile}"
+      `,
+      { E2E_DRY_RUN: "1" },
+    );
+  }
+
+  it("install_should_dispatch_to_install_repo_helper_for_repo_current_profile", () => {
+    const r = dispatchDryRun("repo-current");
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout + r.stderr).toMatch(/install-repo/);
+    expect(r.stdout + r.stderr).not.toMatch(/install-curl|install-ollama|install-launchable/);
+  });
+
+  it("install_should_dispatch_to_install_curl_helper_for_public_installer_profile", () => {
+    const r = dispatchDryRun("public-installer");
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout + r.stderr).toMatch(/install-curl/);
+    expect(r.stdout + r.stderr).not.toMatch(/install-repo|install-ollama|install-launchable/);
+  });
+
+  it("install_should_dispatch_to_install_ollama_helper_for_ollama_profile", () => {
+    const r = dispatchDryRun("ollama");
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout + r.stderr).toMatch(/install-ollama/);
+    expect(r.stdout + r.stderr).not.toMatch(/install-repo|install-curl|install-launchable/);
+  });
+
+  it("install_should_dispatch_to_install_launchable_helper_for_launchable_profile", () => {
+    const r = dispatchDryRun("launchable");
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout + r.stderr).toMatch(/install-launchable/);
+    expect(r.stdout + r.stderr).not.toMatch(/install-repo|install-curl|install-ollama/);
   });
 });

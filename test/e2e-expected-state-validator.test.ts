@@ -161,3 +161,70 @@ describe("runner_should_not_run_suites_when_expected_state_fails", () => {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 1.F — --validate-only flag on run-scenario.sh
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("run-scenario --validate-only flag", () => {
+  it("runs only validator and emits probe results json on stdout without running install/onboard/suites", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "e2e-validate-only-"));
+    try {
+      const trace = path.join(tmp, "trace.log");
+      // Pre-populate a context.env: --validate-only assumes setup has already run.
+      fs.writeFileSync(
+        path.join(tmp, "context.env"),
+        "E2E_SCENARIO=ubuntu-repo-cloud-openclaw\n",
+      );
+      const r = spawnSync(
+        "bash",
+        [RUN_SCENARIO, "ubuntu-repo-cloud-openclaw", "--validate-only"],
+        {
+          env: {
+            ...process.env,
+            E2E_CONTEXT_DIR: tmp,
+            E2E_TRACE_FILE: trace,
+            // Supply probe overrides for every key the expected state needs.
+            E2E_PROBE_OVERRIDE_CLI_INSTALLED: "true",
+            E2E_PROBE_OVERRIDE_GATEWAY_EXPECTED: "present",
+            E2E_PROBE_OVERRIDE_GATEWAY_HEALTH: "healthy",
+            E2E_PROBE_OVERRIDE_SANDBOX_EXPECTED: "present",
+            E2E_PROBE_OVERRIDE_SANDBOX_STATUS: "running",
+            E2E_PROBE_OVERRIDE_SANDBOX_AGENT: "openclaw",
+            E2E_PROBE_OVERRIDE_INFERENCE_EXPECTED: "available",
+            E2E_PROBE_OVERRIDE_INFERENCE_PROVIDER: "nvidia",
+            E2E_PROBE_OVERRIDE_INFERENCE_ROUTE: "inference-local",
+            E2E_PROBE_OVERRIDE_INFERENCE_MODE: "gateway-routed",
+            E2E_PROBE_OVERRIDE_CREDENTIALS_EXPECTED: "present",
+            E2E_PROBE_OVERRIDE_CREDENTIALS_STORAGE: "gateway-managed",
+          },
+          encoding: "utf8",
+          timeout: Number(process.env.E2E_SPAWN_TIMEOUT_MS ?? 60_000),
+          cwd: REPO_ROOT,
+        },
+      );
+      expect(r.status, r.stderr).toBe(0);
+      // Must NOT have traced install or onboard.
+      const contents = fs.existsSync(trace) ? fs.readFileSync(trace, "utf8") : "";
+      expect(contents).not.toMatch(/install:/);
+      expect(contents).not.toMatch(/onboard:/);
+      // Must have emitted an expected-state-report.json (probe results).
+      const reportPath = path.join(tmp, "expected-state-report.json");
+      expect(fs.existsSync(reportPath), `missing ${reportPath}`).toBe(true);
+      const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+      expect(report.ok).toBe(true);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("is_mutually_exclusive_with_plan_only", () => {
+    const r = spawnSync(
+      "bash",
+      [RUN_SCENARIO, "ubuntu-repo-cloud-openclaw", "--validate-only", "--plan-only"],
+      { encoding: "utf8", timeout: 15_000, cwd: REPO_ROOT },
+    );
+    expect(r.status).not.toBe(0);
+    expect(r.stdout + r.stderr).toMatch(/mutually.exclusive|cannot.*both|--plan-only.*--validate-only|--validate-only.*--plan-only/i);
+  });
+});
