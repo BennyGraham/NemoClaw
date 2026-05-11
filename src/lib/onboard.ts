@@ -3091,9 +3091,6 @@ function getGatewayLocalEndpoint(): string {
 }
 
 const {
-  runGatewayClusterCapture,
-  runGatewayCluster,
-  listMissingGatewayBootstrapSecrets,
   gatewayClusterHealthcheckPassed,
   repairGatewayBootstrapSecrets,
 } = createGatewayBootstrapRepairHelpers({
