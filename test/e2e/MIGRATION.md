@@ -13,11 +13,37 @@ them once parity is verified.
 equivalent that produces the same PASS/FAIL outcomes as the legacy
 script in a side-by-side CI run.
 
+## Reuse being absorbed
+
+Migrating 40 scripts collapses 13 distinct categories of duplication.
+Each row maps to a Wave 0 item or an existing helper.
+
+| # | Category | Fan-in (legacy) | Target absorber | LOC |
+|---|---|---|---|---:|
+| 1 | Logging helpers (`section` / `info` / `pass` / `fail`) | 28–39 scripts redefine each | `lib/logging.sh` (Wave 0.B.5) | 1,556 |
+| 2 | Non-interactive env exports | 187 inlined lines across 40 scripts | `lib/env.sh::e2e_env_apply_noninteractive` + convention 0.G.1 | 175 |
+| 3 | Repo-root / `SCRIPT_DIR` discovery | 37 lines, 4 competing patterns | One convention (Wave 0.G.2) | 25 |
+| 4 | `nemoclaw list` / `status` / gateway state probes | 142 inlined sites | `lib/assert/{gateway,sandbox}-alive.sh` | 500 |
+| 5 | `bash install.sh ...` invocations | 24 scripts | `lib/setup/install.sh` dispatcher (Wave 0.C.1) | 300 |
+| 6 | `nemoclaw onboard ...` variants | 42 invocations, 8+ flag incantations | `lib/setup/onboard.sh` + profile handlers | 800 |
+| 7 | Docker older-base-image pattern | 3 hand-rolled implementations | `lib/fixtures/older-base-image.sh` (Wave 0.A.1) | 250 |
+| 8 | Trap / cleanup / teardown blocks | 112 lines, ~15 patterns | `lib/cleanup.sh` + convention 0.G.3 | 400 |
+| 9 | Fake-endpoint inline setups | 3 inline variants | `lib/fixtures/fake-{openai,telegram,discord,slack}.sh` (Wave 0.A.2–5) | 150 |
+| 10 | Sandbox-scoped exec (`nemoclaw shell <sb> -- ...`) | 15 scripts reimplement with drift | `lib/sandbox-exec.sh` (Wave 0.A.6) | 200 |
+| 11 | Hermes/OpenClaw pair-variant scripts | 7 paired scripts share ~70% | Shared suite steps; scenario agent via `expected_state.sandbox.agent` | 800 |
+| 12 | `section "Phase N: X"` markers | Every script inflates logs with phase text | Step-script filename carries the name (convention 0.G.4) | 300 |
+| 13 | Log-capture paths (`/tmp/*.log`) | 25 different conventions; CI artifact upload assumes one | `$E2E_CONTEXT_DIR/logs/` convention 0.G.5 | 300 |
+| **Total** | | | | **~5,556** |
+
+About **25% LOC reduction** net after legacy retirement. The larger win
+is drift reduction: when `--yes-i-accept-third-party-software` renames
+again, it's a 1-file change instead of a 24-file change.
+
 ## Status summary
 
 | Bucket | Legacy LOC | Status |
 |---|---:|---|
-| Wave 0 — shared fixtures, asserts, setup split | — | ⬜ not started |
+| Wave 0 — fixtures, asserts, setup splits, conventions, parity workflow | — | ⬜ not started |
 | Wave 1 — onboarding baseline | 1,101 | ⬜ |
 | Wave 2 — onboarding lifecycle | 2,013 | ⬜ |
 | Wave 3 — sandbox lifecycle | 2,891 | ⬜ |
