@@ -53,8 +53,10 @@ fail() {
   echo -e "${RED}[FAIL]${NC} $1" >&2
   diag "start log tail:"
   tail -80 "$START_LOG" 2>/dev/null || true
-  diag "gateway log tail:"
+  diag "gateway process log tail:"
   tail -80 "$GATEWAY_LOG" 2>/dev/null || true
+  diag "onboard gateway log tail (where sabotage stderr lands):"
+  tail -80 "${STATE_DIR}/openshell-gateway.log" 2>/dev/null || true
   diag "openshell status: $(openshell status 2>&1 || true)"
   diag "gateway info: $(openshell gateway info -g nemoclaw 2>&1 || true)"
   diag "pid file: $(cat "${PID_FILE:-/dev/null}" 2>/dev/null || echo missing)"
@@ -170,13 +172,21 @@ info "node exit code: ${NODE_EXIT}"
 
 # ── Pre-assertion: prove the sabotage path was actually exercised ───
 # Without this guard, an unrelated setup failure (module-not-found,
-# missing env, stale dist/, etc.) could produce a log that happens to
-# lack the 'healthy' string and thereby false-green the primary
-# assertion. We require positive evidence that the sabotage shim ran.
-if ! grep -qE 'GLIBC_2\.3(8|9)|openshell-gateway-sabotage' "$START_LOG"; then
-  fail "Sabotage markers (GLIBC_2.38/2.39 or 'openshell-gateway-sabotage') not observed in start log — the test may have failed before the sabotaged gateway was invoked, so the assertions below cannot be trusted. Inspect the start log above for the real cause."
+# missing env, stale dist/, etc.) could produce a $START_LOG that
+# happens to lack the 'healthy' string and thereby false-green the
+# primary assertion. We require positive evidence that the sabotage
+# shim ran.
+#
+# The sabotage shim writes its GLIBC-style stderr to the gateway log
+# file opened by onboard.ts:startGatewayWithOptions at
+# $STATE_DIR/openshell-gateway.log (NOT to the start log, which only
+# captures node's stdout/stderr). That gateway log is the authoritative
+# source of truth for "did our binary get exec'd".
+GATEWAY_ONBOARD_LOG="${STATE_DIR}/openshell-gateway.log"
+if ! grep -qE 'GLIBC_2\.3(8|9)|openshell-gateway-sabotage' "$GATEWAY_ONBOARD_LOG" 2>/dev/null; then
+  fail "Sabotage markers (GLIBC_2.38/2.39 or 'openshell-gateway-sabotage') not observed in gateway log ${GATEWAY_ONBOARD_LOG} — the test may have failed before the sabotaged gateway was invoked, so the assertions below cannot be trusted. Inspect $START_LOG and $GATEWAY_ONBOARD_LOG above for the real cause."
 fi
-pass "Sabotage shim was invoked as expected (GLIBC/sabotage markers present in log)"
+pass "Sabotage shim was invoked as expected (GLIBC/sabotage markers present in gateway log)"
 
 # ── Primary assertion ────────────────────────────────────────────────
 # This is the bug from #3111. Onboard printed "healthy" while the child
