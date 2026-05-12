@@ -3,7 +3,7 @@
 
 import { createRequire } from "node:module";
 
-import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { afterEach, describe, expect, it, type MockInstance, vi } from "vitest";
 
 import {
   detectOpenShellStateRpcPreflightIssue,
@@ -208,5 +208,24 @@ describe("OpenShell gateway drift preflight", () => {
         expect.stringContaining("nemoclaw backup-all"),
       ]),
     );
+  });
+
+  it("formats runtime protobuf mismatches with gateway-specific recovery guidance", () => {
+    const lines = formatOpenShellStateRpcIssue(
+      {
+        kind: "protobuf_mismatch",
+        output: "Sandbox.metadata: invalid wire type value: 6",
+      },
+      {
+        action: "querying live sandboxes",
+        gatewayName: "custom-gw",
+      },
+    );
+
+    expect(lines).toContain(
+      "  OpenShell gateway/schema mismatch was detected while querying live sandboxes.",
+    );
+    expect(lines.join("\n")).toContain("openshell-cluster-custom-gw");
+    expect(lines.join("\n")).not.toContain("schema preflight failed before");
   });
 });

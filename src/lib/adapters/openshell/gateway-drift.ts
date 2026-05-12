@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { CLI_DISPLAY_NAME, CLI_NAME } from "../../cli/branding";
+import { isOpenShellProtobufSchemaMismatch } from "../../runtime-recovery";
 import { isGatewayHealthy } from "../../state/gateway";
 import { dockerContainerInspectFormat } from "../docker";
-import { isOpenShellProtobufSchemaMismatch } from "../../runtime-recovery";
 import { stripAnsi } from "./client";
 import { captureOpenshell, getInstalledOpenshellVersionOrNull } from "./runtime";
 import { OPENSHELL_PROBE_TIMEOUT_MS } from "./timeouts";
@@ -50,6 +50,7 @@ type StateRpcResult = {
 type FormatIssueOptions = {
   action?: string;
   command?: string;
+  gatewayName?: string;
 };
 
 function hasInjectedGatewayDriftDeps(deps: GatewayDriftDeps): boolean {
@@ -253,14 +254,24 @@ function compactOutput(output: string): string {
 
 export function formatOpenShellStateRpcIssue(
   issue: OpenShellStateRpcIssue,
-  { action = "querying OpenShell sandbox state", command }: FormatIssueOptions = {},
+  {
+    action = "querying OpenShell sandbox state",
+    command,
+    gatewayName = DEFAULT_GATEWAY_NAME,
+  }: FormatIssueOptions = {},
 ): string[] {
+  const phaseLine =
+    issue.kind === "image_drift"
+      ? `  OpenShell gateway schema preflight failed before ${action}.`
+      : `  OpenShell gateway/schema mismatch was detected while ${action}.`;
   const lines = [
     "",
-    `  OpenShell gateway schema preflight failed before ${action}.`,
+    phaseLine,
   ];
 
   const drift = issue.kind === "image_drift" ? issue.drift : issue.drift || null;
+  const gatewayContainerName =
+    drift?.containerName ?? getGatewayClusterContainerName(gatewayName);
   if (drift) {
     lines.push(
       `  Installed OpenShell: ${drift.expectedVersion}`,
@@ -288,7 +299,7 @@ export function formatOpenShellStateRpcIssue(
     `    1. Run \`${CLI_NAME} onboard --resume\` to repair or recreate the ${CLI_DISPLAY_NAME} gateway with the installed OpenShell image.`,
     `    2. Rerun${command ? ` \`${command}\`` : " the command"} after \`openshell status\` reports a healthy ${CLI_DISPLAY_NAME} gateway.`,
     "",
-    `  If gateway recreation is required, preserve sandbox state first; do not remove \`openshell-cluster-${DEFAULT_GATEWAY_NAME}\` Docker volumes unless you have a backup and explicitly accept state loss.`,
+    `  If gateway recreation is required, preserve sandbox state first; do not remove \`${gatewayContainerName}\` Docker volumes unless you have a backup and explicitly accept state loss.`,
   );
 
   return lines;
