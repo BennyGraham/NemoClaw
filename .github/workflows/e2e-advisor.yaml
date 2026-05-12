@@ -49,6 +49,10 @@ on:
 
 permissions:
   contents: read
+  # `actions: write` lets the trusted advisor dispatcher trigger the selected
+  # E2E workflow for eligible NVIDIA-owned PRs after validating the requested
+  # jobs against the target workflow's own selective-dispatch predicates.
+  actions: write
   # `pull-requests: write` is required for the advisor to post (or update) a
   # comment on a PR via POST /repos/:o/:r/issues/:n/comments. Even though the
   # endpoint lives under `/issues/`, for GITHUB_TOKEN the permission that
@@ -80,7 +84,7 @@ jobs:
       ADVISOR_DIR: ${{ github.workspace }}/advisor
     steps:
       # Trusted-code boundary: the advisor implementation (pi-analyze.mjs,
-      # comment.mjs, schema.json, pi-models.template.json) is always fetched
+      # dispatch.mjs, comment.mjs, schema.json, pi-models.template.json) is always fetched
       # from the main branch of this repo, regardless of what the PR changed.
       # This prevents a future PR from modifying advisor code and executing
       # arbitrary Node in a job that holds API keys and a write-scoped token.
@@ -181,6 +185,21 @@ jobs:
             printf '# Pi Semantic E2E Advisor\n\nPi analysis did not produce a summary. See raw artifacts/logs.\n' >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Auto-dispatch required E2E jobs
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node "$ADVISOR_DIR/tools/e2e-advisor/dispatch.mjs" \
+            --result "$GITHUB_WORKSPACE/artifacts/e2e-advisor/e2e-advisor-final-result.json" \
+            --workflow nightly-e2e.yaml \
+            --workflow-path "$ADVISOR_DIR/.github/workflows/nightly-e2e.yaml" \
+            --out-dir "$GITHUB_WORKSPACE/artifacts/e2e-advisor"
+          if [ -f "$GITHUB_WORKSPACE/artifacts/e2e-advisor/e2e-advisor-dispatch-summary.md" ]; then
+            cat "$GITHUB_WORKSPACE/artifacts/e2e-advisor/e2e-advisor-dispatch-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Post E2E advisor PR comment
         if: ${{ always() && github.event_name == 'pull_request' }}
         continue-on-error: true
@@ -192,7 +211,8 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --pr "$PR_NUMBER" \
             --summary "$GITHUB_WORKSPACE/artifacts/e2e-advisor/e2e-advisor-pi-summary.md" \
-            --result "$GITHUB_WORKSPACE/artifacts/e2e-advisor/e2e-advisor-final-result.json"
+            --result "$GITHUB_WORKSPACE/artifacts/e2e-advisor/e2e-advisor-final-result.json" \
+            --dispatch "$GITHUB_WORKSPACE/artifacts/e2e-advisor/e2e-advisor-dispatch-result.json"
 
       - name: Upload advisor artifacts
         if: always()

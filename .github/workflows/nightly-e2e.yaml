@@ -90,6 +90,19 @@ on:
         required: false
         type: string
         default: ""
+      target_ref:
+        description: >-
+          Optional branch, ref, or SHA to test. When empty, tests run against
+          the workflow ref selected for the dispatch. Used by e2e-advisor
+          auto-dispatch so the trusted main workflow can test a PR head SHA.
+        required: false
+        type: string
+        default: ""
+      pr_number:
+        description: Optional PR number for selective-dispatch result comments.
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -110,6 +123,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run cloud E2E test
         env:
@@ -144,6 +159,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run cloud onboard E2E test
         env:
@@ -180,6 +197,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run cloud inference E2E test
         env:
@@ -212,6 +231,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run skill agent E2E test
         env:
@@ -244,6 +265,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Install NemoClaw
         env:
@@ -279,6 +302,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run messaging providers E2E test
         env:
@@ -317,6 +342,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run messaging compatible endpoint E2E test
         env:
@@ -354,6 +381,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run Brave Search E2E test
         env:
@@ -394,6 +423,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run Kimi inference compatibility E2E test
         env:
@@ -444,6 +475,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run token rotation E2E test
         env:
@@ -482,6 +515,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run sandbox survival E2E test
         env:
@@ -515,6 +550,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run #2478 crash-loop recovery E2E test
         env:
@@ -548,6 +585,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run Hermes Agent E2E test
         env:
@@ -583,6 +622,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run Hermes inference switch E2E test
         env:
@@ -618,6 +659,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run Hermes Discord E2E test
         env:
@@ -658,6 +701,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run Hermes Slack E2E test
         env:
@@ -696,6 +741,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Start gateway log streamer (background)
         run: |
@@ -942,6 +989,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run inference error classification E2E test
         env:
@@ -974,6 +1023,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run OpenClaw inference switch E2E test
         env:
@@ -1007,6 +1058,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run network policy E2E test
         env:
@@ -1040,6 +1093,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run deployment services E2E test
         env:
@@ -1072,6 +1127,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run diagnostics E2E test
         env:
@@ -1106,6 +1163,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run credential migration E2E test
         env:
@@ -1139,6 +1198,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run snapshot commands E2E test
         env:
@@ -1171,6 +1232,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run shields & config E2E test
         env:
@@ -1203,6 +1266,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run OpenClaw rebuild upgrade E2E test
         env:
@@ -1236,6 +1301,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run upgrade stale sandbox E2E test
         env:
@@ -1271,6 +1338,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -1323,6 +1392,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -1360,6 +1431,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run Hermes rebuild upgrade E2E test
         env:
@@ -1393,6 +1466,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run Hermes stale base-image rebuild E2E test
         env:
@@ -1425,6 +1500,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
       - name: Install NemoClaw
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -1464,6 +1541,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
       - name: Install NemoClaw
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -1503,6 +1582,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
       - name: Install NemoClaw
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -1540,6 +1621,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
       - name: Install NemoClaw
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -1578,6 +1661,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
       - name: Install NemoClaw and onboard sandbox
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -1619,6 +1704,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
       - name: Install NemoClaw and onboard sandbox
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -1663,6 +1750,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run overlayfs auto-fix E2E test
         env:
@@ -1701,6 +1790,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run device auth health E2E
         env:
@@ -1737,6 +1828,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Run launchable install-flow smoke test
         env:
@@ -1794,6 +1887,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Verify GPU availability
         run: |
@@ -1847,6 +1942,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.target_ref || github.ref }}
 
       - name: Verify GPU availability
         run: |
@@ -1933,7 +2030,7 @@ jobs:
         gpu-e2e,
         gpu-double-onboard-e2e,
       ]
-    if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    if: ${{ always() && github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
     permissions:
       issues: write
     steps:
@@ -2027,6 +2124,7 @@ jobs:
       ]
     if: ${{ always() && github.event_name == 'workflow_dispatch' }}
     permissions:
+      issues: write
       pull-requests: write
     steps:
       - name: Post E2E results to PR
@@ -2035,23 +2133,30 @@ jobs:
           script: |
             const needs = ${{ toJSON(needs) }};
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const branch = context.ref.replace('refs/heads/', '');
+            const workflowBranch = context.ref.replace('refs/heads/', '');
+            const targetRef = ${{ toJSON(inputs.target_ref) }} || '';
+            const prNumberInput = ${{ toJSON(inputs.pr_number) }} || '';
+            const displayRef = targetRef || workflowBranch;
             const requestedJobs = ${{ toJSON(inputs.jobs) }} || "";
 
-            // Find open PR for this branch
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${branch}`,
-              state: 'open',
-            });
+            let prNumber = prNumberInput ? Number.parseInt(prNumberInput, 10) : undefined;
+            if (!prNumber) {
+              // Find open PR for this branch. This is the legacy manual-dispatch
+              // path where the workflow itself is dispatched on the PR branch.
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: `${context.repo.owner}:${workflowBranch}`,
+                state: 'open',
+              });
 
-            if (prs.length === 0) {
-              core.info(`No open PR found for branch ${branch} — skipping comment.`);
-              return;
+              if (prs.length === 0) {
+                core.info(`No open PR found for branch ${workflowBranch} — skipping comment.`);
+                return;
+              }
+
+              prNumber = prs[0].number;
             }
-
-            const pr = prs[0];
 
             const requested = requestedJobs
               .split(',')
@@ -2090,7 +2195,8 @@ jobs:
               `### Selective E2E Results — ${status}`,
               '',
               `**Run:** [${context.runId}](${runUrl})`,
-              `**Branch:** \`${branch}\``,
+              `**Target ref:** \`${displayRef}\``,
+              targetRef ? `**Workflow ref:** \`${workflowBranch}\`` : undefined,
               requestedJobs ? `**Requested jobs:** \`${requestedJobs}\`` : '**Requested jobs:** all (no filter)',
               `**Summary:** ${passed.length} passed, ${failed.length} failed, ${skipped.length} skipped`,
               '',
@@ -2109,7 +2215,7 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: pr.number,
+              issue_number: prNumber,
               body,
             });
 

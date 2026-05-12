@@ -10,6 +10,7 @@ const repo = args.repo || process.env.GITHUB_REPOSITORY;
 const pr = args.pr || process.env.PR_NUMBER;
 const summaryPath = args.summary || "artifacts/e2e-advisor/e2e-advisor-pi-summary.md";
 const resultPath = args.result || "artifacts/e2e-advisor/e2e-advisor-final-result.json";
+const dispatchPath = args.dispatch || "artifacts/e2e-advisor/e2e-advisor-dispatch-result.json";
 const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
 const runUrl = process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
   ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
@@ -31,7 +32,8 @@ if (!summary) {
 }
 
 const result = readJsonIfExists(resultPath);
-const body = buildComment({ summary, result, runUrl, marker });
+const dispatch = readJsonIfExists(dispatchPath);
+const body = buildComment({ summary, result, dispatch, runUrl, marker });
 
 try {
   const existing = await findExistingComment(repo, pr, token, marker);
@@ -80,7 +82,7 @@ function readJsonIfExists(filePath) {
   return text ? JSON.parse(text) : undefined;
 }
 
-function buildComment({ summary, result, runUrl, marker }) {
+function buildComment({ summary, result, dispatch, runUrl, marker }) {
   const requiredTests = Array.isArray(result?.requiredTests) ? result.requiredTests : [];
   const optionalTests = Array.isArray(result?.optionalTests) ? result.optionalTests : [];
   const requiredLine = requiredTests.length > 0
@@ -89,16 +91,17 @@ function buildComment({ summary, result, runUrl, marker }) {
   const optionalLine = optionalTests.length > 0
     ? optionalTests.map((test) => `\`${test.id}\``).join(", ")
     : "_None_";
-  const dispatch = result?.dispatchHint?.jobsInput
+  const dispatchHint = result?.dispatchHint?.jobsInput
     ? `\n\n**Dispatch hint:** \`${result.dispatchHint.jobsInput}\``
     : "";
+  const autoDispatch = renderAutoDispatch(dispatch);
   const run = runUrl ? `\n\n[Workflow run](${runUrl})` : "";
 
   return `${marker}
 ## E2E Advisor Recommendation
 
 **Required E2E:** ${requiredLine}
-**Optional E2E:** ${optionalLine}${dispatch}${run}
+**Optional E2E:** ${optionalLine}${dispatchHint}${autoDispatch}${run}
 
 <details>
 <summary>Full advisor summary</summary>
@@ -107,6 +110,24 @@ ${summary.trim()}
 
 </details>
 `;
+}
+
+function renderAutoDispatch(dispatch) {
+  if (!dispatch || typeof dispatch !== "object") {
+    return "";
+  }
+  if (dispatch.status === "dispatched") {
+    const jobs = Array.isArray(dispatch.jobs) && dispatch.jobs.length > 0
+      ? dispatch.jobs.map((job) => `\`${job}\``).join(", ")
+      : "_unknown_";
+    const workflow = dispatch.workflow ? ` via \`${dispatch.workflow}\`` : "";
+    const target = dispatch.targetRef ? ` at \`${dispatch.targetRef}\`` : "";
+    return `\n\n**Auto-dispatched E2E:** ${jobs}${workflow}${target}`;
+  }
+  if (dispatch.status === "failed") {
+    return `\n\n**Auto-dispatch:** failed — ${dispatch.reason || "unknown error"}`;
+  }
+  return "";
 }
 
 async function findExistingComment(repo, pr, token, marker) {
