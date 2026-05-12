@@ -255,16 +255,20 @@ function waitForSsh(maxAttempts = 0, intervalMs = 5_000): void {
   if (maxAttempts === 0) {
     maxAttempts = USE_PUBLISHED_LAUNCHABLE ? 96 : 40;
   }
+  let lastError = "unknown error";
   for (let i = 1; i <= maxAttempts; i++) {
     try {
       ssh("echo ok", { timeout: 10_000 });
       return;
-    } catch {
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
       if (i === maxAttempts)
         throw new Error(
-          `SSH not ready after ${maxAttempts} attempts (~${Math.round((maxAttempts * (intervalMs + 10_000)) / 60_000)} min)`,
+          `SSH not ready after ${maxAttempts} attempts (~${Math.round((maxAttempts * (intervalMs + 10_000)) / 60_000)} min). Last error: ${lastError}`,
         );
-      console.log(`  SSH attempt ${i}/${maxAttempts} failed, retrying in ${intervalMs / 1000}s...`);
+      console.log(
+        `  SSH attempt ${i}/${maxAttempts} failed: ${lastError}; retrying in ${intervalMs / 1000}s...`,
+      );
       if (i % 5 === 0) {
         console.log(`  Refreshing brev SSH config...`);
         try {
