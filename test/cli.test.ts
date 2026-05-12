@@ -2194,7 +2194,8 @@ describe("CLI dispatch", () => {
 
     try {
       let calls: string[] = [];
-      const pollTimeoutMs = Math.min(testTimeout(10_000), Math.max(1_000, testTimeout() - 5_000));
+      const testBudgetMs = testTimeout(10_000);
+      const pollTimeoutMs = Math.min(testBudgetMs, Math.max(1_000, testBudgetMs - 5_000));
       const deadline = Date.now() + pollTimeoutMs;
       while (Date.now() < deadline) {
         calls = readCalls();
@@ -2258,7 +2259,8 @@ describe("CLI dispatch", () => {
 
     try {
       let calls: string[] = [];
-      const pollTimeoutMs = Math.min(testTimeout(10_000), Math.max(1_000, testTimeout() - 5_000));
+      const testBudgetMs = testTimeout(10_000);
+      const pollTimeoutMs = Math.min(testBudgetMs, Math.max(1_000, testBudgetMs - 5_000));
       const deadline = Date.now() + pollTimeoutMs;
       while (Date.now() < deadline) {
         calls = readCalls();
@@ -2275,7 +2277,8 @@ describe("CLI dispatch", () => {
       child.kill("SIGTERM");
 
       let callsAfterTerm: string[] = [];
-      const termDeadline = Date.now() + Math.min(testTimeout(5_000), Math.max(1_000, testTimeout() - 5_000));
+      const termTimeoutMs = Math.min(testBudgetMs, Math.max(1_000, testBudgetMs - 5_000));
+      const termDeadline = Date.now() + termTimeoutMs;
       while (Date.now() < termDeadline) {
         callsAfterTerm = readCalls();
         if (callsAfterTerm.some((call) => call.endsWith("term-start")) || hasExited) {
