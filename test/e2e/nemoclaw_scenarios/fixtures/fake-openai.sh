@@ -79,7 +79,7 @@ fake_openai_start() {
     if [[ -s "${tmp_port}" ]]; then
       break
     fi
-    : "${i}"  # quiet unused-var check
+    : "${i}" # quiet unused-var check
     sleep 0.1
   done
   if [[ ! -s "${tmp_port}" ]]; then

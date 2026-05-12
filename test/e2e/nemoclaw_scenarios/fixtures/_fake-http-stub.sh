@@ -54,7 +54,7 @@ _fake_http_stub_start() {
   local i
   for i in $(seq 1 50); do
     [[ -s "${tmp_port}" ]] && break
-    : "${i}"  # quiet unused-var check
+    : "${i}" # quiet unused-var check
     sleep 0.1
   done
   if [[ ! -s "${tmp_port}" ]]; then

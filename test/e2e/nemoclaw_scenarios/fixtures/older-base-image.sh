@@ -17,9 +17,9 @@
 #   older_base_image_cleanup <dockerfile-path>
 #     Removes the generated Dockerfile and (if present) its build context.
 
-_E2E_OBI_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=../env.sh
-. "${_E2E_OBI_LIB_DIR}/../env.sh"
+_E2E_OBI_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../runtime/lib" && pwd)"
+# shellcheck source=../../runtime/lib/env.sh
+. "${_E2E_OBI_LIB_DIR}/env.sh"
 
 older_base_image_prepare() {
   local tag="${1:?tag required}"
@@ -52,8 +52,8 @@ EOF
   e2e_env_trace "fixture:older-base-image" "${registry}:${tag}"
   if ! e2e_env_is_dry_run; then
     if command -v docker >/dev/null 2>&1; then
-      docker pull "${registry}:${tag}" >&2 || \
-        echo "older_base_image_prepare: docker pull failed (continuing; build may still succeed on cached layers)" >&2
+      docker pull "${registry}:${tag}" >&2 \
+        || echo "older_base_image_prepare: docker pull failed (continuing; build may still succeed on cached layers)" >&2
     fi
   fi
   printf '%s\n' "${dockerfile}"
@@ -69,6 +69,6 @@ older_base_image_cleanup() {
   rm -f "${dockerfile}"
   # Only remove the temp dir if it looks like one we created.
   case "${dir}" in
-    /tmp/*|/var/folders/*) rm -rf "${dir}" ;;
+    /tmp/* | /var/folders/*) rm -rf "${dir}" ;;
   esac
 }
