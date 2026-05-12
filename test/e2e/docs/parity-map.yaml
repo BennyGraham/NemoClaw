@@ -136,3 +136,12 @@ scripts:
   test-upgrade-stale-sandbox.sh:
     scenario: ""
     assertions: []
+  test-hermes-inference-switch.sh:
+    scenario: ""
+    assertions: []
+  test-openclaw-inference-switch.sh:
+    scenario: ""
+    assertions: []
+  test-openshell-gateway-upgrade.sh:
+    scenario: ""
+    assertions: []
