@@ -350,7 +350,13 @@ describe("Phase 1.D assertion helpers", () => {
     try {
       const bundle = path.join(tmp, "bundle");
       fs.mkdirSync(bundle);
-      fs.writeFileSync(path.join(bundle, "leak.txt"), "token=sk-abc123DEADBEEFCAFE0000111122223333");
+      fs.writeFileSync(
+        path.join(bundle, "leak.txt"),
+        [
+          "openai=sk-proj-abc123DEADBEEFCAFE0000111122223333",
+          "github=github_pat_11ABCDEFabcdefghijklmnopqrstuvwx",
+        ].join("\n"),
+      );
       const r = runBash(`
         . "${ASSERT}/no-credentials-leaked.sh"
         e2e_assert_no_credentials_leaked "${bundle}"

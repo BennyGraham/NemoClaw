@@ -59,11 +59,11 @@ e2e_assert_inference_works() {
     return 1
   fi
   # Minimal shape check: must contain a `choices` array with some content.
-  if ! printf '%s' "${out}" | grep -q '"choices"'; then
+  if [[ "${out}" != *'"choices"'* ]]; then
     echo "FAIL: inference response missing 'choices' field: ${out}" >&2
     return 1
   fi
-  if ! printf '%s' "${out}" | grep -q '"content"'; then
+  if [[ "${out}" != *'"content"'* ]]; then
     echo "FAIL: inference response missing 'content' field: ${out}" >&2
     return 1
   fi
