@@ -90,10 +90,17 @@ describe("isDockerDriverGatewayTcpReady (#3111)", () => {
   });
 
   it("enforces a minimum timeout of 50ms even when caller passes 0", async () => {
-    const port = await getLikelyClosedPort();
+    // Use a non-routable host so the probe can't short-circuit via an
+    // immediate ECONNREFUSED. If timeout clamping regressed to 0 ms, the
+    // probe would return essentially instantly; the >=40 ms lower bound
+    // (generous 10 ms slack under the 50 ms floor) catches that regression.
     const started = Date.now();
-    await expect(isDockerDriverGatewayTcpReady(port, 0)).resolves.toBe(false);
-    expect(Date.now() - started).toBeLessThan(500);
+    await expect(
+      isDockerDriverGatewayTcpReady(9, 0, "10.255.255.1"),
+    ).resolves.toBe(false);
+    const elapsed = Date.now() - started;
+    expect(elapsed).toBeGreaterThanOrEqual(40);
+    expect(elapsed).toBeLessThan(2000);
   });
 
   it("never throws — always resolves with a boolean", async () => {
