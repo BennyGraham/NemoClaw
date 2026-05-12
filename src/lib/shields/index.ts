@@ -26,12 +26,17 @@ const {
   parseCurrentPolicy,
   PERMISSIVE_POLICY_PATH,
 } = require("../policy");
-const { parseDuration, MAX_SECONDS, DEFAULT_SECONDS } = require("../domain/duration");
+const {
+  parseDuration,
+  MAX_SECONDS,
+  DEFAULT_SECONDS,
+} = require("../domain/duration");
 const {
   timerMarkerPath,
   readTimerMarker,
   clearTimerMarker,
   isProcessAlive,
+  verifyTimerMarkerIdentity,
   killTimer,
 } = require("./timer-control");
 const { resolveNemoclawStateDir } = require("../state/paths");
@@ -53,7 +58,9 @@ const STATE_DIR = resolveNemoclawStateDir();
 
 const K3S_CONTAINER = "openshell-cluster-nemoclaw";
 
-function resolveDockerDriverSandboxContainer(sandboxName: string): string | null {
+function resolveDockerDriverSandboxContainer(
+  sandboxName: string,
+): string | null {
   try {
     if (registry.getSandbox?.(sandboxName)?.openshellDriver !== "docker") {
       return null;
@@ -63,7 +70,9 @@ function resolveDockerDriverSandboxContainer(sandboxName: string): string | null
   }
   const prefix = `openshell-${sandboxName}-`;
   const exact = `openshell-${sandboxName}`;
-  const output = dockerCapture(["ps", "--format", "{{.Names}}"], { ignoreError: true });
+  const output = dockerCapture(["ps", "--format", "{{.Names}}"], {
+    ignoreError: true,
+  });
   return (
     output
       .split("\n")
@@ -88,8 +97,12 @@ function kubectlExecArgv(sandboxName: string, cmd: string[]): string[] {
   ];
 }
 
-function privilegedSandboxExecArgv(sandboxName: string, cmd: string[]): string[] {
-  const dockerDriverContainer = resolveDockerDriverSandboxContainer(sandboxName);
+function privilegedSandboxExecArgv(
+  sandboxName: string,
+  cmd: string[],
+): string[] {
+  const dockerDriverContainer =
+    resolveDockerDriverSandboxContainer(sandboxName);
   if (dockerDriverContainer) {
     return ["exec", "--user", "root", dockerDriverContainer, ...cmd];
   }
@@ -103,7 +116,10 @@ function privilegedSandboxExec(sandboxName: string, cmd: string[]): void {
   });
 }
 
-function privilegedSandboxExecCapture(sandboxName: string, cmd: string[]): string {
+function privilegedSandboxExecCapture(
+  sandboxName: string,
+  cmd: string[],
+): string {
   return dockerExecFileSync(privilegedSandboxExecArgv(sandboxName, cmd), {
     stdio: ["ignore", "pipe", "pipe"],
     timeout: 15000,
@@ -326,7 +342,12 @@ function applyStateDirLockMode(
       }
     }
     try {
-      privilegedSandboxExec(sandboxName, ["chmod", "-R", recursiveMode, dirPath]);
+      privilegedSandboxExec(sandboxName, [
+        "chmod",
+        "-R",
+        recursiveMode,
+        dirPath,
+      ]);
     } catch {
       // Silently skip
     }
@@ -378,7 +399,14 @@ function assertNoLegacyStateLayout(
   const script =
     'set -u; config_dir="$1"; data_dir="$2"; data_real="$(readlink -f "$data_dir" 2>/dev/null || printf "%s" "$data_dir")"; if [ -e "$data_dir" ] || [ -L "$data_dir" ]; then echo "legacy data dir exists: $data_dir"; exit 1; fi; for entry in "$config_dir"/*; do [ -L "$entry" ] || continue; target="$(readlink -f "$entry" 2>/dev/null || readlink "$entry" 2>/dev/null || true)"; case "$target" in "$data_real"/*|"$data_dir"/*) echo "legacy symlink remains: $entry -> $target"; exit 1;; esac; done';
   try {
-    privilegedSandboxExecCapture(sandboxName, ["sh", "-c", script, "sh", configDir, dataDir]);
+    privilegedSandboxExecCapture(sandboxName, [
+      "sh",
+      "-c",
+      script,
+      "sh",
+      configDir,
+      dataDir,
+    ]);
   } catch (err) {
     const execErr = err as {
       stdout?: Buffer | string;
@@ -447,7 +475,11 @@ function unlockAgentConfig(
     }
   }
   try {
-    privilegedSandboxExec(sandboxName, ["chown", "sandbox:sandbox", target.configDir]);
+    privilegedSandboxExec(sandboxName, [
+      "chown",
+      "sandbox:sandbox",
+      target.configDir,
+    ]);
   } catch {
     errors.push("chown config dir");
   }
@@ -471,7 +503,12 @@ function unlockAgentConfig(
   const issues: string[] = [];
   for (const f of filesToUnlock) {
     try {
-      const perms = privilegedSandboxExecCapture(sandboxName, ["stat", "-c", "%a %U:%G", f]);
+      const perms = privilegedSandboxExecCapture(sandboxName, [
+        "stat",
+        "-c",
+        "%a %U:%G",
+        f,
+      ]);
       const [mode, owner] = perms.split(" ");
       if (mode !== fileMode)
         issues.push(`${f} mode=${mode} (expected ${fileMode})`);
@@ -482,7 +519,11 @@ function unlockAgentConfig(
       issues.push(`${f} stat failed: ${msg}`);
     }
     try {
-      const attrs = privilegedSandboxExecCapture(sandboxName, ["lsattr", "-d", f]);
+      const attrs = privilegedSandboxExecCapture(sandboxName, [
+        "lsattr",
+        "-d",
+        f,
+      ]);
       const [flags] = attrs.trim().split(/\s+/, 1);
       if (flags.includes("i")) issues.push(`${f} immutable bit still set`);
     } catch {
@@ -491,7 +532,12 @@ function unlockAgentConfig(
   }
 
   try {
-    const dirPerms = privilegedSandboxExecCapture(sandboxName, ["stat", "-c", "%a %U:%G", target.configDir]);
+    const dirPerms = privilegedSandboxExecCapture(sandboxName, [
+      "stat",
+      "-c",
+      "%a %U:%G",
+      target.configDir,
+    ]);
     const [mode, owner] = dirPerms.split(" ");
     if (mode !== dirMode)
       issues.push(`config dir mode=${mode} (expected ${dirMode})`);
@@ -558,7 +604,11 @@ function lockAgentConfig(
   }
 
   try {
-    privilegedSandboxExec(sandboxName, ["chown", "root:root", target.configDir]);
+    privilegedSandboxExec(sandboxName, [
+      "chown",
+      "root:root",
+      target.configDir,
+    ]);
   } catch {
     errors.push("chown root:root config dir");
   }
@@ -603,7 +653,12 @@ function lockAgentConfig(
   const issues: string[] = [];
   for (const f of filesToLock) {
     try {
-      const perms = privilegedSandboxExecCapture(sandboxName, ["stat", "-c", "%a %U:%G", f]);
+      const perms = privilegedSandboxExecCapture(sandboxName, [
+        "stat",
+        "-c",
+        "%a %U:%G",
+        f,
+      ]);
       const [mode, owner] = perms.split(" ");
       if (!/^4[0-4][0-4]$/.test(mode))
         issues.push(`${f} mode=${mode} (expected 444)`);
@@ -616,7 +671,12 @@ function lockAgentConfig(
   }
 
   try {
-    const dirPerms = privilegedSandboxExecCapture(sandboxName, ["stat", "-c", "%a %U:%G", target.configDir]);
+    const dirPerms = privilegedSandboxExecCapture(sandboxName, [
+      "stat",
+      "-c",
+      "%a %U:%G",
+      target.configDir,
+    ]);
     const [dirMode, dirOwner] = dirPerms.split(" ");
     if (dirMode !== "755") issues.push(`dir mode=${dirMode} (expected 755)`);
     if (dirOwner !== "root:root")
@@ -629,7 +689,11 @@ function lockAgentConfig(
   if (chattrSucceeded) {
     for (const f of filesToLock) {
       try {
-        const attrs = privilegedSandboxExecCapture(sandboxName, ["lsattr", "-d", f]);
+        const attrs = privilegedSandboxExecCapture(sandboxName, [
+          "lsattr",
+          "-d",
+          f,
+        ]);
         // lsattr format: "----i---------e----- /path/to/file"
         // First whitespace-delimited token is the flags field.
         const [flags] = attrs.trim().split(/\s+/, 1);
@@ -703,10 +767,19 @@ function recoverExpiredAutoRestoreInline(
     return { attempted: false, restored: false };
   }
 
-  if (isProcessAlive(marker.pid)) return { attempted: false, restored: false };
+  // PID liveness alone is unsafe: after a reboot/OOM the original timer's PID
+  // can be reassigned to an unrelated live process, which would otherwise block
+  // recovery forever and reproduce the #3112 fail-open. Treat a live PID as
+  // "our timer" only if cmdline + sandbox + processToken match.
+  if (
+    isProcessAlive(marker.pid) &&
+    verifyTimerMarkerIdentity(marker).verified
+  ) {
+    return { attempted: false, restored: false };
+  }
 
   console.error(
-    "  Warning: auto-restore timer marker is expired and its process is not running; attempting inline restore.",
+    "  Warning: auto-restore timer marker is expired and the timer process is not the recorded shields timer; attempting inline restore.",
   );
 
   const activation = activateLockdownFromSnapshot(
@@ -761,7 +834,9 @@ function recoverExpiredAutoRestoreGate(
 } {
   const state = loadShieldsState(sandboxName);
   if (!allowInlineRecovery) return state;
-  if (deriveShieldsMode(state, state._hasStateFile) !== "temporarily_unlocked") {
+  if (
+    deriveShieldsMode(state, state._hasStateFile) !== "temporarily_unlocked"
+  ) {
     return state;
   }
 

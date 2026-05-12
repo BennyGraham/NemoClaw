@@ -19,7 +19,13 @@ vi.mock("../runner", () => ({
 }));
 
 vi.mock("../policy", () => ({
-  buildPolicyGetCommand: vi.fn((name) => ["openshell", "policy", "get", "--full", name]),
+  buildPolicyGetCommand: vi.fn((name) => [
+    "openshell",
+    "policy",
+    "get",
+    "--full",
+    name,
+  ]),
   buildPolicySetCommand: vi.fn((file, name) => [
     "openshell",
     "policy",
@@ -338,7 +344,10 @@ describe("shields — unit logic", () => {
       return path.join(tmpDir, ".nemoclaw", "state");
     }
 
-    function writeState(sandboxName: string, state: Record<string, unknown>): void {
+    function writeState(
+      sandboxName: string,
+      state: Record<string, unknown>,
+    ): void {
       fs.mkdirSync(stateDir(), { recursive: true });
       fs.writeFileSync(
         path.join(stateDir(), `shields-${sandboxName}.json`),
@@ -347,7 +356,10 @@ describe("shields — unit logic", () => {
       );
     }
 
-    function writeMarker(sandboxName: string, marker: Record<string, unknown>): void {
+    function writeMarker(
+      sandboxName: string,
+      marker: Record<string, unknown>,
+    ): void {
       fs.mkdirSync(stateDir(), { recursive: true });
       fs.writeFileSync(
         path.join(stateDir(), `shields-timer-${sandboxName}.json`),
@@ -390,28 +402,33 @@ describe("shields — unit logic", () => {
         });
       const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const dockerExecFileSync = (await import("node:child_process")).execFileSync as ReturnType<
-        typeof vi.fn
-      >;
-      dockerExecFileSync.mockImplementation((_file: string, argv?: readonly string[]) => {
-        const cmd = Array.isArray(argv) ? argv.join(" ") : "";
-        if (cmd.includes(" stat -c %a %U:%G /sandbox/.openclaw/.config-hash")) {
-          return "444 root:root";
-        }
-        if (cmd.includes(" stat -c %a %U:%G /sandbox/.openclaw/openclaw.json")) {
-          return "444 root:root";
-        }
-        if (cmd.includes(" lsattr -d /sandbox/.openclaw/.config-hash")) {
-          return "----i---------e----- /sandbox/.openclaw/.config-hash";
-        }
-        if (cmd.includes(" stat -c %a %U:%G /sandbox/.openclaw")) {
-          return "755 root:root";
-        }
-        if (cmd.includes(" lsattr -d /sandbox/.openclaw/openclaw.json")) {
-          return "----i---------e----- /sandbox/.openclaw/openclaw.json";
-        }
-        return "";
-      });
+      const dockerExecFileSync = (await import("node:child_process"))
+        .execFileSync as ReturnType<typeof vi.fn>;
+      dockerExecFileSync.mockImplementation(
+        (_file: string, argv?: readonly string[]) => {
+          const cmd = Array.isArray(argv) ? argv.join(" ") : "";
+          if (
+            cmd.includes(" stat -c %a %U:%G /sandbox/.openclaw/.config-hash")
+          ) {
+            return "444 root:root";
+          }
+          if (
+            cmd.includes(" stat -c %a %U:%G /sandbox/.openclaw/openclaw.json")
+          ) {
+            return "444 root:root";
+          }
+          if (cmd.includes(" lsattr -d /sandbox/.openclaw/.config-hash")) {
+            return "----i---------e----- /sandbox/.openclaw/.config-hash";
+          }
+          if (cmd.includes(" stat -c %a %U:%G /sandbox/.openclaw")) {
+            return "755 root:root";
+          }
+          if (cmd.includes(" lsattr -d /sandbox/.openclaw/openclaw.json")) {
+            return "----i---------e----- /sandbox/.openclaw/openclaw.json";
+          }
+          return "";
+        },
+      );
 
       const { shieldsStatus } = await loadShieldsModule();
 
@@ -419,14 +436,19 @@ describe("shields — unit logic", () => {
 
       expect(processKillSpy).toHaveBeenCalledWith(4242, 0);
       expect(errorSpy).toHaveBeenCalledWith(
-        "  Warning: auto-restore timer marker is expired and its process is not running; attempting inline restore.",
+        "  Warning: auto-restore timer marker is expired and the timer process is not the recorded shields timer; attempting inline restore.",
       );
-      expect(logSpy).toHaveBeenCalledWith("  Shields: DOWN (temporarily unlocked)");
+      expect(logSpy).toHaveBeenCalledWith(
+        "  Shields: DOWN (temporarily unlocked)",
+      );
     });
 
     it("shieldsStatus warns and stays DOWN when inline recovery fails", async () => {
       const sandboxName = "openclaw";
-      const missingSnapshotPath = path.join(stateDir(), "missing-snapshot.yaml");
+      const missingSnapshotPath = path.join(
+        stateDir(),
+        "missing-snapshot.yaml",
+      );
       writeState(sandboxName, {
         shieldsDown: true,
         shieldsDownAt: new Date(Date.now() - 60_000).toISOString(),
@@ -443,14 +465,16 @@ describe("shields — unit logic", () => {
         restoreAt: new Date(Date.now() - 30_000).toISOString(),
       });
 
-      vi.spyOn(process, "kill").mockImplementation((pid: number, signal?: string | number) => {
-        if (signal === 0 && pid === 4242) {
-          const err = new Error("not running") as NodeJS.ErrnoException;
-          err.code = "ESRCH";
-          throw err;
-        }
-        return true;
-      });
+      vi.spyOn(process, "kill").mockImplementation(
+        (pid: number, signal?: string | number) => {
+          if (signal === 0 && pid === 4242) {
+            const err = new Error("not running") as NodeJS.ErrnoException;
+            err.code = "ESRCH";
+            throw err;
+          }
+          return true;
+        },
+      );
       const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -458,14 +482,102 @@ describe("shields — unit logic", () => {
 
       shieldsStatus(sandboxName);
 
-      expect(logSpy).toHaveBeenCalledWith("  Shields: DOWN (temporarily unlocked)");
+      expect(logSpy).toHaveBeenCalledWith(
+        "  Shields: DOWN (temporarily unlocked)",
+      );
       expect(errorSpy).toHaveBeenCalledWith(
         "  Recovery warning: inline auto-restore failed; shields remain DOWN.",
       );
       expect(errorSpy).toHaveBeenCalledWith(
         `  Recovery warning: run \`nemoclaw ${sandboxName} shields up\` manually.`,
       );
-      expect(fs.existsSync(path.join(stateDir(), `shields-timer-${sandboxName}.json`))).toBe(true);
+      expect(
+        fs.existsSync(
+          path.join(stateDir(), `shields-timer-${sandboxName}.json`),
+        ),
+      ).toBe(true);
+    });
+
+    it("shieldsStatus attempts inline recovery when expired marker PID is alive but cmdline does not match recorded timer", async () => {
+      const sandboxName = "openclaw";
+      const snapshotPath = path.join(stateDir(), "policy-snapshot-test.yaml");
+      fs.mkdirSync(stateDir(), { recursive: true });
+      fs.writeFileSync(snapshotPath, "version: 1\nnetwork_policies: {}\n");
+      writeState(sandboxName, {
+        shieldsDown: true,
+        shieldsDownAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        shieldsDownTimeout: 300,
+        shieldsDownReason: "testing",
+        shieldsDownPolicy: "permissive",
+        shieldsPolicySnapshotPath: snapshotPath,
+        updatedAt: new Date().toISOString(),
+      });
+      writeMarker(sandboxName, {
+        pid: 4242,
+        sandboxName,
+        snapshotPath,
+        restoreAt: new Date(Date.now() - 30_000).toISOString(),
+        processToken: "token-123",
+      });
+
+      // PID is alive but belongs to an unrelated process (PID reuse after reboot).
+      vi.spyOn(process, "kill").mockImplementation(
+        (_pid: number, _signal?: string | number) => true,
+      );
+      const originalExistsSync = fs.existsSync.bind(fs);
+      const originalReadFileSync = fs.readFileSync.bind(fs);
+      vi.spyOn(fs, "existsSync").mockImplementation((p: fs.PathLike) => {
+        if (String(p) === "/proc/4242/cmdline") return true;
+        return originalExistsSync(p);
+      });
+      vi.spyOn(fs, "readFileSync").mockImplementation(
+        (p: fs.PathOrFileDescriptor, options?: unknown) => {
+          if (String(p) === "/proc/4242/cmdline") {
+            return "python\0unrelated-process\0";
+          }
+          return originalReadFileSync(p, options as never) as never;
+        },
+      );
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const dockerExecFileSync = (await import("node:child_process"))
+        .execFileSync as ReturnType<typeof vi.fn>;
+      dockerExecFileSync.mockImplementation(
+        (_file: string, argv?: readonly string[]) => {
+          const cmd = Array.isArray(argv) ? argv.join(" ") : "";
+          if (
+            cmd.includes(" stat -c %a %U:%G /sandbox/.openclaw/.config-hash")
+          ) {
+            return "444 root:root";
+          }
+          if (
+            cmd.includes(" stat -c %a %U:%G /sandbox/.openclaw/openclaw.json")
+          ) {
+            return "444 root:root";
+          }
+          if (cmd.includes(" lsattr -d /sandbox/.openclaw/.config-hash")) {
+            return "----i---------e----- /sandbox/.openclaw/.config-hash";
+          }
+          if (cmd.includes(" stat -c %a %U:%G /sandbox/.openclaw")) {
+            return "755 root:root";
+          }
+          if (cmd.includes(" lsattr -d /sandbox/.openclaw/openclaw.json")) {
+            return "----i---------e----- /sandbox/.openclaw/openclaw.json";
+          }
+          return "";
+        },
+      );
+
+      const { shieldsStatus } = await loadShieldsModule();
+      shieldsStatus(sandboxName);
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        "  Warning: auto-restore timer marker is expired and the timer process is not the recorded shields timer; attempting inline restore.",
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        "  Shields: DOWN (temporarily unlocked)",
+      );
     });
 
     it("status fails fast on corrupt shields state instead of reporting NOT CONFIGURED", async () => {
@@ -774,16 +886,24 @@ describe("NC-2227-05: shields.ts locks state directories", () => {
       if (asString === "/proc/7331/cmdline") return true;
       return originalExistsSync(p);
     });
-    readFileSyncSpy.mockImplementation((p: fs.PathOrFileDescriptor, options?: BufferEncoding | { encoding?: null | BufferEncoding; flag?: string } | null) => {
-      const asString = String(p);
-      if (asString === "/proc/7331/cmdline") {
-        return "node\0dist/lib/shields/timer.js\0openclaw\0/tmp/snap.yaml\0proc-token-1\0";
-      }
-      return originalReadFileSync(p, options as never) as never;
-    });
-    const processKillSpy = vi.spyOn(process, "kill").mockImplementation(
-      (_pid: number, _signal?: string | number) => true,
+    readFileSyncSpy.mockImplementation(
+      (
+        p: fs.PathOrFileDescriptor,
+        options?:
+          | BufferEncoding
+          | { encoding?: null | BufferEncoding; flag?: string }
+          | null,
+      ) => {
+        const asString = String(p);
+        if (asString === "/proc/7331/cmdline") {
+          return "node\0dist/lib/shields/timer.js\0openclaw\0/tmp/snap.yaml\0proc-token-1\0";
+        }
+        return originalReadFileSync(p, options as never) as never;
+      },
     );
+    const processKillSpy = vi
+      .spyOn(process, "kill")
+      .mockImplementation((_pid: number, _signal?: string | number) => true);
 
     const result = killTimer("openclaw");
 
@@ -796,7 +916,9 @@ describe("NC-2227-05: shields.ts locks state directories", () => {
     });
     expect(processKillSpy).toHaveBeenCalledWith(7331, 0);
     expect(processKillSpy).toHaveBeenCalledWith(7331, "SIGTERM");
-    expect(fs.existsSync(path.join(stateDir, "shields-timer-openclaw.json"))).toBe(false);
+    expect(
+      fs.existsSync(path.join(stateDir, "shields-timer-openclaw.json")),
+    ).toBe(false);
   });
 
   it("killTimer does not signal a live PID when marker identity mismatches and still clears marker", async () => {
@@ -829,26 +951,38 @@ describe("NC-2227-05: shields.ts locks state directories", () => {
       if (asString === "/proc/7331/cmdline") return true;
       return originalExistsSync(p);
     });
-    readFileSyncSpy.mockImplementation((p: fs.PathOrFileDescriptor, options?: BufferEncoding | { encoding?: null | BufferEncoding; flag?: string } | null) => {
-      const asString = String(p);
-      if (asString === "/proc/7331/cmdline") {
-        return "python\0some-other-process\0--token\0nope\0";
-      }
-      return originalReadFileSync(p, options as never) as never;
-    });
-    const processKillSpy = vi.spyOn(process, "kill").mockImplementation(
-      (_pid: number, _signal?: string | number) => true,
+    readFileSyncSpy.mockImplementation(
+      (
+        p: fs.PathOrFileDescriptor,
+        options?:
+          | BufferEncoding
+          | { encoding?: null | BufferEncoding; flag?: string }
+          | null,
+      ) => {
+        const asString = String(p);
+        if (asString === "/proc/7331/cmdline") {
+          return "python\0some-other-process\0--token\0nope\0";
+        }
+        return originalReadFileSync(p, options as never) as never;
+      },
     );
+    const processKillSpy = vi
+      .spyOn(process, "kill")
+      .mockImplementation((_pid: number, _signal?: string | number) => true);
 
     const result = killTimer("openclaw");
 
     expect(result.markerFound).toBe(true);
     expect(result.wasAlive).toBe(true);
     expect(result.terminated).toBe(false);
-    expect(result.warnings[0]).toContain("does not match shields timer identity");
+    expect(result.warnings[0]).toContain(
+      "does not match shields timer identity",
+    );
     expect(processKillSpy).toHaveBeenCalledTimes(1);
     expect(processKillSpy).toHaveBeenCalledWith(7331, 0);
-    expect(fs.existsSync(path.join(stateDir, "shields-timer-openclaw.json"))).toBe(false);
+    expect(
+      fs.existsSync(path.join(stateDir, "shields-timer-openclaw.json")),
+    ).toBe(false);
   });
 
   it("killTimer clears stale marker even when PID is not alive", async () => {
@@ -902,7 +1036,9 @@ describe("NC-2227-05: shields.ts locks state directories", () => {
     expect(downStart).not.toBe(-1);
     const fnBody = src.slice(downStart, src.indexOf("function shieldsUp"));
 
-    expect(fnBody).toContain("const processToken = randomBytes(16).toString(\"hex\")");
+    expect(fnBody).toContain(
+      'const processToken = randomBytes(16).toString("hex")',
+    );
     expect(fnBody).toContain("processToken,");
   });
 
@@ -917,7 +1053,10 @@ describe("NC-2227-05: shields.ts locks state directories", () => {
     const { isShieldsDown } = await import(distModulePath);
     const stateDir = path.join(tmpDir, ".nemoclaw", "state");
     fs.mkdirSync(stateDir, { recursive: true });
-    fs.writeFileSync(path.join(stateDir, "shields-openclaw.json"), "{broken-json");
+    fs.writeFileSync(
+      path.join(stateDir, "shields-openclaw.json"),
+      "{broken-json",
+    );
 
     expect(isShieldsDown("openclaw")).toBe(false);
   });
