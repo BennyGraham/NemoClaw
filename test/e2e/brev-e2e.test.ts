@@ -255,7 +255,7 @@ function waitForSsh(maxAttempts = 0, intervalMs = 5_000): void {
   if (maxAttempts === 0) {
     maxAttempts = USE_PUBLISHED_LAUNCHABLE ? 96 : 40;
   }
-  let lastError = "unknown error";
+  let lastError: string;
   for (let i = 1; i <= maxAttempts; i++) {
     try {
       ssh("echo ok", { timeout: 10_000 });
