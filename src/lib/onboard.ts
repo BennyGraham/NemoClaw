@@ -4108,6 +4108,48 @@ function isPidAlive(pid: number): boolean {
   }
 }
 
+/**
+ * Probe a TCP endpoint to verify something is actually listening and
+ * accepting connections. Used to gate the "gateway is healthy" log in
+ * startDockerDriverGateway against the class of bug reported in #3111 where
+ * the openshell-gateway binary crashed on startup but metadata-based health
+ * checks (isGatewayHealthy) still returned true.
+ *
+ * Resolves true on successful TCP connect. Resolves false on connection
+ * refused, unreachable host, or timeout. Never rejects.
+ *
+ * TODO(#2562): adopt the unified timeout abstraction once that epic lands.
+ */
+async function verifyDockerDriverGatewayListening(
+  port: number,
+  timeoutMs = 500,
+  host = "127.0.0.1",
+): Promise<boolean> {
+  // Lazy-require so tests that don't exercise the gateway path don't pay
+  // for the net module load, and so the import doesn't fan out across the
+  // already-bloated top-of-file require block.
+  // biome-ignore lint/suspicious/noExplicitAny: node:net types are not in scope in this file
+  const net: any = require("node:net");
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const settle = (result: boolean) => {
+      if (settled) return;
+      settled = true;
+      try {
+        socket.destroy();
+      } catch {
+        /* best effort */
+      }
+      resolve(result);
+    };
+    const socket = net.createConnection({ host, port });
+    socket.setTimeout(Math.max(50, timeoutMs));
+    socket.once("connect", () => settle(true));
+    socket.once("timeout", () => settle(false));
+    socket.once("error", () => settle(false));
+  });
+}
+
 function getDockerDriverGatewayPid(): number | null {
   try {
     const raw = fs.readFileSync(getDockerDriverGatewayPidFile(), "utf-8").trim();
@@ -5507,6 +5549,21 @@ async function startDockerDriverGateway({
       ...gatewayEnv,
     },
   });
+  // Track early-exit via the ChildProcess event rather than process.kill(pid, 0).
+  // isPidAlive() returns true for zombies (detached children that exited but
+  // were not reaped by a wait() call), which masks the failure mode reported
+  // in #3111: the binary crashes on startup but the pid remains in the
+  // process table as a zombie. The 'exit' event fires reliably for detached
+  // children once libuv observes SIGCHLD. We still call unref() below so the
+  // child doesn't hold the Node event loop open after we return.
+  let childExited = false;
+  let childExitCode: number | null = null;
+  let childExitSignal: NodeJS.Signals | null = null;
+  child.once("exit", (code: number | null, signal: NodeJS.Signals | null) => {
+    childExited = true;
+    childExitCode = code;
+    childExitSignal = signal;
+  });
   child.unref();
   const childPid = child.pid ?? 0;
   if (childPid <= 0) {
@@ -5516,8 +5573,12 @@ async function startDockerDriverGateway({
 
   const pollCount = envInt("NEMOCLAW_HEALTH_POLL_COUNT", 30);
   const pollInterval = envInt("NEMOCLAW_HEALTH_POLL_INTERVAL", 2);
+  const tcpProbeTimeoutMs = envInt("NEMOCLAW_GATEWAY_TCP_PROBE_TIMEOUT_MS", 500);
   for (let i = 0; i < pollCount; i += 1) {
-    if (!isPidAlive(childPid)) {
+    // #3111: combine the exit-event check with isPidAlive. exit-event catches
+    // zombies that isPidAlive misses; isPidAlive catches children we lost
+    // track of (e.g., if the exit listener was removed).
+    if (childExited || !isPidAlive(childPid)) {
       break;
     }
     if (!registerDockerDriverGatewayEndpoint()) {
@@ -5530,8 +5591,21 @@ async function startDockerDriverGateway({
     });
     const currentInfo = runCaptureOpenshell(["gateway", "info"], { ignoreError: true });
     if (isGatewayHealthy(status, namedInfo, currentInfo)) {
-      console.log("  ✓ Docker-driver gateway is healthy");
-      return;
+      // #3111: isGatewayHealthy is a pure string match on openshell CLI
+      // output. "Server Status" is a header emitted unconditionally, even
+      // when the gateway endpoint is not reachable (Connection refused).
+      // Gate the "healthy" log on a real TCP probe so we don't claim
+      // healthy for a dead or zombied gateway. On probe failure, keep
+      // polling — the binary may still be binding its listener. The
+      // childExited / isPidAlive check at the top of the loop will
+      // terminate us if the process actually died.
+      //
+      // TODO(#3213): surface this as a structured advisory rather than
+      // plain log output once the unified registry lands.
+      if (await verifyDockerDriverGatewayListening(GATEWAY_PORT, tcpProbeTimeoutMs)) {
+        console.log("  ✓ Docker-driver gateway is healthy");
+        return;
+      }
     }
     if (i < pollCount - 1) sleep(pollInterval);
   }
@@ -5546,6 +5620,13 @@ async function startDockerDriverGateway({
     : "";
   if (exitOnFailure) {
     console.error("  Docker-driver gateway failed to start.");
+    if (childExited) {
+      const how =
+        childExitSignal !== null
+          ? `killed by signal ${childExitSignal}`
+          : `exited with code ${childExitCode ?? "(unknown)"}`;
+      console.error(`  Gateway process ${how} before becoming ready.`);
+    }
     if (tail) {
       console.error("  Gateway log tail:");
       for (const line of tail.split("\n")) console.error(`    ${redact(line)}`);
@@ -12052,6 +12133,7 @@ module.exports = {
   getResumeConfigConflicts,
   isGatewayHealthy,
   hasStaleGateway,
+  verifyDockerDriverGatewayListening,
   getRequestedSandboxNameHint,
   getResumeSandboxConflict,
   getSandboxReuseState,
