@@ -13,22 +13,49 @@ name: regression-e2e
 on:
   workflow_dispatch:
     inputs:
-      jobs:
-        description: >-
-          Comma-separated regression job names to run (empty = all).
-          Valid: gateway-health-honest-e2e
+      pr_number:
+        description: "PR number (optional; creates a check run on that PR)"
         required: false
         type: string
         default: ""
+      jobs:
+        description: >-
+          Comma-separated regression job names to run (empty = all).
+          Valid: dashboard-remote-bind-e2e,gateway-health-honest-e2e
+        required: false
+        type: string
+        default: ""
+      keep_alive:
+        description: "Keep Brev instance alive after tests (for SSH debugging)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  checks: write
+  pull-requests: write
 
 concurrency:
-  group: regression-e2e-${{ github.event_name }}-${{ github.ref }}-${{ inputs.jobs || 'all' }}
+  group: regression-e2e-${{ github.event_name }}-${{ github.ref }}-${{ inputs.jobs || 'all' }}-${{ inputs.pr_number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
+  dashboard-remote-bind-e2e:
+    if: >-
+      github.repository == 'NVIDIA/NemoClaw' &&
+      (github.event_name != 'workflow_dispatch' ||
+       inputs.jobs == '' ||
+       contains(format(',{0},', inputs.jobs), ',dashboard-remote-bind-e2e,'))
+    uses: ./.github/workflows/e2e-branch-validation.yaml
+    with:
+      branch: ${{ github.ref_name }}
+      pr_number: ${{ inputs.pr_number }}
+      test_suite: dashboard-remote-bind
+      use_launchable: true
+      keep_alive: ${{ inputs.keep_alive }}
+    secrets: inherit
+
   # ── Gateway health-honesty E2E ──────────────────────────────
   # Coverage guard for #3111. Issue #3111 reported that onboard prints
   # "✓ Docker-driver gateway is healthy" on Ubuntu 22.04 even though the
