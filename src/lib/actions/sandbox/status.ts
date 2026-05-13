@@ -157,7 +157,7 @@ export async function showSandboxStatus(sandboxName: string): Promise<void> {
       /* non-fatal */
     }
 
-    if (shields.isShieldsDown(sandboxName)) {
+    if (shields.isShieldsDown(sandboxName, true)) {
       console.log("    Permissions: shields down (check `shields status` for details)");
     }
 
