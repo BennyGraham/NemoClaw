@@ -24,6 +24,7 @@
  *   - Every `test/e2e/test-*.sh` script MUST have an entry in
  *     `test/e2e/docs/parity-map.yaml` (Risk #1: guards against new
  *     legacy scripts landing unmapped).
+ *   - The generated parity inventory MUST match current legacy assertions.
  *
  * Invocation:
  *   tsx scripts/e2e/lint-conventions.ts [--root <repo-root>]
@@ -33,6 +34,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { buildLegacyAssertionInventory } from "./extract-legacy-assertions";
 
 interface Rule {
   id: string;
@@ -215,9 +218,33 @@ function lintLegacyFrontier(root: string): LintFinding[] {
   return findings;
 }
 
+function lintParityInventory(root: string): LintFinding[] {
+  const findings: LintFinding[] = [];
+  const inventoryPath = path.join(root, "test/e2e/docs/parity-inventory.generated.json");
+  if (!fs.existsSync(inventoryPath)) {
+    findings.push({
+      file: "test/e2e/docs/parity-inventory.generated.json",
+      rule: "legacy-assertion-inventory-current",
+      message: "generated parity inventory is missing; run scripts/e2e/extract-legacy-assertions.ts",
+    });
+    return findings;
+  }
+
+  const expected = `${JSON.stringify(buildLegacyAssertionInventory(root), null, 2)}\n`;
+  const actual = fs.readFileSync(inventoryPath, "utf8");
+  if (actual !== expected) {
+    findings.push({
+      file: "test/e2e/docs/parity-inventory.generated.json",
+      rule: "legacy-assertion-inventory-current",
+      message: "generated parity inventory is stale; run scripts/e2e/extract-legacy-assertions.ts",
+    });
+  }
+  return findings;
+}
+
 function main(): number {
   const { root } = parseArgs(process.argv);
-  const findings = [...lintSuiteSteps(root), ...lintLegacyFrontier(root)];
+  const findings = [...lintSuiteSteps(root), ...lintLegacyFrontier(root), ...lintParityInventory(root)];
   if (findings.length === 0) {
     return 0;
   }

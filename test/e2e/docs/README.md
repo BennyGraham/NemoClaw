@@ -69,6 +69,26 @@ The CI entry points are `.github/workflows/e2e-scenarios.yaml`
 (`nightly-e2e.yaml`, `macos-e2e.yaml`, `wsl-e2e.yaml`, etc.) are
 unchanged during the migration.
 
+## Legacy assertion inventory
+
+The generated inventory at `test/e2e/docs/parity-inventory.generated.json`
+is the auditable source of truth for legacy E2E `PASS:` / `FAIL:`
+assertions. Regenerate it after changing any `test/e2e/test-*.sh`
+entrypoint or `test/e2e/brev-e2e.test.ts`:
+
+```bash
+npx tsx scripts/e2e/extract-legacy-assertions.ts
+```
+
+Use `--check` to verify the committed inventory has no drift:
+
+```bash
+npx tsx scripts/e2e/extract-legacy-assertions.ts --check
+```
+
+Scripts with no extracted assertions remain listed with a review TODO so
+parity gaps are visible in diffs.
+
 ## How to add a scenario, state, or suite
 
 Add-a-scenario, add-a-state, and add-a-suite are short edits to the
