@@ -77,10 +77,10 @@ if [ "$RESOLVED_CHANNEL" != "dev" ]; then
   fi
   if [ -n "${NEMOCLAW_OPENSHELL_MAX_VERSION:-}" ]; then
     MAX_VERSION="$(apply_blueprint_override NEMOCLAW_OPENSHELL_MAX_VERSION "$NEMOCLAW_OPENSHELL_MAX_VERSION")"
-    # Default the pin to the (possibly overridden) MAX_VERSION before applying
-    # the explicit PIN override so a bumped blueprint without a resolver result
-    # still pins to the new max.
-    PIN_VERSION="$MAX_VERSION"
+    # Intentionally do NOT default PIN_VERSION to the overridden MAX here.
+    # If the TS resolver couldn't reach GitHub (rate-limited / offline) it
+    # only sets MIN/MAX, never PIN — falling through to the script's
+    # hardcoded PIN_VERSION is the known-good safe path (#3446 CodeRabbit).
   fi
   if [ -n "${NEMOCLAW_OPENSHELL_PIN_VERSION:-}" ]; then
     PIN_VERSION="$(apply_blueprint_override NEMOCLAW_OPENSHELL_PIN_VERSION "$NEMOCLAW_OPENSHELL_PIN_VERSION")"

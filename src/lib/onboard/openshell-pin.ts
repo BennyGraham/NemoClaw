@@ -97,14 +97,17 @@ function listOpenshellReleaseTagsViaCurl(): string[] | null {
       ],
       { encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"], timeout: 30_000 },
     );
-    if (result.status !== 0 || typeof result.stdout !== "string") {
-      return page === 1 ? null : tags;
-    }
+    // Any per-page failure invalidates the whole list — a partial result
+    // could let the resolver wrongly return `incompatible` because an older
+    // compatible release on a missing page is invisible to it. Returning
+    // null lets the caller fall back to the script's legacy behaviour
+    // (#3446 CodeRabbit).
+    if (result.status !== 0 || typeof result.stdout !== "string") return null;
     let parsed: unknown;
     try {
       parsed = JSON.parse(result.stdout);
     } catch {
-      return page === 1 ? null : tags;
+      return null;
     }
     if (!Array.isArray(parsed) || parsed.length === 0) break;
     for (const entry of parsed) {
