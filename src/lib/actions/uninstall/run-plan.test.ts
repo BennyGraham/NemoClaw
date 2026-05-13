@@ -533,4 +533,37 @@ describe("uninstall run plan", () => {
     expect(warnings).toContain("Failed to disable /swapfile; skipping swap cleanup.");
     expect(logs).not.toContain("Swap file removed");
   });
+
+  it("reports skipped openshell cleanup without the contradictory past-tense wording", () => {
+    const logs: string[] = [];
+    const warnings: string[] = [];
+    const result = runUninstallPlan(
+      { assumeYes: true, deleteModels: false, keepOpenShell: true },
+      {
+        commandExists: () => true,
+        env: { HOME: "/tmp/nemoclaw-uninstall-test-skip-wording" } as NodeJS.ProcessEnv,
+        error: (line) => warnings.push(line),
+        existsSync: () => false,
+        isTty: false,
+        kill: () => true,
+        log: (line) => logs.push(line),
+        rmSync: vi.fn(),
+        run: (command, args) => {
+          if (command === "openshell") {
+            return { status: 1, stdout: "", stderr: "" };
+          }
+          if (args[0] === "-c") return ok("/fake/bin/tool\n");
+          if (args[0] === "-f") return ok("");
+          return ok();
+        },
+        runDocker: () => ok(""),
+      },
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(warnings).toContain("Skipped gateway 'nemoclaw' (already absent or unavailable)");
+    expect(warnings).toContain("Skipped all OpenShell sandboxes (already absent or unavailable)");
+    expect(warnings.every((line) => !/^Destroyed .+ skipped$/.test(line))).toBe(true);
+    expect(warnings.every((line) => !/^Deleted .+ skipped$/.test(line))).toBe(true);
+  });
 });

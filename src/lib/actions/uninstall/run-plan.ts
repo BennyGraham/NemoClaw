@@ -209,8 +209,12 @@ function confirm(options: UninstallRunOptions, runtime: UninstallRuntime): boole
 
 function runOptional(runtime: UninstallRuntime, description: string, command: string, args: string[]): void {
   const result = runtime.run(command, args, { env: runtime.env, stdio: "ignore" });
-  if (result.status === 0) runtime.log(description);
-  else runtime.warn(`${description} skipped`);
+  if (result.status === 0) {
+    runtime.log(description);
+    return;
+  }
+  const target = description.replace(/^(Destroyed|Deleted|Stopped|Removed)\s+/i, "");
+  runtime.warn(`Skipped ${target} (already absent or unavailable)`);
 }
 
 function stopHelperServices(paths: UninstallPaths, runtime: UninstallRuntime): void {
