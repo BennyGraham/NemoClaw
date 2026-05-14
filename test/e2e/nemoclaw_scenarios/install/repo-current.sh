@@ -25,9 +25,20 @@ e2e_install_repo() {
   (
     cd "${repo_root}" || exit
     npm ci --ignore-scripts
-    npx tsc -p tsconfig.src.json
+    mkdir -p .e2e
+    if ! npx tsc -p tsconfig.src.json >.e2e/build-cli.log 2>&1; then
+      build_status=$?
+      cat .e2e/build-cli.log >&2
+      echo "CLI TypeScript build failed with status ${build_status}" >&2
+      exit "${build_status}"
+    fi
     if find nemoclaw-blueprint/scripts -name '*.ts' -print -quit | grep -q .; then
-      npx tsc -p nemoclaw-blueprint/tsconfig.json
+      if ! npx tsc -p nemoclaw-blueprint/tsconfig.json >.e2e/build-blueprint.log 2>&1; then
+        build_status=$?
+        cat .e2e/build-blueprint.log >&2
+        echo "Blueprint TypeScript build failed with status ${build_status}" >&2
+        exit "${build_status}"
+      fi
     fi
     bash scripts/npm-link-or-shim.sh
   )
