@@ -152,4 +152,4 @@ Fresh-issue triage (last 48h, 5 candidates):
 
 ## Hard nos
 
-- First-touch only. No issue-body edits, no closes, no auto-apply without per-issue confirm. Deep triage → `quick-wins` or `issue-autopilot`. Duplicate-close → chain to `scope-issues` → `close-superseded-issues`.
+- First-touch only. No issue body edits, no closes, no auto-apply without per-issue confirm. Deep triage → `quick-wins` or `issue-autopilot`. Duplicate-close → chain to `scope-issues` → `close-superseded-issues`.

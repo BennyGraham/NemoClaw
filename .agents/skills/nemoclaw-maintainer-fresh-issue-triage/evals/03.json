@@ -1,0 +1,15 @@
+{
+  "skills": [
+    "nemoclaw-maintainer-fresh-issue-triage"
+  ],
+  "query": "An issue body cites 'src/lib/onboard.ts' \u2014 apply CODEOWNERS-based area routing.",
+  "files": [
+    ".github/CODEOWNERS"
+  ],
+  "expected_behavior": [
+    "Extracts path references from the issue body via regex against known top-level dirs.",
+    "Matches each path against .github/CODEOWNERS using last-match-wins semantics (per GitHub spec).",
+    "Translates resolved team handles to area-labels (e.g. @NVIDIA/nemoclaw-engineer -> area: cli).",
+    "Proposes the resolved team as assignee (team handle, not individual)."
+  ]
+}

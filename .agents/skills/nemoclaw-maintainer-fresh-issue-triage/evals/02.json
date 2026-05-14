@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nemoclaw-maintainer-fresh-issue-triage"
+  ],
+  "query": "A bug_report issue has empty Reproduction Steps. What should the skill do?",
+  "files": [],
+  "expected_behavior": [
+    "Detects bug_report template via the labels: [bug, status: triage] mapping in .github/ISSUE_TEMPLATE/bug_report.yml.",
+    "Identifies the Reproduction Steps section is empty (<20 chars).",
+    "Drafts a needs-info comment asking the reporter to fill out the Reproduction Steps section and run nemoclaw debug --quick.",
+    "Suggests keeping the issue in `status: triage` and adding a `needs-info` label."
+  ]
+}

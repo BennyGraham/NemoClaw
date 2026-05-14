@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nemoclaw-maintainer-fresh-issue-triage"
+  ],
+  "query": "Triage all issues filed in the last 48 hours.",
+  "files": [],
+  "expected_behavior": [
+    "Queries gh issue list with search='created:>=<48h-ago>' for fresh issues.",
+    "Skips already-triaged issues (those with non-`status: triage` labels) unless --include-untouched-only off.",
+    "For each issue: detects template (bug_report / feature_request / doc_issue), drafts area-label + priority + assignee suggestions.",
+    "Surfaces a per-issue table with [accept] / [edit] / [skip] choices; never applies without per-issue confirmation."
+  ]
+}
