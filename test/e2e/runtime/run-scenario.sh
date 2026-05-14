@@ -182,17 +182,20 @@ ONBOARDING_ID="$(read_plan_string dimensions.onboarding.id)"
 e2e_env_trace "install:${INSTALL_ID}"
 
 install_log="${E2E_CONTEXT_DIR}/install.log"
-if ! e2e_install "${INSTALL_METHOD}" >"${install_log}" 2>&1; then
-  install_status=$?
+set +e
+e2e_install "${INSTALL_METHOD}" >"${install_log}" 2>&1
+install_status=$?
+set -e
+if [[ "${install_status}" -ne 0 ]]; then
   cat "${install_log}" >&2
   echo "run-scenario: install ${INSTALL_METHOD} failed with status ${install_status}" >&2
   exit "${install_status}"
 fi
-command -v nemoclaw >&2 || {
+if ! command -v nemoclaw >&2; then
   echo "run-scenario: nemoclaw not found on PATH after install" >&2
   printf 'PATH=%s\n' "${PATH}" >&2
   exit 127
-}
+fi
 
 # Negative preflight scenarios intentionally model a missing container daemon.
 # CI runners normally have Docker available, so force the Docker client at an
@@ -219,8 +222,11 @@ if [[ "$(read_plan_string expected_state.id)" == "preflight-failure-no-sandbox" 
 fi
 
 onboard_log="${E2E_CONTEXT_DIR}/onboard.log"
-if ! e2e_onboard "${ONBOARDING_ID}" >"${onboard_log}" 2>&1; then
-  onboard_status=$?
+set +e
+e2e_onboard "${ONBOARDING_ID}" >"${onboard_log}" 2>&1
+onboard_status=$?
+set -e
+if [[ "${onboard_status}" -ne 0 ]]; then
   cat "${onboard_log}" >&2
   echo "run-scenario: onboarding ${ONBOARDING_ID} failed with status ${onboard_status}" >&2
   exit "${onboard_status}"
