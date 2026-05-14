@@ -207,7 +207,13 @@ if [[ "$(read_plan_string expected_state.id)" == "preflight-failure-no-sandbox" 
   exit 0
 fi
 
-e2e_onboard "${ONBOARDING_ID}"
+onboard_log="${E2E_CONTEXT_DIR}/onboard.log"
+if ! e2e_onboard "${ONBOARDING_ID}" >"${onboard_log}" 2>&1; then
+  onboard_status=$?
+  cat "${onboard_log}" >&2
+  echo "run-scenario: onboarding ${ONBOARDING_ID} failed with status ${onboard_status}" >&2
+  exit "${onboard_status}"
+fi
 e2e_gateway_assert_healthy
 e2e_sandbox_assert_running
 
