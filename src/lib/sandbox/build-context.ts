@@ -113,6 +113,7 @@ function stageOptimizedSandboxBuildContext(
     path.join(rootDir, "scripts", "generate-openclaw-config.py"),
     path.join(stagedScriptsDir, "generate-openclaw-config.py"),
   );
+
   return { buildCtx, stagedDockerfile };
 }
 

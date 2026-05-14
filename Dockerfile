@@ -91,16 +91,6 @@ RUN set -eu; \
         rm -rf /usr/local/lib/node_modules/openclaw /usr/local/bin/openclaw; \
         npm install -g --no-audit --no-fund --no-progress "openclaw@${MIN_VER}"; \
     fi; \
-    # Subtle maintenance nudge for the rcf-shim sentinel. When the shim's
-    # sentinel still sits above the minimum pin, the shim is active across
-    # the entire supported range -- which is fine, but worth re-checking
-    # against openclaw/openclaw#72950 periodically so we lower the sentinel
-    # the moment the upstream fix lands. Once min_openclaw_version exceeds
-    # the sentinel, the shim can be deleted entirely.
-    SHIM_CEIL=$(grep -m 1 'last_openclaw_needing_rcf_shim' /opt/nemoclaw-blueprint/blueprint.yaml | awk '{print $2}' | tr -d '"' || true); \
-    if [ -n "$SHIM_CEIL" ] && [ "$(printf '%s\n%s' "$SHIM_CEIL" "$MIN_VER" | sort -V | head -n1)" = "$MIN_VER" ] && [ "$SHIM_CEIL" != "$MIN_VER" ]; then \
-        echo "INFO: rcf-shim sentinel $SHIM_CEIL is above min_openclaw_version $MIN_VER; shim still active for all supported versions (track openclaw/openclaw#72950)"; \
-    fi; \
     # Pre-install the codex-acp package so the embedded ACPx runtime can
     # call the local binary instead of `npx @zed-industries/codex-acp`.
     # The sandbox's L7 proxy denies @zed-industries/* package URLs
@@ -200,13 +190,6 @@ RUN set -eu; \
     sed -i 's/const baseLstat = await fs\.lstat(params\.installBaseDir)/const baseLstat = await fs.stat(params.installBaseDir)/' "$ipd_file"; \
     sed -i 's/baseLstat\.isSymbolicLink()/false \/* nemoclaw: symlink check disabled, realpath guards containment *\//' "$ipd_file"; \
     if grep -q 'fs\.lstat(params\.installBaseDir)' "$ipd_file"; then echo "ERROR: Patch 3b (install-package-dir) left lstat in assertInstallBaseStable" >&2; exit 1; fi; \
-    # --- Patch 4 (moved out): replaceConfigFile EACCES handling --- \
-    # Previously a build-time monkey-patch against OpenClaw's source. The \
-    # source shape kept drifting between releases (#2686, #3497), so the \
-    # patch is now a runtime --require shim baked at \
-    # /usr/local/lib/nemoclaw/preloads/openclaw-rcf-shim.js and wired into \
-    # NODE_OPTIONS by scripts/nemoclaw-start.sh::install_openclaw_rcf_shim. \
-    # Upstream fix tracked in openclaw/openclaw#72950. \
     # --- Patch 5: bump default WS handshake timeout 10s -> 60s (#2484) --- \
     # OpenClaw's WS connect handshake has a hard-coded 10s timeout on both \
     # client and server. Server-side connect-handler processing can exceed \
