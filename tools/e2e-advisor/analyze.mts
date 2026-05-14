@@ -161,9 +161,7 @@ async function main(): Promise<void> {
     );
   } catch (error: unknown) {
     const reason = error instanceof Error ? error.message : String(error);
-    if (!fs.existsSync(artifacts.raw)) {
-      fs.writeFileSync(artifacts.raw, `Advisor SDK execution failed: ${reason}\n`);
-    }
+    fs.writeFileSync(artifacts.raw, `Advisor SDK execution failed: ${reason}\n`);
     writeFailure(reason);
     process.exit(1);
   }
