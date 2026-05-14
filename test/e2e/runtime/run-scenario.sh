@@ -181,30 +181,11 @@ ONBOARDING_ID="$(read_plan_string dimensions.onboarding.id)"
 # the resolved method.
 e2e_env_trace "install:${INSTALL_ID}"
 
-if [[ "$(read_plan_string dimensions.platform.profile.os)" == "wsl" ]] && [[ -z "${WSL_DISTRO_NAME:-}" ]]; then
-  echo "run-scenario: unsupported live scenario gate: wsl-repo-cloud-openclaw requires execution inside WSL2 with Docker reachable from WSL; this GitHub-hosted Windows runner executes bash outside WSL"
-  exit 0
-fi
-
-if [[ "$(read_plan_string dimensions.platform.profile.gpu)" == "nvidia" ]] && ! command -v nvidia-smi >/dev/null 2>&1; then
-  echo "run-scenario: unsupported live scenario gate: gpu-repo-local-ollama-openclaw requires an NVIDIA GPU runner with nvidia-smi and Docker CDI; this runner has no NVIDIA GPU"
-  exit 0
-fi
-
-if [[ "${INSTALL_METHOD}" == "brev-launchable" ]] && [[ -z "${BREV_API_TOKEN:-}" ]]; then
-  echo "run-scenario: unsupported live scenario gate: brev-launchable-cloud-openclaw requires BREV_API_TOKEN and a pre-provisioned launchable image; this workflow has no Brev token"
-  exit 0
-fi
-
 e2e_install "${INSTALL_METHOD}"
 
 # Negative preflight scenarios intentionally model a missing container daemon.
 # CI runners normally have Docker available, so force the Docker client at an
 # unreachable socket and assert onboarding fails before any sandbox is created.
-if [[ "$(read_plan_string dimensions.platform.profile.os)" == "macos" ]] && ! docker info >/dev/null 2>&1; then
-  echo "run-scenario: unsupported live scenario gate: macos-repo-cloud-openclaw requires a macOS runner with Docker Desktop/Colima running; this runner has no reachable Docker daemon"
-  exit 0
-fi
 
 if [[ "$(read_plan_string expected_state.id)" == "preflight-failure-no-sandbox" ]]; then
   negative_log="${E2E_CONTEXT_DIR}/negative-preflight.log"

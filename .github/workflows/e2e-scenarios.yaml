@@ -47,9 +47,9 @@ jobs:
           SCENARIO: ${{ github.event.inputs.scenario }}
         run: |
           case "${SCENARIO}" in
-            macos-*)  echo "runner=macos-latest"   >> "$GITHUB_OUTPUT" ;;
+            macos-*)  echo "runner=macos-26"      >> "$GITHUB_OUTPUT" ;;
             wsl-*)    echo "runner=windows-latest" >> "$GITHUB_OUTPUT" ;;
-            gpu-*)    echo "runner=ubuntu-latest"  >> "$GITHUB_OUTPUT" ;;
+            gpu-*)    echo "runner=linux-amd64-gpu-rtxpro6000-latest-1" >> "$GITHUB_OUTPUT" ;;
             ubuntu-*|brev-*) echo "runner=ubuntu-latest" >> "$GITHUB_OUTPUT" ;;
             *)
               echo "::error::Unknown scenario prefix for runner selection: ${SCENARIO}" >&2
