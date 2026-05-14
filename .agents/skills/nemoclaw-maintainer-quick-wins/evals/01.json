@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nemoclaw-maintainer-quick-wins"
+  ],
+  "query": "I have an hour for PR review \u2014 what should I look at next?",
+  "files": [],
+  "expected_behavior": [
+    "Fetches the open-PR list with lightweight fields (number, title, author, labels, createdAt, additions, deletions, isDraft).",
+    "Applies Mode D blended scoring: merge_readiness * impact * (1 + min(age_days/14, 1.0)).",
+    "Presents the top-10 ranked candidates with reason columns; waits for the maintainer to pick 3-5 for the deep pass.",
+    "Does NOT run heavy GraphQL fields (statusCheckRollup, mergeStateStatus) in bulk \u2014 those are fetched per-finalist to avoid 502s."
+  ]
+}

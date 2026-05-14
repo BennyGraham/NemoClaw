@@ -1,0 +1,13 @@
+{
+  "skills": [
+    "nemoclaw-maintainer-quick-wins"
+  ],
+  "query": "Review PR #3284 and produce a verdict plus a draft RFR.",
+  "files": [],
+  "expected_behavior": [
+    "Runs same-fix-already-merged check (skip if a sibling PR with high title-overlap merged in the last 14 days).",
+    "Applies the two-lens judgment chain (Scope/Coverage + Sequencing) then the Karpathy review lens; fails fast.",
+    "Resolves reviewers from .github/CODEOWNERS intersected with the PR's changed files; checks reviewer-load via gh search prs --review-requested for each candidate team.",
+    "For APPROVE verdicts: produces a draft PR comment (<=30 lines) plus a 2-line draft RFR with auto-resolved team handles."
+  ]
+}

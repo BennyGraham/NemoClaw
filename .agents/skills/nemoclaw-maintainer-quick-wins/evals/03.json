@@ -1,0 +1,15 @@
+{
+  "skills": [
+    "nemoclaw-maintainer-quick-wins"
+  ],
+  "query": "The CODEOWNERS-resolved reviewer team already has 8 open review-requests. What should the skill do?",
+  "files": [
+    ".github/CODEOWNERS"
+  ],
+  "expected_behavior": [
+    "Counts open review-requests on each candidate team via gh search prs --repo NVIDIA/NemoClaw --state open --review-requested @team --json number.",
+    "When count >= QW_LOAD_THRESHOLD (default 5), surfaces the warning to the maintainer.",
+    "Recommends routing to the third-most-loaded team (row 3 of the CODEOWNERS-resolved list) OR the maintainer self-reviews / waits until queue drains.",
+    "Never silently routes to an over-loaded team; surfaces the load count explicitly so the maintainer can decide."
+  ]
+}

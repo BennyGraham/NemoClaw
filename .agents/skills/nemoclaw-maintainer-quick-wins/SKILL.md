@@ -208,6 +208,15 @@ Never silently route to an over-loaded team — explicit surfacing lets the main
 blocks a first-run symlink attack on ~/.nemoclaw that would hijack credential writes. small, tested.
 ```
 
+## Reference cases (live runs)
+
+Real runs against the NemoClaw open-PR queue in 2026-04 and 2026-05; PR numbers preserved for traceability.
+
+- **APPROVE + RFR drafted** — PR #2290 (safe-dir symlink refusal). Scope/Coverage Lens PASS (one risky-area file, tests covered both shapes). Sequencing Lens PASS. Karpathy: hidden assumption "$HOME is not itself a symlink" flagged as a documented limitation. Tier 1 + Tier 2 green. Verdict: APPROVE.
+- **BLOCK + salvage** — PR #1954 (redact gateway auth token in printed URLs). Karpathy goal-driven verification: stated objective is "URL contains `****` after redaction"; no test covered `forDisplay=true`. Missing-test required new test → coverage failure → BLOCK. Salvage offered (one-line vitest case in `dashboard.test.ts`).
+- **CLOSE-AS-SUPERSEDED** — a 1-line Dockerfile fix scored high on labels + diff size, but a sibling PR with 70%+ title-token overlap had merged the same morning. Same-fix-already-merged check fired before judgment chain. Verdict: CLOSE-AS-SUPERSEDED.
+- **SEQUENCE** — PR with new utility + 8 call-site migrations + a bonus cleanup, all in one diff. Right intent, wrong shape. Verdict: SEQUENCE with a concrete proposed split (substrate PR → migration PR → optional cleanup PR).
+
 ## Status ledger
 
 Maintain a running markdown table across the whole session:
