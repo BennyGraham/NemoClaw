@@ -162,17 +162,15 @@ onboard_sandbox() {
 get_cloudflared_log_path() {
   local log="/tmp/nemoclaw-services-${SANDBOX_NAME}/cloudflared.log"
   if [[ -f "$log" ]]; then
-    echo "$log"
+    printf '%s\n' "$log"
     return 0
   fi
   # shellcheck disable=SC2012
-  log=$(ls -t /tmp/nemoclaw-services-*/cloudflared.log 2>/dev/null | head -1)
+  log="$(ls -t /tmp/nemoclaw-services-*/cloudflared.log 2>/dev/null | head -1 || true)"
   if [[ -n "$log" && -f "$log" ]]; then
-    echo "$log"
-    return 0
+    printf '%s\n' "$log"
   fi
-  echo ""
-  return 1
+  return 0
 }
 
 # Classify failure cause from cloudflared.log. Echoes one of:
