@@ -52,6 +52,7 @@ fail() {
   echo -e "${RED}  FAIL${NC} $1 — $2" | tee -a "$LOG_FILE"
 }
 # Record a skipped test.
+# shellcheck disable=SC2329
 skip() {
   ((SKIP += 1))
   ((TOTAL += 1))
@@ -200,7 +201,8 @@ test_backup_restore_lifecycle() {
   fi
 
   local backup_dir
-  backup_dir=$(find "$HOME/.nemoclaw/backups" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -r | head -1)
+  backup_dir=$(find "$HOME/.nemoclaw/backups" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' 2>/dev/null \
+    | sort -nr | awk 'NR==1 {print $2}')
   if [[ -z "$backup_dir" || ! -d "$backup_dir" ]]; then
     fail "TC-STATE-01: Backup dir" "No backup directory found"
     return
@@ -304,7 +306,8 @@ test_backup_restore_lifecycle() {
   local memory_probe memory_probe_rc=0
   memory_probe=$(sandbox_exec "if [ -f '${workspace_path}/memory/2026-04-20.md' ]; then printf 'STATE=EXISTS\\n'; cat '${workspace_path}/memory/2026-04-20.md'; else printf 'STATE=MISSING\\n'; fi") || memory_probe_rc=$?
 
-  if grep -Fq -- "${marker_content}_daily" <<<"$memory_probe"; then
+  if grep -Fq -- "STATE=EXISTS" <<<"$memory_probe" \
+    && grep -Fq -- "${marker_content}_daily" <<<"$memory_probe"; then
     pass "TC-STATE-01: MemoryDirRestore — memory directory contents restored correctly"
   elif grep -q "^STATE=MISSING" <<<"$memory_probe"; then
     print_restore_output_for_diag "$restore_output"
