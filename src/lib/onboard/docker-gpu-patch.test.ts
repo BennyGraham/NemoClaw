@@ -142,7 +142,7 @@ describe("docker-gpu-patch", () => {
     expect(args).not.toEqual(expect.arrayContaining(["--env", "NVIDIA_VISIBLE_DEVICES=void"]));
   });
 
-  it("adds SYS_PTRACE to the GPU clone when the baseline container lacks it (#3511)", () => {
+  it("adds SYS_PTRACE to the GPU clone when the baseline container lacks it", () => {
     const inspect = inspectFixture();
     inspect.HostConfig!.CapAdd = ["SYS_ADMIN", "NET_ADMIN"];
 
@@ -154,7 +154,7 @@ describe("docker-gpu-patch", () => {
     expect(args).toEqual(expect.arrayContaining(["--cap-add", "NET_ADMIN"]));
   });
 
-  it("does not duplicate SYS_PTRACE when the baseline container already has it (#3511)", () => {
+  it("does not duplicate SYS_PTRACE when the baseline container already has it", () => {
     const inspect = inspectFixture();
     inspect.HostConfig!.CapAdd = ["SYS_ADMIN", "SYS_PTRACE"];
 
@@ -164,7 +164,7 @@ describe("docker-gpu-patch", () => {
     expect(sysPtraceCount).toBe(1);
   });
 
-  it("injects apparmor=unconfined when the baseline container has no apparmor profile (#3511)", () => {
+  it("injects apparmor=unconfined when the baseline container has no apparmor profile", () => {
     const inspect = inspectFixture();
     inspect.HostConfig!.SecurityOpt = [];
 
@@ -173,7 +173,7 @@ describe("docker-gpu-patch", () => {
     expect(args).toEqual(expect.arrayContaining(["--security-opt", "apparmor=unconfined"]));
   });
 
-  it("respects a baseline-pinned apparmor profile instead of overriding it (#3511)", () => {
+  it("respects a baseline-pinned apparmor profile instead of overriding it", () => {
     const inspect = inspectFixture();
     inspect.HostConfig!.SecurityOpt = ["apparmor=docker-default", "no-new-privileges"];
 
