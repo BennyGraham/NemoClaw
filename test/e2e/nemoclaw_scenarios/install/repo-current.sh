@@ -48,7 +48,7 @@ e2e_install_repo() {
   chmod +x bin/nemoclaw.js
   mkdir -p "${HOME}/.local/bin"
   ln -sf "${repo_root}/bin/nemoclaw.js" "${HOME}/.local/bin/nemoclaw"
-  nemoclaw_refresh_install_env
+  nemoclaw_ensure_local_bin_on_path
   echo "repo-current: verify cli"
   if ! command -v nemoclaw >.e2e/npm-link-or-shim.log 2>&1; then
     cat .e2e/npm-link-or-shim.log >&2
