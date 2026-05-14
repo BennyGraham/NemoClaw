@@ -21,6 +21,10 @@ const root = process.cwd();
 const ADVISOR_PROVIDER = "openai";
 const ADVISOR_MODEL = "openai/openai/gpt-5.5";
 const READ_ONLY_TOOLS = ["read", "grep", "find", "ls"];
+const ADVISOR_SYSTEM_PROMPT = `You are an automated E2E recommendation advisor for NemoClaw CI.
+Use repository context and the available read-only tools to recommend E2E coverage.
+Do not modify files, run commands, or perform dynamic analysis.
+When asked for a recommendation, return JSON only.`;
 
 type ParsedArgs = Record<string, string | undefined>;
 type AdvisorProviderConfig = Parameters<ModelRegistry["registerProvider"]>[1];
@@ -251,6 +255,8 @@ async function runAdvisor(options: {
     noPromptTemplates: true,
     noThemes: true,
     noContextFiles: true,
+    systemPromptOverride: () => ADVISOR_SYSTEM_PROMPT,
+    appendSystemPromptOverride: () => [],
   });
   await resourceLoader.reload();
 
