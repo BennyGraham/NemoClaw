@@ -10,6 +10,7 @@ import { CLI_DISPLAY_NAME, CLI_NAME } from "../../cli/branding";
 import { isErrnoException } from "../../core/errno";
 import { recoverNamedGatewayRuntime } from "../../gateway-runtime-action";
 import { probeProviderHealth, type ProviderHealthStatus } from "../../inference/health";
+import { probeSandboxInferenceGatewayHealth } from "./process-recovery";
 import { parseGatewayInference } from "../../inference/config";
 import { stripAnsi } from "../../adapters/openshell/client";
 import { captureOpenshell } from "../../adapters/openshell/runtime";
@@ -584,6 +585,25 @@ export async function runSandboxDoctor(sandboxName: string, args: string[] = [])
         detail: `no health probe registered for ${currentProvider}`,
       });
     } else {
+      // #3265 optional 3rd line — append gateway-chain probe for local
+      // providers so doctor sees the full path the agent uses.
+      if (currentProvider === "ollama-local" || currentProvider === "vllm-local") {
+        const gatewayChain = await probeSandboxInferenceGatewayHealth(sandboxName);
+        if (gatewayChain) {
+          inferenceHealth.subprobes = [
+            ...(inferenceHealth.subprobes ?? []),
+            {
+              ok: gatewayChain.ok,
+              probed: true,
+              providerLabel: "Inference gateway chain",
+              endpoint: gatewayChain.endpoint,
+              detail: gatewayChain.detail,
+              probeLabel: "gateway",
+              ...(gatewayChain.ok ? {} : { failureLabel: "unreachable" as const }),
+            },
+          ];
+        }
+      }
       pushInferenceHealthCheck(checks, inferenceHealth);
       for (const sub of inferenceHealth.subprobes ?? []) {
         pushInferenceHealthCheck(checks, sub);

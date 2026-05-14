@@ -27,7 +27,10 @@ import {
   printGatewayLifecycleHint,
   printWrongGatewayActiveGuidance,
 } from "./gateway-state";
-import { isSandboxGatewayRunningForStatus } from "./process-recovery";
+import {
+  isSandboxGatewayRunningForStatus,
+  probeSandboxInferenceGatewayHealth,
+} from "./process-recovery";
 import {
   createSystemDeps as createSessionDeps,
   getActiveSandboxSessions,
@@ -116,6 +119,28 @@ export async function showSandboxStatus(sandboxName: string): Promise<void> {
     currentProvider,
     currentModel,
   );
+  // #3265 optional 3rd line: probe the full inference chain (openclaw gateway
+  // → auth proxy → backend) from inside the sandbox so a broken hop the
+  // host-side probes can't see still surfaces in `status`.
+  if (
+    inferenceHealth &&
+    lookup.state === "present" &&
+    (currentProvider === "ollama-local" || currentProvider === "vllm-local")
+  ) {
+    const gatewayChain = await probeSandboxInferenceGatewayHealth(sandboxName);
+    if (gatewayChain) {
+      const gatewaySubprobe: ProviderHealthStatus = {
+        ok: gatewayChain.ok,
+        probed: true,
+        providerLabel: "Inference gateway chain",
+        endpoint: gatewayChain.endpoint,
+        detail: gatewayChain.detail,
+        probeLabel: "gateway",
+        ...(gatewayChain.ok ? {} : { failureLabel: "unreachable" as const }),
+      };
+      inferenceHealth.subprobes = [...(inferenceHealth.subprobes ?? []), gatewaySubprobe];
+    }
+  }
   if (sb) {
     console.log("");
     console.log(`  Sandbox: ${sb.name}`);
