@@ -516,7 +516,9 @@ Changed files:
 ${changedFiles.map((file) => `- ${file}`).join("\n") || "- <none>"}
 
 Git diff, truncated if large:
+\`\`\`diff
 ${diff || "<no diff available>"}
+\`\`\`
 `;
 }
 
