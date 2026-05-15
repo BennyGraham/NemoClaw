@@ -63,7 +63,7 @@ export default class CredentialsResetCommand extends NemoClawCommand {
       }
     }
 
-    await recoverGatewayOrExit("reach");
+    if (!(await recoverGatewayOrExit("reach", (lines) => this.failWithLines(lines)))) return;
 
     const result = runOpenshellProviderCommand(["provider", "delete", key], {
       ignoreError: true,

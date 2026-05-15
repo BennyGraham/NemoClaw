@@ -3,7 +3,7 @@
 
 import { createRequire } from "node:module";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const REPO_ROOT = path.join(import.meta.dirname, "..");
@@ -194,6 +194,20 @@ describe("credentials oclif commands", () => {
 
     expect(output.stderr).toContain("Could not query OpenShell gateway");
     expect(output.stderr).toContain("openshell gateway start --name nemoclaw");
+  });
+
+  it("records gateway recovery failures without calling provider list", async () => {
+    const runOpenshell = vi.fn(() => ({ status: 0, stdout: "nvidia-prod" }));
+    installRuntimeBridge({
+      recoverNamedGatewayRuntime: async () => ({ recovered: false }),
+      runOpenshell,
+    });
+    const { CredentialsListCommand } = loadCommands();
+
+    const output = await captureOutput(() => expectExitCode(() => CredentialsListCommand.run([]), 1));
+
+    expect(output.stderr).toContain("Could not query the NemoClaw OpenShell gateway");
+    expect(runOpenshell).not.toHaveBeenCalled();
   });
 
   it("deletes a provider credential with --yes", async () => {

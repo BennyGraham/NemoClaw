@@ -20,7 +20,7 @@ export default class CredentialsListCommand extends NemoClawCommand {
 
   public async run(): Promise<void> {
     await this.parse(CredentialsListCommand);
-    await recoverGatewayOrExit("query");
+    if (!(await recoverGatewayOrExit("query", (lines) => this.failWithLines(lines)))) return;
 
     const result = runOpenshellProviderCommand(["provider", "list", "--names"], {
       ignoreError: true,
