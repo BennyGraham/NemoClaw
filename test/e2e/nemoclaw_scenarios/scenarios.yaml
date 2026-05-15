@@ -287,3 +287,16 @@ test_plans:
     - base-installed
     - preflight-expected-failed
     suites: []
+onboarding_assertions:
+  base-installed:
+    stage: base
+    script: onboarding_assertions/base/00-cli-installed.sh
+    assertion_id: onboarding.base.cli-installed
+  preflight-passed:
+    stage: onboarding
+    script: onboarding_assertions/preflight/00-preflight-passed.sh
+    assertion_id: onboarding.preflight.passed
+  preflight-expected-failed:
+    stage: onboarding
+    script: onboarding_assertions/preflight/00-preflight-passed.sh
+    assertion_id: onboarding.preflight.expected-failed

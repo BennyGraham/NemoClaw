@@ -182,6 +182,18 @@ ONBOARDING_ID="$(read_plan_string dimensions.onboarding.id)"
 e2e_env_trace "install:${INSTALL_ID}"
 e2e_install "${INSTALL_METHOD}"
 e2e_onboard "${ONBOARDING_ID}"
+echo "== onboarding-assertions =="
+node -e '
+const fs = require("fs");
+const cp = require("child_process");
+const plan = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const scenarios = require("js-yaml").load(fs.readFileSync(process.argv[2], "utf8"));
+for (const id of plan.onboarding_assertions || []) {
+  const def = scenarios.onboarding_assertions?.[id];
+  if (!def) throw new Error(`missing onboarding assertion ${id}`);
+  cp.execFileSync("bash", [process.argv[3] + "/" + def.script], { stdio: "inherit" });
+}
+' "${E2E_CONTEXT_DIR}/plan.json" "${E2E_ROOT}/nemoclaw_scenarios/scenarios.yaml" "${E2E_ROOT}"
 e2e_gateway_assert_healthy
 e2e_sandbox_assert_running
 
