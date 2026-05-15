@@ -198,13 +198,17 @@ export PATH="${HOME}/.local/bin:${PATH}"
   printf 'PATH=%s\n' "${PATH}"
   command -v nemoclaw || true
 } >"${E2E_CONTEXT_DIR}/post-install-path.log" 2>&1
-nemoclaw_bin="$(command -v nemoclaw || true)"
-if [[ -z "${nemoclaw_bin}" ]]; then
-  cat "${E2E_CONTEXT_DIR}/post-install-path.log" >&2
-  echo "run-scenario: nemoclaw not found on PATH after install" >&2
-  exit 127
+if [[ "${DRY_RUN}" -eq 1 ]]; then
+  printf 'run-scenario: dry-run skipping post-install nemoclaw PATH verification\n' >&2
+else
+  nemoclaw_bin="$(command -v nemoclaw || true)"
+  if [[ -z "${nemoclaw_bin}" ]]; then
+    cat "${E2E_CONTEXT_DIR}/post-install-path.log" >&2
+    echo "run-scenario: nemoclaw not found on PATH after install" >&2
+    exit 127
+  fi
+  printf 'run-scenario: using nemoclaw at %s\n' "${nemoclaw_bin}" >&2
 fi
-printf 'run-scenario: using nemoclaw at %s\n' "${nemoclaw_bin}" >&2
 
 # Negative preflight scenarios intentionally model a missing container daemon.
 # CI runners normally have Docker available, so force the Docker client at an
