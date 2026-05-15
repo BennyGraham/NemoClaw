@@ -19,7 +19,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 ## Phase 1: Layered Terminology and Schema Planning - Validation Scenarios
 
-### Scenario 1.1: Legacy scenario alias resolves to layered plan [STATUS: pending]
+### Scenario 1.1: Legacy scenario alias resolves to layered plan [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Happy Path
 
 **Given**: existing scenario ID `ubuntu-repo-cloud-openclaw` remains in compatibility metadata
@@ -33,7 +33,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 **Tools Required**: Bash
 
-### Scenario 1.2: Direct layered test plan resolves [STATUS: pending]
+### Scenario 1.2: Direct layered test plan resolves [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Happy Path
 
 **Given**: test plan `ubuntu-repo-docker__cloud-nvidia-openclaw` exists
@@ -47,7 +47,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 **Tools Required**: Bash
 
-### Scenario 1.3: Broken layered references fail fast [STATUS: pending]
+### Scenario 1.3: Broken layered references fail fast [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Sad Path
 
 **Given**: resolver fixture with a missing base, onboarding profile, expected state, assertion, or suite reference
@@ -61,7 +61,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 **Tools Required**: Vitest
 
-### Scenario 1.4: Capability and expected-failure metadata are preserved but not enforced [STATUS: pending]
+### Scenario 1.4: Capability and expected-failure metadata are preserved but not enforced [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Happy Path
 
 **Given**: GPU/base plans declare `runner_requirements` and no-Docker plan declares `expected_failure`
@@ -77,7 +77,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 ## Phase 2: Layered Coverage and Gap Reports - Validation Scenarios
 
-### Scenario 2.1: Coverage report shows layered sections [STATUS: pending]
+### Scenario 2.1: Coverage report shows layered sections [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Happy Path
 
 **Given**: layered metadata exists
@@ -91,7 +91,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 **Tools Required**: Bash
 
-### Scenario 2.2: Transitional parity entries without explicit layer still pass [STATUS: pending]
+### Scenario 2.2: Transitional parity entries without explicit layer still pass [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Sad Path
 
 **Given**: deferred parity assertion lacks explicit `layer`
@@ -107,7 +107,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 ## Phase 3: Onboarding Assertion Stage - Validation Scenarios
 
-### Scenario 3.1: Onboarding assertions run before expected-state validation [STATUS: pending]
+### Scenario 3.1: Onboarding assertions run before expected-state validation [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Happy Path
 
 **Given**: a plan with stub onboarding assertion scripts and expected-state validation enabled
@@ -121,7 +121,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 **Tools Required**: Vitest, Bash fixtures
 
-### Scenario 3.2: Missing onboarding assertion reference fails at plan time [STATUS: pending]
+### Scenario 3.2: Missing onboarding assertion reference fails at plan time [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Sad Path
 
 **Given**: a plan references unknown assertion `ghost-assertion`
@@ -137,7 +137,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 ## Phase 4: Onboarding Matrix Expansion - Validation Scenarios
 
-### Scenario 4.1: Onboarding profile coverage is independent from base coverage [STATUS: pending]
+### Scenario 4.1: Onboarding profile coverage is independent from base coverage [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Happy Path
 
 **Given**: messaging, OpenAI-compatible, Hermes, and lifecycle profiles exist
@@ -151,7 +151,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 **Tools Required**: Bash
 
-### Scenario 4.2: Unsupported base/onboarding combination is rejected [STATUS: pending]
+### Scenario 4.2: Unsupported base/onboarding combination is rejected [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Sad Path
 
 **Given**: metadata combines an unsupported base with an onboarding profile requiring unavailable secrets/capabilities
@@ -167,7 +167,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 ## Phase 5: Post-Onboard Suite Reorganization - Validation Scenarios
 
-### Scenario 5.1: Suite family aliases preserve existing behavior [STATUS: pending]
+### Scenario 5.1: Suite family aliases preserve existing behavior [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Happy Path
 
 **Given**: old suite IDs and new family IDs coexist during migration
@@ -181,7 +181,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 **Tools Required**: Vitest
 
-### Scenario 5.2: Suite attempting to install or onboard is rejected [STATUS: pending]
+### Scenario 5.2: Suite attempting to install or onboard is rejected [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Sad Path
 
 **Given**: suite metadata includes a step that calls install/onboard paths
@@ -197,7 +197,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 ## Phase 6: Workflow and Report Visibility - Validation Scenarios
 
-### Scenario 6.1: Workflow summaries include layered reports [STATUS: pending]
+### Scenario 6.1: Workflow summaries include layered reports [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Happy Path
 
 **Given**: E2E scenario and parity workflows run in GitHub Actions
@@ -211,7 +211,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 **Tools Required**: Vitest, Bash
 
-### Scenario 6.2: Failed run records failing layer [STATUS: pending]
+### Scenario 6.2: Failed run records failing layer [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Sad Path
 
 **Given**: a fixture scenario fails during base, onboarding, expected-state, or suite stage
@@ -227,7 +227,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 ## Phase 7: Clean the House - Validation Scenarios
 
-### Scenario 7.1: Layered model is the documented source of truth [STATUS: pending]
+### Scenario 7.1: Layered model is the documented source of truth [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Happy Path
 
 **Given**: migration cleanup is complete
@@ -241,7 +241,7 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 **Tools Required**: Vitest, Bash
 
-### Scenario 7.2: New legacy E2E entrypoints are blocked [STATUS: pending]
+### Scenario 7.2: New legacy E2E entrypoints are blocked [STATUS: passed] [VALIDATED: 88d8a018f]
 **Type**: Sad Path
 
 **Given**: a new `test/e2e/test-*.sh` entrypoint is added outside approved compatibility paths
@@ -259,11 +259,11 @@ Test Spec: `specs/2026-05-14_new-e2e-model/tests.md`
 
 | Phase | Happy | Sad | Total | Passed | Failed | Pending |
 |-------|------:|----:|------:|-------:|-------:|--------:|
-| Phase 1 | 3 | 1 | 4 | 0 | 0 | 4 |
-| Phase 2 | 1 | 1 | 2 | 0 | 0 | 2 |
-| Phase 3 | 1 | 1 | 2 | 0 | 0 | 2 |
-| Phase 4 | 1 | 1 | 2 | 0 | 0 | 2 |
-| Phase 5 | 1 | 1 | 2 | 0 | 0 | 2 |
-| Phase 6 | 1 | 1 | 2 | 0 | 0 | 2 |
-| Phase 7 | 1 | 1 | 2 | 0 | 0 | 2 |
-| **Total** | **9** | **7** | **16** | **0** | **0** | **16** |
+| Phase 1 | 3 | 1 | 4 | 4 | 0 | 0 |
+| Phase 2 | 1 | 1 | 2 | 2 | 0 | 0 |
+| Phase 3 | 1 | 1 | 2 | 2 | 0 | 0 |
+| Phase 4 | 1 | 1 | 2 | 2 | 0 | 0 |
+| Phase 5 | 1 | 1 | 2 | 2 | 0 | 0 |
+| Phase 6 | 1 | 1 | 2 | 2 | 0 | 0 |
+| Phase 7 | 1 | 1 | 2 | 2 | 0 | 0 |
+| **Total** | **9** | **7** | **16** | **16** | **0** | **0** |
