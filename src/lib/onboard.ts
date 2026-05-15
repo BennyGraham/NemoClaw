@@ -2041,12 +2041,10 @@ function isInferenceRouteReady(provider: string, model: string): boolean {
   return Boolean(live && live.provider === provider && live.model === model);
 }
 
-function shouldSmokeOpenAiLikeOnboardRoute(provider: string): boolean {
-  if (provider === "nvidia-nim" || provider === "nvidia-router") return true;
-  return Object.values(REMOTE_PROVIDER_CONFIG).some(
-    (entry) => entry.providerName === provider && entry.providerType === "openai",
-  );
-}
+const {
+  verifyOnboardInferenceSmoke: verifyOnboardInferenceSmokeWithDeps,
+  shouldSmokeOpenAiLikeOnboardRoute,
+} = require("./onboard/inference-smoke");
 
 function verifyOnboardInferenceSmoke(options: {
   provider: string;
@@ -2054,31 +2052,7 @@ function verifyOnboardInferenceSmoke(options: {
   endpointUrl?: string | null;
   credentialEnv?: string | null;
 }): void {
-  if (!shouldSmokeOpenAiLikeOnboardRoute(options.provider)) return;
-  if (process.env.VITEST === "true") return;
-
-  const endpointUrl = options.endpointUrl || INFERENCE_ROUTE_URL;
-  const credentialEnv = options.credentialEnv || null;
-  const apiKey = credentialEnv
-    ? hydrateCredentialEnv(credentialEnv) || getCredential(credentialEnv) || ""
-    : "";
-  const probe = probeOpenAiLikeEndpoint(endpointUrl, options.model, apiKey, {
-    authMode: getProbeAuthMode(options.provider),
-    skipResponsesProbe: true,
-  });
-
-  if (probe.ok) {
-    console.log(`  ✓ Inference smoke passed: ${options.provider} / ${options.model}`);
-    return;
-  }
-
-  console.error("  Onboard inference smoke check failed.");
-  console.error(`  Provider: ${options.provider}`);
-  console.error(`  Model: ${options.model}`);
-  console.error(`  API base: ${endpointUrl}`);
-  if (credentialEnv) console.error(`  Credential env: ${credentialEnv}`);
-  console.error(`  Upstream error: ${compactText(redact(probe.message || "unknown inference failure"))}`);
-  process.exit(1);
+  verifyOnboardInferenceSmokeWithDeps(options, { hydrateCredentialEnv });
 }
 
 function verifyCompatibleEndpointSandboxSmoke(options: {
