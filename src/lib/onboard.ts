@@ -17,9 +17,7 @@ const {
 }: typeof import("./onboard/branding") = require("./onboard/branding");
 const { cleanupTempDir }: typeof import("./onboard/temp-files") = require("./onboard/temp-files");
 const { stopStaleDashboardListenersForSandbox } = require("./onboard/stale-gateway-cleanup");
-const {
-  runBackgroundForwardStartWithDiagnostics,
-}: typeof import("./onboard/forward-start") = require("./onboard/forward-start");
+const { looksLikeForwardPortConflict, runBackgroundForwardStartWithPortReleaseRetries }: typeof import("./onboard/forward-start") = require("./onboard/forward-start");
 const {
   ensureOllamaLoopbackSystemdOverride,
 }: typeof import("./onboard/ollama-systemd") = require("./onboard/ollama-systemd");
@@ -9302,43 +9300,17 @@ function ensureDashboardForward(
   const parsedUrl = new URL(chatUiUrl.includes("://") ? chatUiUrl : `http://${chatUiUrl}`);
   parsedUrl.port = String(actualPort);
   const actualTarget = getDashboardForwardTarget(parsedUrl.toString());
-  const startDashboardForward = () =>
-    runBackgroundForwardStartWithDiagnostics((stdio, timeout) =>
+  runOpenshell(["forward", "stop", String(actualPort)], { ignoreError: true });
+  const { result: fwdResult, diagnostic: fwdDiagnostic } = runBackgroundForwardStartWithPortReleaseRetries(
+    (stdio, timeout) =>
       runOpenshell(
         ["forward", "start", "--background", actualTarget, sandboxName],
         { ignoreError: true, suppressOutput: true, stdio, timeout },
       ),
-    );
-  runOpenshell(["forward", "stop", String(actualPort)], { ignoreError: true });
-  let { result: fwdResult, diagnostic: fwdDiagnostic } = startDashboardForward();
-  let looksLikePortConflict = Boolean(
-    fwdResult &&
-      fwdResult.status !== 0 &&
-      (fwdDiagnostic === "" ||
-        /eaddrinuse|address already in use|port .* in use|bind: .*in use/i.test(fwdDiagnostic)),
+    () => { sleep(1); runOpenshell(["forward", "stop", String(actualPort)], { ignoreError: true }); },
   );
-  for (
-    let attempt = 1;
-    fwdResult && fwdResult.status !== 0 && looksLikePortConflict && attempt <= 3;
-    attempt++
-  ) {
-    // OpenShell may report the previous forward stopped before the host socket
-    // is fully released. Retry the same baked-in dashboard port before rolling
-    // back an otherwise healthy newly-created sandbox (#3260 follow-up).
-    sleep(1);
-    runOpenshell(["forward", "stop", String(actualPort)], { ignoreError: true });
-    ({ result: fwdResult, diagnostic: fwdDiagnostic } = startDashboardForward());
-    looksLikePortConflict = Boolean(
-      fwdResult &&
-        fwdResult.status !== 0 &&
-        (fwdDiagnostic === "" ||
-          /eaddrinuse|address already in use|port .* in use|bind: .*in use/i.test(fwdDiagnostic)),
-    );
-  }
   if (fwdResult && fwdResult.status !== 0) {
-    looksLikePortConflict =
-      fwdDiagnostic === "" ||
-      /eaddrinuse|address already in use|port .* in use|bind: .*in use/i.test(fwdDiagnostic);
+    const looksLikePortConflict = looksLikeForwardPortConflict(fwdDiagnostic);
     if (rollbackSandboxOnFailure) {
       // The sandbox was just created, committed to actualPort via its
       // baked-in CHAT_UI_URL and NEMOCLAW_DASHBOARD_PORT env. Silently
