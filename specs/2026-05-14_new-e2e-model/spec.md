@@ -119,6 +119,26 @@ The largest deferred areas in `test/e2e/docs/parity-map.yaml` currently include:
 
 These counts are not a one-to-one list of tests to write. They are extracted legacy assertions that must be mapped, consolidated, implemented, gated, or retired.
 
+## Related Issues and Scope Boundaries
+
+This specification is the concrete implementation plan for #3588, under the broader E2E restructuring epic #3281. It should create the layered scenario model and plan-resolution foundation without absorbing every follow-on stabilization issue.
+
+Schema-shaping hooks included here:
+
+- #3604 capability-aware scenario planning: base scenarios and test plans may declare runner requirements or capability metadata so future capability checks do not require another schema migration. This specification does not implement runtime capability detection, suite scaling, or runner introspection.
+- #3608 expected-failure scenarios: negative plans may declare expected-failure metadata so no-Docker and similar cases are represented structurally. This specification does not implement the full expected-vs-actual failure matcher or cleanup-invariant runner.
+
+Follow-up issues intentionally kept separate:
+
+- #3589 publish parity and coverage reports to workflow summaries.
+- #3605 introduce a unified route resolver for gateway and inference checks.
+- #3606 make repo install hermetic and observable.
+- #3607 standardize phase diagnostics and failure envelopes.
+- #3609 define GPU sandbox policy and diagnostics contracts.
+- #3610 extract platform execution adapters for WSL, macOS, and GPU.
+
+The layered model should use names and metadata compatible with those follow-up issues, but Phase 1 must remain limited to docs, schema, resolver behavior, aliases, and plan-only compatibility.
+
 ## Architecture Design
 
 ### Conceptual entities
@@ -155,8 +175,17 @@ base_scenarios:
     platform: ubuntu-local
     install: repo-current
     runtime: docker-missing
-    negative: true
+    expected_failure:
+      phase: preflight
+      error_class: docker-missing
+      forbidden_side_effects:
+        - gateway-started
+        - sandbox-created
 ```
+
+Capability-related fields such as `runner_requirements` are metadata in Phase 1. They should be preserved in resolved plans, but live runner capability detection is deferred to #3604.
+
+Expected-failure fields are also metadata in Phase 1. They make negative scenarios structurally visible, but the full matcher that compares actual failure phase/reason/side effects is deferred to #3608.
 
 This layer answers:
 
@@ -465,6 +494,8 @@ The resolver must fail fast with clear messages when:
 - an onboarding profile requires a runner/secret not available through the base plan
 - a negative base scenario is combined with a positive onboarding profile without `expected_failure`
 
+Phase 1 compatibility validation must preserve `runner_requirements`, capability metadata, and `expected_failure` metadata in plan output when present, but it does not need to enforce live runner capability detection or structured failure matching.
+
 ### Gap classification model
 
 Extend parity metadata so every deferred assertion has a layer classification:
@@ -547,6 +578,7 @@ Minimum visible summary:
 
 - `test/e2e/nemoclaw_scenarios/scenarios.yaml`
   - Introduce `base_scenarios`, `onboarding_profiles`, and `test_plans`.
+  - Preserve `runner_requirements` / capability metadata and `expected_failure` metadata in resolved plans when present.
   - Keep existing `platforms`, `installs`, and `runtimes` profiles.
   - Keep `setup_scenarios` as alias compatibility until final cleanup.
 
@@ -621,6 +653,8 @@ test/e2e/runtime/reports/
 
 No new required environment variables are introduced in Phase 1.
 
+Capability detection, route resolution, hermetic install diagnostics, standardized failure envelopes, GPU diagnostics, and platform adapters are explicitly out of Phase 1 scope and remain tracked by their follow-up issues.
+
 Existing env remains relevant:
 
 - `E2E_CONTEXT_DIR`
@@ -663,6 +697,8 @@ Introduce the layered terminology and schema support while preserving current sc
    - expected state ID
    - onboarding assertion IDs
    - suite IDs
+   - runner requirement / capability metadata when present
+   - expected-failure metadata when present
 6. Keep `run-scenario.sh <old-id>` working through aliases.
 
 ### Acceptance Criteria
@@ -671,6 +707,7 @@ Introduce the layered terminology and schema support while preserving current sc
 - `bash test/e2e/runtime/run-scenario.sh ubuntu-repo-cloud-openclaw --plan-only` still succeeds.
 - `bash test/e2e/runtime/run-scenario.sh ubuntu-repo-docker__cloud-nvidia-openclaw --plan-only` succeeds.
 - Plan JSON contains separate `base`, `onboarding`, `expected_state`, and `suites` sections.
+- Plan JSON preserves runner requirement / capability metadata and expected-failure metadata when present.
 - Existing scenario-framework tests pass.
 - No live E2E behavior changes are required in this phase.
 
