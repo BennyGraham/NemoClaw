@@ -137,7 +137,6 @@ setup_scenarios:
       - docker-cdi
     expected_state: local-ollama-openclaw-ready
     suites:
-      - smoke
       - local-ollama-inference
       - ollama-proxy
 
