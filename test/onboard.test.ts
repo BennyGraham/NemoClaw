@@ -65,7 +65,12 @@ type OnboardTestInternals = {
     options?: { suppressGpuFlag?: boolean },
   ) => string[];
   buildDirectGpuPolicyYaml: (basePolicy: string, options?: { procReadWrite?: boolean }) => string;
-  buildDirectSandboxGpuProofCommands: (sandboxName: string) => { label: string; args: string[] }[];
+  buildDirectSandboxGpuProofCommands: (sandboxName: string) => {
+    id: string;
+    label: string;
+    args: string[];
+    optional?: boolean;
+  }[];
   classifySandboxCreateFailure: (output?: string) => { kind: string; uploadedToGateway: boolean };
   compactText: (value?: string) => string;
   computeSetupPresetSuggestions: ShimFn<string[]>;
