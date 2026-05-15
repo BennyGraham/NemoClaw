@@ -16,6 +16,26 @@ fail() { ((FAIL++)); ((TOTAL++)); printf '\033[31m  FAIL: %s\033[0m\n' "$1"; }
 section() { echo ""; printf '\033[1;36m=== %s ===\033[0m\n' "$1"; }
 info() { printf '\033[1;34m  [info]\033[0m %s\n' "$1"; }
 
+is_routed_pong_response() {
+  python3 - <<'PY'
+import json, re, sys
+raw = sys.stdin.read()
+try:
+    data = json.loads(raw)
+except Exception:
+    raise SystemExit(1)
+model = str(data.get("model", ""))
+choices = data.get("choices") or []
+content = ""
+if choices and isinstance(choices[0], dict):
+    message = choices[0].get("message") or {}
+    content = str(message.get("content", ""))
+ok_model = model == "nvidia-routed" or model.startswith("nvidia-routed")
+ok_content = re.search(r"\bPONG\b", content, re.IGNORECASE) is not None
+raise SystemExit(0 if ok_model and ok_content else 1)
+PY
+}
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SANDBOX_NAME="${NEMOCLAW_SANDBOX_NAME:-e2e-model-router}"
@@ -136,7 +156,7 @@ for _ in $(seq 1 3); do
     2>&1 || true)"
   printf '%s\n' "$response" >"$RESPONSE_LOG"
   redact_file "$RESPONSE_LOG"
-  if echo "$response" | grep -qi 'PONG'; then
+  if is_routed_pong_response <<<"$response"; then
     pass "inference.local returned a routed Model Router completion"
     break
   fi
@@ -146,7 +166,7 @@ for _ in $(seq 1 3); do
   sleep 5
 done
 
-if echo "$response" | grep -qi 'PONG'; then
+if is_routed_pong_response <<<"$response"; then
   :
 else
   fail "Model Router inference.local did not return a routed completion; expected #3255 main-equivalent failure"
