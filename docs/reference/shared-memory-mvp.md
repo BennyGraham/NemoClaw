@@ -21,6 +21,7 @@ Key decisions:
 
 - OpenShell exposes the shared memory API.
 - Redis Streams provide the MVP storage and delivery backend.
+- OpenShell uses a backend-neutral `MemoryStoreDriver` interface behind the `/v1/memory` API.
 - NemoClaw passes only sandbox-safe memory configuration into agent sandboxes.
 - Redis credentials stay in the OpenShell gateway process.
 - OpenClaw and Hermes use separate adapters that call the same OpenShell memory API.
@@ -35,7 +36,7 @@ The MVP is implemented on the shared-memory feature branches.
 | Area | Branch | Status |
 |---|---|---|
 | NemoClaw integration and OpenClaw adapter | `NVIDIA/NemoClaw:aniket/feat-shared-agent-memory` | Implemented |
-| OpenShell memory driver and Redis backend | `aknvda/OpenShell:aniket/feat-shared-agent-memory` | Implemented |
+| OpenShell memory driver interface and Redis backend | `aknvda/OpenShell:aniket/feat-shared-agent-memory` | Implemented |
 | Hermes shared-memory adapter | `aknvda/hermes-agent:aniket/feat-shared-agent-memory` | Implemented |
 
 The local runnable demo is `examples/shared-memory/run-local-demo.sh`.
@@ -97,7 +98,7 @@ The implementation is split by platform responsibility.
 
 | Layer | Owner | Responsibility |
 |---|---|---|
-| Memory platform | OpenShell | Memory API, Redis driver, backend credentials, validation, policy, delivery, replay, and acknowledgement. |
+| Memory platform | OpenShell | Memory API, backend-neutral driver interface, backend credentials, validation, policy, delivery, replay, and acknowledgement. |
 | Reference integration | NemoClaw | Onboarding configuration, sandbox-safe environment, registry metadata, OpenClaw adapter packaging, docs, examples, and demo. |
 | Runtime adapter | Each agent runtime | Mapping shared memory operations into native tools, memory, sessions, plans, or task state. |
 
@@ -119,7 +120,7 @@ OpenClaw adapter        Hermes adapter        Future agent adapter
                           |
                  OpenShell memory service
                           |
-                 Redis Streams memory driver
+                 MemoryStoreDriver backend
 ```
 
 This boundary keeps backend credentials, policy, validation, and audit independent of the agent runtime.
@@ -143,6 +144,8 @@ crates/openshell-sandbox/src/proxy.rs
 
 The MVP is HTTP-first.
 That keeps the contract easy to exercise while the semantics settle.
+The server now dispatches memory operations through a `MemoryStoreDriver` interface.
+Redis is the durable MVP driver, and an in-memory driver is available for local and test paths.
 The sandbox-local `memory.local` route forwards memory calls to the gateway without exposing Redis to the sandbox.
 
 ### NemoClaw
@@ -323,7 +326,17 @@ Example subscription:
 
 Subscribers should acknowledge events after they integrate or intentionally ignore them.
 
-## Redis Driver
+## Backend Drivers
+
+The OpenShell memory service uses a backend-neutral driver interface behind the agent-facing API.
+Drivers implement publish, query, subscribe, poll, acknowledge, backend identity, and capability reporting.
+
+Current drivers:
+
+| Driver | Use | Durability |
+|---|---|---|
+| `redis` | MVP shared-memory backend using Redis Streams. | Durable while Redis retains the stream and metadata. |
+| `in-memory` | Local and test backend for exercising the same API without Redis. | Process-local only. |
 
 Redis Streams are the MVP source of truth for event delivery.
 Plain Redis Pub/Sub is not sufficient because offline subscribers miss messages.
@@ -339,7 +352,8 @@ Core operations:
 | Query | Stream scan or materialized view | Return deterministic filtered events. |
 
 Redis stays behind the OpenShell memory service.
-Future drivers can replace Redis without changing the agent adapter contract.
+Additional drivers can replace Redis without changing the agent adapter contract.
+That extension point can support storage-vendor or NVIDIA BlueField-backed implementations where OpenShell keeps the agent-facing policy boundary and the vendor driver owns persistence, isolation, telemetry, and storage controls.
 
 ## Adapter Contract
 
@@ -449,6 +463,7 @@ Before broad production use, the platform work should add:
 - More explicit retention and redaction behavior.
 - Direct OpenShell gateway smoke tests for publish, subscribe, poll, and ack.
 - A stable OpenShell API surface, either HTTP-only or HTTP plus gRPC.
+- A documented driver registration path for storage-vendor and BlueField-backed implementations.
 - Operator-facing policy for `accepted` versus `proposed` publish status.
 - Rebuildable materialized views for query acceleration.
 - A decision on whether the OpenClaw adapter remains NemoClaw-packaged or moves to an OpenClaw-owned distribution.
