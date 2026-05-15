@@ -16473,8 +16473,8 @@
     }
   ],
   "totals": {
-    "scripts": 51,
-    "assertions": 2022,
+    "scripts": 52,
+    "assertions": 2026,
     "zero_assertion_scripts": 1
   }
 }
