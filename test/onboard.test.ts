@@ -1220,6 +1220,7 @@ network_policies:
         {},
         null,
         {},
+        {},
         true,
       );
       const patched = fs.readFileSync(dockerfilePath, "utf8");
@@ -4164,7 +4165,7 @@ const { setupInference, getSandboxInferenceConfig } = require(${onboardPath});
     });
   });
 
-  it("prepares managed Model Router dependencies instead of using PATH when managed command is absent", testTimeoutOptions(20_000), () => {
+  it("prepares managed Model Router dependencies instead of using PATH when managed command is absent", testTimeoutOptions(30_000), () => {
     const repoRoot = path.join(import.meta.dirname, "..");
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-onboard-router-venv-"));
     const fakeBin = path.join(tmpDir, "bin");

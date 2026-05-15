@@ -428,24 +428,29 @@ export function buildDockerGpuCloneRunArgs(
     args.push("--restart", value);
   }
 
-  // GPU bring-up requires writing to /proc/<pid>/task/<tid>/comm (see
-  // PROC_COMM_WRITE_PROBE in initial-policy.ts).  On some Docker/distro
-  // baselines, the OpenShell-created container that we inspect here lacks
-  // SYS_PTRACE and/or apparmor=unconfined, which the kernel/LSM combination
-  // requires for that write.  Augment the recreate flags to make the
-  // GPU-capable container self-sufficient for the operations the GPU proof
-  // checks, regardless of what the non-GPU baseline happened to set (#3511).
+  const capDrops = stringArray(host.CapDrop);
   const capAdd = new Set(stringArray(host.CapAdd));
+  // GPU bring-up requires writing to /proc/<pid>/task/<tid>/comm (see
+  // PROC_COMM_WRITE_PROBE in initial-policy.ts). On some Docker/distro
+  // baselines, the OpenShell-created container that we inspect here lacks
+  // capabilities/security options required by the kernel/LSM combination.
+  // Augment the recreate flags to make the GPU-capable container
+  // self-sufficient while still honoring explicit capability drops.
+  if (!capDrops.some((cap) => cap.toUpperCase() === "SYS_ADMIN")) {
+    capAdd.add("SYS_ADMIN");
+  }
   capAdd.add("SYS_PTRACE");
   for (const cap of capAdd) args.push("--cap-add", cap);
-  for (const cap of stringArray(host.CapDrop)) args.push("--cap-drop", cap);
+  for (const cap of capDrops) args.push("--cap-drop", cap);
   const securityOpt = new Set(stringArray(host.SecurityOpt));
+  if (![...securityOpt].some((entry) => entry.toLowerCase().startsWith("seccomp="))) {
+    securityOpt.add("seccomp=unconfined");
+  }
   // Only inject apparmor=unconfined when the baseline did not pin a specific
-  // apparmor profile.  Docker rejects multiple `--security-opt apparmor=...`
+  // apparmor profile. Docker rejects multiple `--security-opt apparmor=...`
   // entries, and a baseline that explicitly chose `apparmor=docker-default`
-  // (or similar) should be respected — we are scoped to the GPU recreate
-  // path, not to overriding deliberate operator choices.
-  if (![...securityOpt].some((entry) => entry.startsWith("apparmor"))) {
+  // (or similar) should be respected.
+  if (![...securityOpt].some((entry) => entry.toLowerCase().startsWith("apparmor="))) {
     securityOpt.add("apparmor=unconfined");
   }
   for (const opt of securityOpt) args.push("--security-opt", opt);

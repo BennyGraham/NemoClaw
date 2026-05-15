@@ -392,6 +392,8 @@ describe("docker-gpu-patch", () => {
         "--cap-add",
         "SYS_PTRACE",
         "--security-opt",
+        "seccomp=unconfined",
+        "--security-opt",
         "apparmor=unconfined",
         "--network",
         "host",
