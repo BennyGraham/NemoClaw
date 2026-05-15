@@ -6,8 +6,6 @@
  * output and determine recovery strategy.
  */
 
-import { loadSession } from "./state/onboard-session";
-
 const ANSI_RE = /\x1b\[[0-9;]*m/g;
 
 function stripAnsi(text: string | null | undefined): string {
@@ -86,12 +84,4 @@ export function shouldAttemptGatewayRecovery({
   gatewayState = "inactive",
 } = {}): boolean {
   return sandboxState === "unavailable" && gatewayState !== "connected";
-}
-
-export function getRecoveryCommand(): string {
-  const session = loadSession();
-  if (session && session.resumable !== false) {
-    return "nemoclaw onboard --resume";
-  }
-  return "nemoclaw onboard";
 }

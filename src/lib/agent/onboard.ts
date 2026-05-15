@@ -178,13 +178,6 @@ export function getAgentPolicyPath(agent: AgentDefinition): string | null {
 }
 
 /**
- * Get the agent-specific permissive policy path, or null to use the global fallback.
- */
-export function getAgentPermissivePolicyPath(agent: AgentDefinition): string | null {
-  return agent.policyPermissivePath || null;
-}
-
-/**
  * Sleep for the requested number of seconds using the shared wait helper.
  */
 function sleep(seconds: number): void {
