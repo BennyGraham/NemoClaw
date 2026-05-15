@@ -1,6 +1,16 @@
 // SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Compatibility front controller for NemoClaw's public CLI surface.
+//
+// oclif owns command discovery, parsing, help rendering, and command execution
+// under src/commands/**. This module intentionally stays in front of oclif only
+// for product compatibility: the public sandbox grammar is
+// `nemoclaw <sandbox-name> <action>` while the oclif-native command IDs are
+// `sandbox:<action>` and parse as `nemoclaw sandbox <action> <sandbox-name>`.
+// Keep new command behavior in src/lib/commands/** and src/lib/actions/**; keep
+// this file limited to argv normalization, compatibility routing, suggestions,
+// and registry-aware sandbox-name checks.
 const { execFileSync, spawn, spawnSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
