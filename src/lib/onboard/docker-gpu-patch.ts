@@ -428,22 +428,27 @@ export function buildDockerGpuCloneRunArgs(
     args.push("--restart", value);
   }
 
-  for (const cap of stringArray(host.CapAdd)) args.push("--cap-add", cap);
-  const capDrops = stringArray(host.CapDrop);
-  for (const cap of capDrops) args.push("--cap-drop", cap);
-  if (!capDrops.some((cap) => cap.toUpperCase() === "SYS_ADMIN")) {
-    // OpenShell grants /proc task comm writes via its sandbox policy, but Docker's
-    // default seccomp profile can still reject that write after the GPU clone is
-    // recreated directly with `docker run`. The live GPU E2E proof exercises that
-    // policy path, so preserve OpenShell's intended sandbox behavior by allowing
-    // the proc write while still honoring sandboxes that explicitly drop SYS_ADMIN.
-    args.push("--cap-add", "SYS_ADMIN");
+  // GPU bring-up requires writing to /proc/<pid>/task/<tid>/comm (see
+  // PROC_COMM_WRITE_PROBE in initial-policy.ts).  On some Docker/distro
+  // baselines, the OpenShell-created container that we inspect here lacks
+  // SYS_PTRACE and/or apparmor=unconfined, which the kernel/LSM combination
+  // requires for that write.  Augment the recreate flags to make the
+  // GPU-capable container self-sufficient for the operations the GPU proof
+  // checks, regardless of what the non-GPU baseline happened to set (#3511).
+  const capAdd = new Set(stringArray(host.CapAdd));
+  capAdd.add("SYS_PTRACE");
+  for (const cap of capAdd) args.push("--cap-add", cap);
+  for (const cap of stringArray(host.CapDrop)) args.push("--cap-drop", cap);
+  const securityOpt = new Set(stringArray(host.SecurityOpt));
+  // Only inject apparmor=unconfined when the baseline did not pin a specific
+  // apparmor profile.  Docker rejects multiple `--security-opt apparmor=...`
+  // entries, and a baseline that explicitly chose `apparmor=docker-default`
+  // (or similar) should be respected — we are scoped to the GPU recreate
+  // path, not to overriding deliberate operator choices.
+  if (![...securityOpt].some((entry) => entry.startsWith("apparmor"))) {
+    securityOpt.add("apparmor=unconfined");
   }
-  const securityOpts = stringArray(host.SecurityOpt);
-  for (const opt of securityOpts) args.push("--security-opt", opt);
-  if (!securityOpts.some((opt) => opt.toLowerCase().startsWith("seccomp="))) {
-    args.push("--security-opt", "seccomp=unconfined");
-  }
+  for (const opt of securityOpt) args.push("--security-opt", opt);
   if (networkMode !== "host") {
     for (const hostEntry of stringArray(host.ExtraHosts)) args.push("--add-host", hostEntry);
   }
@@ -655,7 +660,7 @@ function waitForOpenShellSandboxExec(
   while (Date.now() <= deadline) {
     const result = deps.runOpenshell(
       ["sandbox", "exec", "-n", sandboxName, "--", "true"],
-      { ignoreError: true, timeout: DOCKER_GPU_PATCH_TIMEOUT_MS },
+      { ignoreError: true, suppressOutput: true, timeout: DOCKER_GPU_PATCH_TIMEOUT_MS },
     );
     if (isZeroStatus(result)) return true;
     d.sleep(2);
