@@ -175,6 +175,8 @@ read_plan_string() {
 INSTALL_ID="$(read_plan_string dimensions.install.id)"
 INSTALL_METHOD="$(read_plan_string dimensions.install.profile.method)"
 ONBOARDING_ID="$(read_plan_string dimensions.onboarding.id)"
+RUNTIME_ID="$(read_plan_string dimensions.runtime.id)"
+RUNTIME_CONTAINER_DAEMON="$(read_plan_string dimensions.runtime.profile.container_daemon)"
 
 # Trace the dimension id so scenario-level assertions can identify the
 # configured install (e.g. repo-current); e2e_install internally traces
@@ -196,13 +198,17 @@ export PATH="${HOME}/.local/bin:${PATH}"
   printf 'PATH=%s\n' "${PATH}"
   command -v nemoclaw || true
 } >"${E2E_CONTEXT_DIR}/post-install-path.log" 2>&1
-nemoclaw_bin="$(command -v nemoclaw || true)"
-if [[ -z "${nemoclaw_bin}" ]]; then
-  cat "${E2E_CONTEXT_DIR}/post-install-path.log" >&2
-  echo "run-scenario: nemoclaw not found on PATH after install" >&2
-  exit 127
+if [[ "${DRY_RUN}" -eq 1 ]]; then
+  printf 'run-scenario: dry-run skipping post-install nemoclaw PATH verification\n' >&2
+else
+  nemoclaw_bin="$(command -v nemoclaw || true)"
+  if [[ -z "${nemoclaw_bin}" ]]; then
+    cat "${E2E_CONTEXT_DIR}/post-install-path.log" >&2
+    echo "run-scenario: nemoclaw not found on PATH after install" >&2
+    exit 127
+  fi
+  printf 'run-scenario: using nemoclaw at %s\n' "${nemoclaw_bin}" >&2
 fi
-printf 'run-scenario: using nemoclaw at %s\n' "${nemoclaw_bin}" >&2
 
 # Negative preflight scenarios intentionally model a missing container daemon.
 # CI runners normally have Docker available, so force the Docker client at an
@@ -228,18 +234,26 @@ if [[ "$(read_plan_string expected_state.id)" == "preflight-failure-no-sandbox" 
   exit 0
 fi
 
-onboard_log="${E2E_CONTEXT_DIR}/onboard.log"
-set +e
-e2e_onboard "${ONBOARDING_ID}" >"${onboard_log}" 2>&1
-onboard_status=$?
-set -e
-if [[ "${onboard_status}" -ne 0 ]]; then
-  cat "${onboard_log}" >&2
-  echo "run-scenario: onboarding ${ONBOARDING_ID} failed with status ${onboard_status}" >&2
-  exit "${onboard_status}"
+if [[ "${RUNTIME_CONTAINER_DAEMON}" == "optional" ]] && ! docker info >/dev/null 2>&1; then
+  echo "run-scenario: Docker unavailable for optional runtime ${RUNTIME_ID}; scaling back to platform-only suites"
+else
+  onboard_log="${E2E_CONTEXT_DIR}/onboard.log"
+  set +e
+  e2e_onboard "${ONBOARDING_ID}" >"${onboard_log}" 2>&1
+  onboard_status=$?
+  set -e
+  if [[ "${onboard_status}" -ne 0 ]]; then
+    cat "${onboard_log}" >&2
+    echo "run-scenario: onboarding ${ONBOARDING_ID} failed with status ${onboard_status}" >&2
+    exit "${onboard_status}"
+  fi
+  if [[ "${RUNTIME_ID}" == "gpu-docker-cdi" ]] && ! e2e_env_is_dry_run; then
+    echo "run-scenario: GPU Docker CDI uses host-network gateway; validating gateway from suites"
+  else
+    e2e_gateway_assert_healthy
+  fi
+  e2e_sandbox_assert_running
 fi
-e2e_gateway_assert_healthy
-e2e_sandbox_assert_running
 
 # Expected state validation. The validator reads E2E_PROBE_OVERRIDE_* env
 # variables to simulate real probe outputs in dry-run/test contexts.
@@ -265,11 +279,23 @@ if [[ "${DRY_RUN}" -eq 1 ]]; then
   exit 0
 fi
 
-mapfile -t SUITE_IDS < <(node -e "
-  const p = JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'));
-  const filter = process.env.E2E_SUITE_FILTER || '';
-  const selected = filter ? filter.split(',').map((s) => s.trim()).filter(Boolean) : p.suites.map((s) => s.id);
-  for (const id of selected) console.log(id);
+SUITE_IDS=()
+while IFS= read -r suite_id; do
+  SUITE_IDS+=("${suite_id}")
+done < <(node -e "
+  try {
+    const planPath = process.argv[1];
+    const p = JSON.parse(require('fs').readFileSync(planPath, 'utf8'));
+    if (!Array.isArray(p.suites)) {
+      throw new Error('missing or invalid suites array');
+    }
+    const filter = process.env.E2E_SUITE_FILTER || '';
+    const selected = filter ? filter.split(',').map((s) => s.trim()).filter(Boolean) : p.suites.map((s) => s.id);
+    for (const id of selected) console.log(id);
+  } catch (err) {
+    console.error('run-scenario: failed to parse plan.json ' + process.argv[1] + ': ' + err.message);
+    process.exit(1);
+  }
 " "${E2E_CONTEXT_DIR}/plan.json")
 
 if [[ "${#SUITE_IDS[@]}" -eq 0 ]]; then
