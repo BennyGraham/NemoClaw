@@ -124,6 +124,28 @@ describe("global oclif command adapters", () => {
     expect(mocks.showStatusCommand).toHaveBeenCalledWith({ statusDeps: true });
   });
 
+  it("maps status JSON output into oclif JSON handling", async () => {
+    const report = {
+      schemaVersion: 1,
+      defaultSandbox: "alpha",
+      liveInference: null,
+      gatewayHealth: null,
+      sandboxes: [],
+      services: [],
+    };
+    mocks.getStatusReport.mockReturnValueOnce(report);
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      await StatusCommand.run(["--json"], rootDir);
+      expect(mocks.buildStatusCommandDeps).toHaveBeenCalledWith(rootDir);
+      expect(mocks.getStatusReport).toHaveBeenCalledWith({ statusDeps: true });
+      expect(mocks.showStatusCommand).not.toHaveBeenCalled();
+      expect(JSON.parse(String(log.mock.calls.at(-1)?.[0]))).toEqual(report);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it("maps maintenance flags to typed action options", async () => {
     await BackupAllCommand.run([], rootDir);
     await UpgradeSandboxesCommand.run(["--check", "--yes"], rootDir);
