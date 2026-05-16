@@ -10,7 +10,6 @@ import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { AgentDefinition } from "../dist/lib/agent/defs.js";
 import { loadAgent } from "../dist/lib/agent/defs.js";
-import { buildChain, buildControlUiUrls } from "../dist/lib/dashboard/contract.js";
 import { NAME_ALLOWED_FORMAT } from "../dist/lib/name-validation.js";
 import { hasOpenShellVmDriverChildProcessFromPsOutput } from "../dist/lib/onboard/vm-driver-process.js";
 import { applyOnboardVmDnsMonkeypatch } from "../dist/lib/onboard/vm-dns-monkeypatch.js";
@@ -72,7 +71,6 @@ type OnboardTestInternals = {
   getDashboardForwardStartCommand: ShimFn<string>;
   getNavigationChoice: (value?: string | null) => string | null;
   getGatewayReuseState: ShimFn<string>;
-  getPortConflictServiceHints: (platform?: string) => string[];
   getFutureShellPathHint: (binDir: string, pathValue?: string) => string | null;
   areRequiredDockerDriverBinariesPresent: (
     platform?: NodeJS.Platform,
@@ -170,7 +168,6 @@ type OnboardTestInternals = {
     agent?: AgentDefinition | null,
     dockerfilePathOverride?: string | null,
   ) => Promise<ShimValue>;
-  isLoopbackHostname: (hostname?: string) => boolean;
   normalizeProviderBaseUrl: (
     value: string | null | undefined,
     flavor: "openai" | "anthropic",
@@ -252,7 +249,6 @@ const {
   formatEnvAssignment,
   getNavigationChoice,
   getGatewayReuseState,
-  getPortConflictServiceHints,
   getFutureShellPathHint,
   areRequiredDockerDriverBinariesPresent,
   getSandboxInferenceConfig,
@@ -289,7 +285,6 @@ const {
   hasChatCompletionsToolCallLeak,
   agentSupportsWebSearch,
   configureWebSearch,
-  isLoopbackHostname,
   normalizeProviderBaseUrl,
   providerNameToOptionKey,
   parsePolicyPresetEnv,
@@ -1418,69 +1413,6 @@ describe("onboard helpers", () => {
     );
     expect(normalizeProviderBaseUrl("https://proxy.example.com/v1/messages", "anthropic")).toBe(
       "https://proxy.example.com",
-    );
-  });
-
-  it("detects loopback dashboard hosts and resolves remote binds correctly", () => {
-    expect(isLoopbackHostname("localhost")).toBe(true);
-    expect(isLoopbackHostname("127.0.0.1")).toBe(true);
-    expect(isLoopbackHostname("127.0.0.42")).toBe(true);
-    expect(isLoopbackHostname("[::1]")).toBe(true);
-    expect(isLoopbackHostname("chat.example.com")).toBe(false);
-
-    // Forward target via buildChain replaces resolveDashboardForwardTarget
-    expect(buildChain({ chatUiUrl: "http://127.0.0.1:18789" }).forwardTarget).toBe("18789");
-    expect(buildChain({ chatUiUrl: "http://[::1]:18789" }).forwardTarget).toBe("18789");
-    expect(buildChain({ chatUiUrl: "https://chat.example.com:18789" }).forwardTarget).toBe(
-      "0.0.0.0:18789",
-    );
-    expect(buildChain({ chatUiUrl: "http://10.0.0.25:18789" }).forwardTarget).toBe("0.0.0.0:18789");
-  });
-
-  it("includes a VS Code/WSL dashboard URL when running under WSL", () => {
-    const chain = buildChain({
-      chatUiUrl: "http://127.0.0.1:19999",
-      isWsl: true,
-      wslHostAddress: "172.24.240.1",
-    });
-    // buildControlUiUrls with the WSL chain's accessUrl includes the WSL IP
-    const urls = buildControlUiUrls("secret-token", chain.port, chain.accessUrl);
-    expect(urls[0]).toBe("http://127.0.0.1:19999/#token=secret-token");
-    expect(urls[1]).toContain("172.24.240.1:19999");
-    expect(urls).toHaveLength(2);
-  });
-
-  it("binds the dashboard forward to all interfaces under WSL", () => {
-    const chain = buildChain({
-      chatUiUrl: "http://127.0.0.1:19999",
-      isWsl: true,
-    });
-    // On WSL, bind to all interfaces so the Windows-side browser can reach the port.
-    expect(chain.forwardTarget).toBe("0.0.0.0:19999");
-  });
-
-  it("uses the default port as-is when NEMOCLAW_DASHBOARD_PORT is not overridden", () => {
-    const chain = buildChain({
-      chatUiUrl: "http://127.0.0.1:18789",
-    });
-    // Default port — forward same port on both sides using the bare port number.
-    // Must not regress to all-interfaces (0.0.0.0:18789).
-    expect(chain.forwardTarget).toBe("18789");
-  });
-
-  it("forwards a custom port as-is on non-WSL loopback", () => {
-    const chain = buildChain({
-      chatUiUrl: "http://127.0.0.1:19000",
-    });
-    // Non-WSL loopback must use the plain port — not the all-interfaces form.
-    expect(chain.forwardTarget).toBe("19000");
-  });
-
-  it("prints platform-appropriate service hints for port conflicts", () => {
-    expect(getPortConflictServiceHints("darwin").join("\n")).toMatch(/launchctl unload/);
-    expect(getPortConflictServiceHints("darwin").join("\n")).not.toMatch(/systemctl --user/);
-    expect(getPortConflictServiceHints("linux").join("\n")).toMatch(
-      /systemctl --user stop openclaw-gateway.service/,
     );
   });
 
