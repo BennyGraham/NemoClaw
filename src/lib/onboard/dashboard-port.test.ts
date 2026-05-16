@@ -5,7 +5,10 @@ import assert from "node:assert/strict";
 
 import { describe, it } from "vitest";
 
-import { findAvailableDashboardPort, findDashboardForwardOwner } from "../../../dist/lib/onboard/dashboard-port";
+import {
+  findAvailableDashboardPort,
+  findDashboardForwardOwner,
+} from "../../../dist/lib/onboard/dashboard-port";
 
 describe("findDashboardForwardOwner", () => {
   it("parses openshell forward list column format (#2169)", () => {
@@ -13,11 +16,15 @@ describe("findDashboardForwardOwner", () => {
       "SANDBOX     BIND             PORT   PID     STATUS",
       "test21      127.0.0.1        18789  42101   active",
       "other       127.0.0.1        18790  42102   active",
+      "stopped     127.0.0.1        18792  42103   stopped",
+      "ansi        127.0.0.1        18793  42104   \u001b[32mrunning\u001b[0m",
     ].join("\n");
 
     assert.equal(findDashboardForwardOwner(forwardList, "18789"), "test21");
     assert.equal(findDashboardForwardOwner(forwardList, "18790"), "other");
     assert.equal(findDashboardForwardOwner(forwardList, "18791"), null);
+    assert.equal(findDashboardForwardOwner(forwardList, "18792"), null);
+    assert.equal(findDashboardForwardOwner(forwardList, "18793"), "ansi");
     assert.equal(findDashboardForwardOwner("", "18789"), null);
     assert.equal(findDashboardForwardOwner(null, "18789"), null);
     assert.equal(findDashboardForwardOwner(undefined, "18789"), null);

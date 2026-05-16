@@ -143,15 +143,7 @@ export function findDashboardForwardOwner(
   forwardListOutput: string | null | undefined,
   portToStop: string,
 ): string | null {
-  if (!forwardListOutput) return null;
-  const portLine = forwardListOutput
-    .split("\n")
-    .map((line) => line.trim())
-    .find((line) => {
-      const parts = line.split(/\s+/);
-      return parts[2] === portToStop;
-    });
-  return portLine ? (portLine.split(/\s+/)[0] ?? null) : null;
+  return getOccupiedPorts(forwardListOutput ?? null).get(portToStop) ?? null;
 }
 
 export function findAvailableDashboardPort(
