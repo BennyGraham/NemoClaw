@@ -12,8 +12,15 @@ import {
 } from "../../../dist/lib/inference/vllm-models";
 
 describe("vllm model registry", () => {
-  it("returns the default model when NEMOCLAW_VLLM_MODEL is unset", () => {
-    expect(selectVllmModelFromEnv({} as NodeJS.ProcessEnv)).toBe(DEFAULT_VLLM_MODEL);
+  it("returns null when NEMOCLAW_VLLM_MODEL is unset so the caller can fall back to the profile default", () => {
+    expect(selectVllmModelFromEnv({} as NodeJS.ProcessEnv)).toBeNull();
+  });
+
+  it("exposes a global DEFAULT_VLLM_MODEL for callers that need a baseline", () => {
+    // The platform-specific default is chosen by the profile (Spark/Station
+    // use Qwen, generic Linux uses Nemotron-Nano-4B); this constant only
+    // documents the registry's first entry.
+    expect(DEFAULT_VLLM_MODEL.envValue).toBe("qwen3.6-27b");
   });
 
   it("resolves a model by its env slug (case-insensitive)", () => {
@@ -40,9 +47,7 @@ describe("vllm model registry", () => {
   });
 
   it("treats an empty NEMOCLAW_VLLM_MODEL the same as unset", () => {
-    expect(selectVllmModelFromEnv({ NEMOCLAW_VLLM_MODEL: "   " } as NodeJS.ProcessEnv)).toBe(
-      DEFAULT_VLLM_MODEL,
-    );
+    expect(selectVllmModelFromEnv({ NEMOCLAW_VLLM_MODEL: "   " } as NodeJS.ProcessEnv)).toBeNull();
   });
 
   it("passes the gated check when HF_TOKEN is present", () => {

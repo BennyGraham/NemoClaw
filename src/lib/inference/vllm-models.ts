@@ -87,15 +87,19 @@ export const DEFAULT_VLLM_MODEL: VllmModelDef = VLLM_MODELS[0];
 const HF_TOKEN_ENV_KEYS = ["HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"] as const;
 
 /**
- * Look up the requested express-vLLM model from `NEMOCLAW_VLLM_MODEL`, or
- * return the default entry when the env var is empty. Match is
- * case-insensitive against either the `envValue` slug or the full HF id.
- * Throws when the env var names something not in the registry so the user
- * gets a single clear message instead of a downstream vLLM startup failure.
+ * Look up the requested express-vLLM model from `NEMOCLAW_VLLM_MODEL`.
+ * Returns `null` when the env var is empty so the caller can fall back to
+ * the per-platform profile default (Spark/Station prefer Qwen3.6-27B, the
+ * generic Linux profile prefers Nemotron-Nano-4B for VRAM headroom).
+ *
+ * Match is case-insensitive against either the `envValue` slug or the full
+ * HF id. Throws when the env var names something not in the registry so the
+ * user gets a single clear message instead of a downstream vLLM startup
+ * failure.
  */
-export function selectVllmModelFromEnv(env: NodeJS.ProcessEnv = process.env): VllmModelDef {
+export function selectVllmModelFromEnv(env: NodeJS.ProcessEnv = process.env): VllmModelDef | null {
   const requested = String(env.NEMOCLAW_VLLM_MODEL ?? "").trim().toLowerCase();
-  if (!requested) return DEFAULT_VLLM_MODEL;
+  if (!requested) return null;
   const match = VLLM_MODELS.find(
     (model) => model.envValue.toLowerCase() === requested || model.id.toLowerCase() === requested,
   );

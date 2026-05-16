@@ -59,6 +59,20 @@ function nemotronNanoModel(): VllmModelDef {
   return match;
 }
 
+/**
+ * Forward a Hugging Face token from the host into the vLLM/hf container so
+ * `hf download` and `vllm serve` can pull weights for gated models. Returns
+ * the `docker run -e KEY=value` argv fragment, or an empty array when no
+ * token is available in the host environment.
+ */
+export function buildHfTokenDockerArgs(env: NodeJS.ProcessEnv = process.env): string[] {
+  for (const key of ["HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"] as const) {
+    const value = String(env[key] ?? "").trim();
+    if (value) return ["-e", `${key}=${value}`];
+  }
+  return [];
+}
+
 const SPARK_PROFILE: VllmProfile = {
   name: "DGX Spark",
   image: "nvcr.io/nvidia/vllm:26.03.post1-py3",
@@ -210,6 +224,7 @@ function downloadModel(
         `${process.env.HOME}/.cache/huggingface:/root/.cache/huggingface`,
         "-e",
         "HF_HOME=/root/.cache/huggingface",
+        ...buildHfTokenDockerArgs(),
         profile.image,
         "hf",
         "download",
@@ -285,7 +300,11 @@ function startContainer(
   const resolvedFlags = profile.buildDockerRunFlags
     ? profile.buildDockerRunFlags()
     : profile.dockerRunFlags;
-  const flags = resolvedFlags.join(" ");
+  // Forward HF_TOKEN/HUGGING_FACE_HUB_TOKEN so the long-lived `vllm serve`
+  // pull can authenticate against gated repos when the model weights are
+  // not already in the mounted cache.
+  const hfTokenFlags = buildHfTokenDockerArgs().join(" ");
+  const flags = [resolvedFlags.join(" "), hfTokenFlags].filter(Boolean).join(" ");
   const cmd =
     `docker run -d ${flags} -p ${String(VLLM_PORT)}:8000 ` +
     `--name ${profile.containerName} ${profile.image} bash -c ${JSON.stringify(buildVllmServeCommand(model))}`;
@@ -406,13 +425,14 @@ export async function installVllm(
   opts: InstallVllmOptions,
 ): Promise<{ ok: boolean }> {
   // Resolve the model to serve: `NEMOCLAW_VLLM_MODEL` override if set, else
-  // the platform default. Validate gated-model access (HF_TOKEN required for
-  // models like DeepSeek-R1 Distill 70B) before touching docker so the user
-  // does not burn a multi-minute pull on a 401.
+  // the per-platform profile default. The generic-Linux profile defaults to
+  // Nemotron-Nano-4B for VRAM headroom; Spark/Station to Qwen3.6-27B.
+  // Validate gated-model access (HF_TOKEN required for models like
+  // DeepSeek-R1 Distill 70B) before touching docker so the user does not
+  // burn a multi-minute pull on a 401.
   let model: VllmModelDef;
   try {
-    const requested = selectVllmModelFromEnv();
-    model = requested.id === profile.defaultModel.id ? profile.defaultModel : requested;
+    model = selectVllmModelFromEnv() ?? profile.defaultModel;
     assertGatedModelAccess(model);
   } catch (err) {
     console.error(`  vLLM install failed: ${(err as Error).message}`);

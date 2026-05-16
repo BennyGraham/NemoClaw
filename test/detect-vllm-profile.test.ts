@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from "vitest";
 
-import { detectVllmProfile } from "../dist/lib/inference/vllm.js";
+import { buildHfTokenDockerArgs, detectVllmProfile } from "../dist/lib/inference/vllm.js";
 
 describe("detectVllmProfile", () => {
   it("returns the Spark profile when gpu.platform === 'spark'", () => {
@@ -68,5 +68,41 @@ describe("detectVllmProfile", () => {
     // Generic profile reuses Spark's marker tables.
     expect(generic!.readyMarker).toBe(spark!.readyMarker);
     expect(generic!.fatalMarkers).toBe(spark!.fatalMarkers);
+  });
+});
+
+describe("buildHfTokenDockerArgs", () => {
+  it("returns no extra env when neither HF token is set", () => {
+    expect(buildHfTokenDockerArgs({} as NodeJS.ProcessEnv)).toEqual([]);
+  });
+
+  it("forwards HF_TOKEN as a docker -e arg so the container can authenticate gated pulls", () => {
+    expect(
+      buildHfTokenDockerArgs({ HF_TOKEN: "hf_abc123" } as NodeJS.ProcessEnv),
+    ).toEqual(["-e", "HF_TOKEN=hf_abc123"]);
+  });
+
+  it("falls back to HUGGING_FACE_HUB_TOKEN when HF_TOKEN is empty", () => {
+    expect(
+      buildHfTokenDockerArgs({
+        HF_TOKEN: "",
+        HUGGING_FACE_HUB_TOKEN: "hf_xyz",
+      } as NodeJS.ProcessEnv),
+    ).toEqual(["-e", "HUGGING_FACE_HUB_TOKEN=hf_xyz"]);
+  });
+
+  it("prefers HF_TOKEN when both env vars are set", () => {
+    expect(
+      buildHfTokenDockerArgs({
+        HF_TOKEN: "hf_primary",
+        HUGGING_FACE_HUB_TOKEN: "hf_secondary",
+      } as NodeJS.ProcessEnv),
+    ).toEqual(["-e", "HF_TOKEN=hf_primary"]);
+  });
+
+  it("ignores tokens that are whitespace-only", () => {
+    expect(
+      buildHfTokenDockerArgs({ HF_TOKEN: "   " } as NodeJS.ProcessEnv),
+    ).toEqual([]);
   });
 });
