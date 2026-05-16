@@ -59,18 +59,48 @@ function nemotronNanoModel(): VllmModelDef {
   return match;
 }
 
+const HF_TOKEN_ENV_KEYS = ["HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"] as const;
+
+function pickHfTokenEntry(
+  env: NodeJS.ProcessEnv = process.env,
+): { key: (typeof HF_TOKEN_ENV_KEYS)[number]; value: string } | null {
+  for (const key of HF_TOKEN_ENV_KEYS) {
+    const value = String(env[key] ?? "").trim();
+    if (value) return { key, value };
+  }
+  return null;
+}
+
 /**
  * Forward a Hugging Face token from the host into the vLLM/hf container so
- * `hf download` and `vllm serve` can pull weights for gated models. Returns
- * the `docker run -e KEY=value` argv fragment, or an empty array when no
- * token is available in the host environment.
+ * `hf download` and `vllm serve` can pull weights for gated models.
+ *
+ * Returns the bare `-e KEY` form (no `=value`) so the token never lands in
+ * the host process list. Docker reads the actual value from its own
+ * environment, which the caller is responsible for populating via
+ * `buildHfTokenForwardEnv` when spawning through the runner allowlist.
+ * The `hf download` container can live for several minutes during a cold
+ * pull and `vllm serve` runs for the lifetime of the sandbox; argv-embedded
+ * secrets would be visible via `ps` for that whole window.
  */
 export function buildHfTokenDockerArgs(env: NodeJS.ProcessEnv = process.env): string[] {
-  for (const key of ["HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"] as const) {
-    const value = String(env[key] ?? "").trim();
-    if (value) return ["-e", `${key}=${value}`];
-  }
-  return [];
+  const entry = pickHfTokenEntry(env);
+  return entry ? ["-e", entry.key] : [];
+}
+
+/**
+ * Companion to `buildHfTokenDockerArgs`: returns the `{ KEY: value }` map
+ * that has to be merged into the subprocess env so docker can see the
+ * token when `-e KEY` (key-only) tells it to forward by name. The CLI's
+ * `runShell` strips non-allowlisted env names by default (see
+ * subprocess-env.ts), so callers that go through that path must pass
+ * this map via the runner's `env` option.
+ */
+export function buildHfTokenForwardEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  const entry = pickHfTokenEntry(env);
+  return entry ? { [entry.key]: entry.value } : {};
 }
 
 const SPARK_PROFILE: VllmProfile = {
@@ -302,13 +332,20 @@ function startContainer(
     : profile.dockerRunFlags;
   // Forward HF_TOKEN/HUGGING_FACE_HUB_TOKEN so the long-lived `vllm serve`
   // pull can authenticate against gated repos when the model weights are
-  // not already in the mounted cache.
+  // not already in the mounted cache. The runner allowlist strips the
+  // token from the docker subprocess env by default, so we have to put it
+  // back via the `env:` option; the docker argv only carries `-e KEY` so
+  // the value stays out of /proc/<pid>/cmdline.
   const hfTokenFlags = buildHfTokenDockerArgs().join(" ");
   const flags = [resolvedFlags.join(" "), hfTokenFlags].filter(Boolean).join(" ");
   const cmd =
     `docker run -d ${flags} -p ${String(VLLM_PORT)}:8000 ` +
     `--name ${profile.containerName} ${profile.image} bash -c ${JSON.stringify(buildVllmServeCommand(model))}`;
-  const result = runShell(cmd, { ignoreError: true, suppressOutput: true });
+  const result = runShell(cmd, {
+    ignoreError: true,
+    suppressOutput: true,
+    env: buildHfTokenForwardEnv(),
+  });
   if (result.status !== 0) {
     return { ok: false, reason: `docker run failed (exit ${String(result.status)})` };
   }

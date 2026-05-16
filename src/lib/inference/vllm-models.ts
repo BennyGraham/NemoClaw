@@ -76,7 +76,10 @@ export const VLLM_MODELS: readonly VllmModelDef[] = [
     id: "nvidia/NVIDIA-Nemotron-3-Nano-4B-FP8",
     label: "NVIDIA Nemotron-3 Nano 4B FP8",
     envValue: "nemotron-3-nano-4b",
-    maxModelLen: 262000,
+    // Matches the model card's `max_position_embeddings` and the vLLM
+    // example NVIDIA publishes for this checkpoint. The previous value
+    // (262000) was an undocumented round-down with no headroom rationale.
+    maxModelLen: 262144,
     modelArgs: ["--load-format", "fastsafetensors"],
     gated: false,
   },
