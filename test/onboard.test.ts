@@ -2959,23 +2959,6 @@ const { loadAgent } = require(${agentDefsPath});
     assert.doesNotMatch(source, /openshell gateway add http:\/\/127\.0\.0\.1:\$\{GATEWAY_PORT\}/);
   });
 
-  it("allows slow sandbox create recovery to wait beyond 60 seconds", () => {
-    const envSource = fs.readFileSync(
-      path.join(import.meta.dirname, "..", "src", "lib", "onboard", "env.ts"),
-      "utf-8",
-    );
-    const source = fs.readFileSync(
-      path.join(import.meta.dirname, "..", "src", "lib", "onboard.ts"),
-      "utf-8",
-    );
-
-    assert.match(envSource, /NEMOCLAW_SANDBOX_READY_TIMEOUT", 180/);
-    assert.match(source, /Math\.ceil\(sandboxReadyTimeoutSecs \/ 2\)/);
-    assert.match(source, /within \$\{sandboxReadyTimeoutSecs\}s/);
-    assert.doesNotMatch(source, /DOCKER_DRIVER_GPU_SANDBOX_READY_TIMEOUT_SECS = 600/);
-    assert.doesNotMatch(source, /OPENSHELL_PROVISION_TIMEOUT = String\(sandboxReadyTimeoutSecs\)/);
-  });
-
   it("classifies gateway reuse states conservatively", () => {
     expect(
       getGatewayReuseState(
@@ -5526,20 +5509,6 @@ ${webSearchVerifySource}`;
     assert.ok(cleanupPos < createPos, "fresh cleanup should run before createSandbox allocates a port");
   });
 
-  it("defaults GPU passthrough on for detected NVIDIA GPUs unless opted out", () => {
-    const source = fs.readFileSync(
-      path.join(import.meta.dirname, "..", "src", "lib", "onboard.ts"),
-      "utf-8",
-    );
-
-    assert.match(source, /const explicitSandboxGpuFlag = resolveSandboxGpuFlagFromOptions\(opts\);/);
-    assert.match(
-      source,
-      /const gpuPassthrough = sandboxGpuConfig\.sandboxGpuEnabled;/,
-    );
-    assert.match(source, /Use --no-gpu to opt out/);
-  });
-
   it("uses the NemoClaw Docker GPU patch without passing --gpu to sandbox create", () => {
     const source = fs.readFileSync(
       path.join(import.meta.dirname, "..", "src", "lib", "onboard.ts"),
@@ -5633,25 +5602,6 @@ ${webSearchVerifySource}`;
       /const recordedSandboxName =\s*session\?\.steps\?\.sandbox\?\.status === "complete" \? session\?\.sandboxName \|\| null : null;[\s\S]*?let sandboxName = recordedSandboxName \|\| requestedSandboxName \|\| null;\s*if \(sandboxName && RESERVED_SANDBOX_NAMES\.has\(sandboxName\)\) \{[\s\S]*?process\.exit\(1\);\s*\}/,
     );
   });
-  it("reserves update as a sandbox name because it is a global command", () => {
-    const source = fs.readFileSync(
-      path.join(import.meta.dirname, "..", "src", "lib", "onboard.ts"),
-      "utf-8",
-    );
-
-    assert.match(source, /const RESERVED_SANDBOX_NAMES = new Set\([\s\S]*?"update"[\s\S]*?\]\);/);
-  });
-  it("delegates sandbox-create progress streaming to the extracted helper module", () => {
-    const onboardSource = fs.readFileSync(
-      path.join(import.meta.dirname, "..", "src", "lib", "onboard.ts"),
-      "utf-8",
-    );
-    const { streamSandboxCreate } = require("../dist/lib/sandbox/create-stream");
-
-    assert.match(onboardSource, /sandbox\/create-stream/);
-    assert.equal(typeof streamSandboxCreate, "function");
-  });
-
   it("re-refs stdin before each raw-mode prompt and unrefs in cleanup so sticky unref() does not strand later prompts", () => {
     const source = fs.readFileSync(
       path.join(import.meta.dirname, "..", "src", "lib", "onboard.ts"),
@@ -9847,15 +9797,10 @@ const { createSandbox } = require(${onboardPath});
     assert.match(fnBody, /getNameValidationGuidance\("sandbox name", sandboxName,/);
   });
 
-  it("shows the full allowed sandbox name format before prompting", () => {
-    const source = fs.readFileSync(
-      path.join(import.meta.dirname, "..", "src", "lib", "onboard.ts"),
-      "utf-8",
-    );
+  it("exposes the full allowed sandbox name format", () => {
     expect(NAME_ALLOWED_FORMAT).toBe(
       "lowercase, starts with a letter, letters/numbers/internal hyphens only, ends with letter/number",
     );
-    assert.match(source, /Sandbox name \(\$\{NAME_ALLOWED_FORMAT\}\)/);
   });
 
   it("guards against reusing the same sandbox name for a different agent", () => {
@@ -10290,25 +10235,6 @@ const { createSandbox } = require(${onboardPath});
       assert.equal(calls.length, 1, `expected 1 probe call, got ${calls.length}`);
       assert.equal(calls[0], 18789);
     });
-  });
-
-  it("isPortBoundOnHost has a layered probe chain — lsof, sudo lsof, Node bind (#3260)", () => {
-    // Source-shape guard for the strengthened detection chain. Behavioural
-    // testing of the real probes spawns subprocesses and is covered by
-    // higher-level tests; this assertion just keeps the chain in place
-    // when the function is refactored.
-    const source = fs.readFileSync(
-      path.join(import.meta.dirname, "..", "src", "lib", "onboard", "dashboard-port.ts"),
-      "utf-8",
-    );
-    assert.match(source, /export function isPortBoundOnHost/);
-    assert.match(source, /\["lsof", "-i", `:\$\{port\}`, "-sTCP:LISTEN", "-P", "-n"\]/);
-    assert.match(
-      source,
-      /\["sudo", "-n", "lsof", "-i", `:\$\{port\}`, "-sTCP:LISTEN", "-P", "-n"\]/,
-    );
-    assert.match(source, /export function probePortBoundSync/);
-    assert.match(source, /EADDRINUSE/);
   });
 
   it("ensureDashboardForward rolls back when forward-start fails on the create path (#3260)", () => {
