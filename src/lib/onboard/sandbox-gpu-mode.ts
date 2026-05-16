@@ -65,14 +65,16 @@ export function resolveSandboxGpuConfig(
 
   let mode = resolveSandboxGpuMode({ envMode, gpu, flag: options.flag });
 
-  const device = (options.device ?? env.NEMOCLAW_SANDBOX_GPU_DEVICE ?? "").trim() || null;
+  const requestedDevice = (options.device ?? env.NEMOCLAW_SANDBOX_GPU_DEVICE ?? "").trim() || null;
+  const explicitEnable = options.flag === "enable" || envMode === "1";
   const explicitDisable = options.flag === "disable";
-  if (device && mode === "0" && !explicitDisable) {
-    errors.push("NEMOCLAW_SANDBOX_GPU_DEVICE cannot be used when sandbox GPU mode is 0.");
+  if (requestedDevice && !explicitEnable && !explicitDisable) {
+    errors.push(
+      "NEMOCLAW_SANDBOX_GPU_DEVICE requires sandbox GPU mode 1; " +
+        "set NEMOCLAW_SANDBOX_GPU=1 or pass --sandbox-gpu.",
+    );
   }
-  if (device && !explicitDisable && (options.flag === "enable" || envMode === "1")) {
-    mode = "1";
-  }
+  const sandboxGpuDevice = mode === "1" ? requestedDevice : null;
 
   const hostGpuDetected = isNvidiaGpuDetected(gpu);
   if (mode === "1" && !hostGpuDetected) {
@@ -83,7 +85,7 @@ export function resolveSandboxGpuConfig(
     mode,
     hostGpuDetected,
     sandboxGpuEnabled: mode === "1" || (mode === "auto" && hostGpuDetected),
-    sandboxGpuDevice: device,
+    sandboxGpuDevice,
     errors,
   };
 }
