@@ -7,8 +7,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { AgentDefinition } from "../dist/lib/agent/defs.js";
-import { loadAgent } from "../dist/lib/agent/defs.js";
 import { applyOnboardVmDnsMonkeypatch } from "../dist/lib/onboard/vm-dns-monkeypatch.js";
 import { stageOptimizedSandboxBuildContext } from "../dist/lib/sandbox/build-context.js";
 import { testTimeoutOptions } from "./helpers/timeouts";
@@ -38,15 +36,6 @@ type OnboardTestInternals = {
     requestedSandboxName: string;
     recordedSandboxName: string;
   } | null>;
-  agentSupportsWebSearch: (
-    agent?: AgentDefinition | null,
-    dockerfilePathOverride?: string | null,
-  ) => boolean;
-  configureWebSearch: (
-    existingConfig?: ShimValue,
-    agent?: AgentDefinition | null,
-    dockerfilePathOverride?: string | null,
-  ) => Promise<ShimValue>;
   pullAndResolveBaseImageDigest: () => { digest: string | null; ref: string } | null;
   SANDBOX_BASE_IMAGE: string;
 };
@@ -62,11 +51,7 @@ type OnboardTestInternalsCandidate = Partial<OnboardTestInternals> | null;
 function isOnboardTestInternals(
   value: OnboardTestInternalsCandidate,
 ): value is OnboardTestInternals {
-  return (
-    value !== null &&
-    typeof value.agentSupportsWebSearch === "function" &&
-    typeof value.configureWebSearch === "function"
-  );
+  return value !== null && typeof value.getNavigationChoice === "function";
 }
 
 const loadedOnboardInternals = require("../dist/lib/onboard");
@@ -86,8 +71,6 @@ const {
   getRequestedSandboxNameHint,
   getResumeConfigConflicts,
   getResumeSandboxConflict,
-  agentSupportsWebSearch,
-  configureWebSearch,
   SANDBOX_BASE_IMAGE,
 } = onboardTestInternals;
 
@@ -97,100 +80,6 @@ const onboardScriptMocksPath = JSON.stringify(
 );
 
 describe("onboard helpers", () => {
-  it("#2433: agentSupportsWebSearch detects whether agent Dockerfile declares the web search ARG", () => {
-    // OpenClaw Dockerfile has ARG NEMOCLAW_WEB_SEARCH_ENABLED → supported.
-    // Hermes Dockerfile does not → not supported.
-    // null agent (default) → supported (assumes OpenClaw).
-    expect(agentSupportsWebSearch(null)).toBe(true);
-    expect(agentSupportsWebSearch(loadAgent("openclaw"))).toBe(true);
-    expect(agentSupportsWebSearch(loadAgent("hermes"))).toBe(false);
-  });
-
-  it("#2433: agentSupportsWebSearch honors the effective custom Dockerfile for Brave-capable agents", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-web-search-custom-"));
-    const withoutArg = path.join(tmpDir, "Dockerfile.no-web");
-    const withArg = path.join(tmpDir, "Dockerfile.web");
-    const missing = path.join(tmpDir, "Dockerfile.missing");
-    fs.writeFileSync(withoutArg, "FROM scratch\n");
-    fs.writeFileSync(withArg, "FROM scratch\n  ARG NEMOCLAW_WEB_SEARCH_ENABLED=0\n");
-    try {
-      expect(agentSupportsWebSearch(loadAgent("openclaw"), withoutArg)).toBe(false);
-      expect(agentSupportsWebSearch(loadAgent("hermes"), withArg)).toBe(false);
-      expect(agentSupportsWebSearch(loadAgent("openclaw"), missing)).toBe(true);
-    } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
-  });
-
-  it("#2433: configureWebSearch skips unsupported Hermes instead of prompting for Brave", async () => {
-    const priorBraveKey = process.env.BRAVE_API_KEY;
-    process.env.BRAVE_API_KEY = "brv-test-key";
-    try {
-      await expect(configureWebSearch(null, loadAgent("hermes"))).resolves.toBeNull();
-    } finally {
-      if (priorBraveKey === undefined) {
-        delete process.env.BRAVE_API_KEY;
-      } else {
-        process.env.BRAVE_API_KEY = priorBraveKey;
-      }
-    }
-  });
-
-  it("#2433: configureWebSearch does not call the prompt helper for unsupported Hermes", () => {
-    const repoRoot = path.join(import.meta.dirname, "..");
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-web-search-prompt-"));
-    const scriptPath = path.join(tmpDir, "web-search-prompt-check.cjs");
-    const onboardPath = JSON.stringify(path.join(repoRoot, "dist", "lib", "onboard.js"));
-    const credentialsPath = JSON.stringify(path.join(repoRoot, "dist", "lib", "credentials", "store.js"));
-    const agentDefsPath = JSON.stringify(path.join(repoRoot, "dist", "lib", "agent", "defs.js"));
-
-    const script = `
-let promptCalls = 0;
-const actualCredentials = require(${credentialsPath});
-const mockedCredentials = {
-  ...actualCredentials,
-  prompt: async () => {
-  promptCalls += 1;
-  throw new Error("prompt should not be called");
-  },
-};
-require.cache[require.resolve(${credentialsPath})] = {
-  id: require.resolve(${credentialsPath}),
-  filename: require.resolve(${credentialsPath}),
-  loaded: true,
-  exports: mockedCredentials,
-};
-process.env.BRAVE_API_KEY = "brv-test-key";
-const { configureWebSearch } = require(${onboardPath});
-const { loadAgent } = require(${agentDefsPath});
-
-(async () => {
-  const result = await configureWebSearch(null, loadAgent("hermes"));
-  console.log(JSON.stringify({ result, promptCalls }));
-})().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
-`;
-    fs.writeFileSync(scriptPath, script);
-    try {
-      const result = spawnSync(process.execPath, [scriptPath], {
-        cwd: repoRoot,
-        encoding: "utf-8",
-        env: {
-          ...process.env,
-          HOME: tmpDir,
-        },
-      });
-      assert.equal(result.status, 0, result.stderr);
-      const payload = parseStdoutJson<{ result: null; promptCalls: number }>(result.stdout);
-      assert.equal(payload.result, null);
-      assert.equal(payload.promptCalls, 0);
-    } finally {
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-    }
-  });
-
   it("prints doctor logs automatically when gateway fails to start (#1605)", testTimeoutOptions(20_000), () => {
     const repoRoot = path.join(import.meta.dirname, "..");
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-gateway-diag-"));
