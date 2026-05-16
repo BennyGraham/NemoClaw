@@ -1,0 +1,1203 @@
+{
+  "skill_name": "nemoclaw-docs-jtbd",
+  "description": "Centralized eval cases generated from NemoClaw documentation Jobs To Be Done. Each eval captures user intent and points to a generated skill or reference file as the target context for progressive-disclosure evaluation.",
+  "prompt_template": "I'm {{situation}}. Help me {{motivation}} so I can {{outcome}}.",
+  "expected_output_template": "A NemoClaw-specific answer that helps the user {{motivation}} and gives enough concrete guidance, decision criteria, verification steps, or risk framing to {{outcome}}.",
+  "assertion_templates": [
+    "The output directly addresses the user's situation: {{situation}}.",
+    "The output helps the user {{motivation}} with NemoClaw-specific guidance rather than generic advice.",
+    "The output gives enough concrete guidance, decision criteria, verification steps, or risk framing for the user to {{outcome}}.",
+    "The output is supported by the terget_context file and avoids inventing unsupported NemoClaw behavior.",
+    "The output follows progressive disclosure: it answers the current request without dumping unrelated details from the terget_context file."
+  ],
+  "evals": [
+    {
+      "id": "docs-index-001",
+      "group": "Landing and Concepts",
+      "situation": "first arriving at the NemoClaw docs",
+      "motivation": "understand what NemoClaw helps me run and why it exists",
+      "outcome": "decide whether it is worth installing before I spend time on setup",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-overview/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-index-002",
+      "group": "Landing and Concepts",
+      "situation": "evaluating whether an always-on assistant can run safely in my environment",
+      "motivation": "see the core safety, lifecycle, and inference-routing promises up front",
+      "outcome": "judge whether the stack matches my risk tolerance",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-overview/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-index-003",
+      "group": "Landing and Concepts",
+      "situation": "considering the one-command install path",
+      "motivation": "know what the command will install, configure, and launch",
+      "outcome": "take the next step without feeling like I am accepting an opaque shortcut",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-overview/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-about-overview-001",
+      "group": "Landing and Concepts",
+      "situation": "explaining NemoClaw to a teammate",
+      "motivation": "summarize the product, stack, and value in plain language",
+      "outcome": "align on whether NemoClaw is relevant to our agent workflow",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/overview.md"
+      }
+    },
+    {
+      "id": "docs-about-overview-002",
+      "group": "Landing and Concepts",
+      "situation": "worried about security, cost, or operations risks from unattended agents",
+      "motivation": "understand which guardrails NemoClaw adds",
+      "outcome": "decide whether sandboxed execution addresses my main concerns",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/overview.md"
+      }
+    },
+    {
+      "id": "docs-about-overview-003",
+      "group": "Landing and Concepts",
+      "situation": "comparing NemoClaw with direct OpenClaw or OpenShell usage",
+      "motivation": "see the capabilities NemoClaw owns",
+      "outcome": "classify it as the right reference stack rather than generic setup glue",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/overview.md"
+      }
+    },
+    {
+      "id": "docs-about-ecosystem-001",
+      "group": "Landing and Concepts",
+      "situation": "comparing OpenClaw, OpenShell, and NemoClaw",
+      "motivation": "understand the role of each layer",
+      "outcome": "choose the right adoption path for my project",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/ecosystem.md"
+      }
+    },
+    {
+      "id": "docs-about-ecosystem-002",
+      "group": "Landing and Concepts",
+      "situation": "deciding whether to use the reference integration",
+      "motivation": "identify when NemoClaw is enough versus when I need direct OpenShell integration",
+      "outcome": "avoid unnecessary platform work",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/ecosystem.md"
+      }
+    },
+    {
+      "id": "docs-about-ecosystem-003",
+      "group": "Landing and Concepts",
+      "situation": "planning a deployment with multiple moving parts",
+      "motivation": "separate agent, runtime, and orchestration responsibilities",
+      "outcome": "assign ownership and troubleshoot the right layer later",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/ecosystem.md"
+      }
+    },
+    {
+      "id": "docs-about-how-it-works-001",
+      "group": "Landing and Concepts",
+      "situation": "studying the NemoClaw architecture",
+      "motivation": "understand how the CLI, plugin, blueprint, and sandbox interact",
+      "outcome": "reason about failures and maintenance work with confidence",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/how-it-works.md"
+      }
+    },
+    {
+      "id": "docs-about-how-it-works-002",
+      "group": "Landing and Concepts",
+      "situation": "debugging a broken setup",
+      "motivation": "identify which lifecycle boundary owns the failure",
+      "outcome": "fix the problem without changing unrelated layers",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/how-it-works.md"
+      }
+    },
+    {
+      "id": "docs-about-how-it-works-003",
+      "group": "Landing and Concepts",
+      "situation": "deciding whether blueprint-driven setup is repeatable enough",
+      "motivation": "see how versions, digests, and sandbox creation fit together",
+      "outcome": "trust the process for team or fleet usage",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/how-it-works.md"
+      }
+    },
+    {
+      "id": "docs-about-release-notes-001",
+      "group": "Landing and Concepts",
+      "situation": "reading NemoClaw release notes",
+      "motivation": "understand what changed since my installed version",
+      "outcome": "assess upgrade risk before touching a working sandbox",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/release-notes.md"
+      }
+    },
+    {
+      "id": "docs-about-release-notes-002",
+      "group": "Landing and Concepts",
+      "situation": "maintaining an existing sandbox",
+      "motivation": "spot compatibility notes, migrations, or behavior changes",
+      "outcome": "decide whether to update now or wait",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/release-notes.md"
+      }
+    },
+    {
+      "id": "docs-about-release-notes-003",
+      "group": "Landing and Concepts",
+      "situation": "evaluating NemoClaw for a longer-running assistant workflow",
+      "motivation": "see the pace and nature of recent changes",
+      "outcome": "judge whether the project feels stable enough for my use case",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-overview/references/release-notes.md"
+      }
+    },
+    {
+      "id": "docs-get-started-prerequisites-001",
+      "group": "Get Started",
+      "situation": "checking prerequisites before installation",
+      "motivation": "verify my host has the required hardware, software, and platform support",
+      "outcome": "avoid a failed first setup",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-get-started/references/prerequisites.md"
+      }
+    },
+    {
+      "id": "docs-get-started-prerequisites-002",
+      "group": "Get Started",
+      "situation": "using a machine with limited CPU, memory, disk, or Docker capacity",
+      "motivation": "understand the practical minimums and known bottlenecks",
+      "outcome": "prepare the machine before onboarding starts",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-get-started/references/prerequisites.md"
+      }
+    },
+    {
+      "id": "docs-get-started-prerequisites-003",
+      "group": "Get Started",
+      "situation": "choosing between local, Windows WSL, and remote GPU setup",
+      "motivation": "compare supported platform paths",
+      "outcome": "start with the environment most likely to work",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-get-started/references/prerequisites.md"
+      }
+    },
+    {
+      "id": "docs-get-started-windows-preparation-001",
+      "group": "Get Started",
+      "situation": "preparing a Windows machine for NemoClaw",
+      "motivation": "enable WSL 2, Ubuntu, and Docker Desktop correctly",
+      "outcome": "enter the standard quickstart from a working Linux environment",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-get-started/references/windows-preparation.md"
+      }
+    },
+    {
+      "id": "docs-get-started-windows-preparation-002",
+      "group": "Get Started",
+      "situation": "unsure whether Windows-specific setup is complete",
+      "motivation": "check the WSL and Docker integration steps that commonly block installs",
+      "outcome": "fix host issues before running the NemoClaw installer",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-get-started/references/windows-preparation.md"
+      }
+    },
+    {
+      "id": "docs-get-started-windows-preparation-003",
+      "group": "Get Started",
+      "situation": "ready to leave the Windows preparation guide",
+      "motivation": "confirm the Ubuntu shell can run the required commands",
+      "outcome": "follow the quickstart without mixing Windows and Linux instructions",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-get-started/references/windows-preparation.md"
+      }
+    },
+    {
+      "id": "docs-get-started-quickstart-001",
+      "group": "Get Started",
+      "situation": "running the OpenClaw quickstart",
+      "motivation": "install NemoClaw and create my first sandboxed agent",
+      "outcome": "send a prompt to a working OpenClaw assistant",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-get-started/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-get-started-quickstart-002",
+      "group": "Get Started",
+      "situation": "encountering installer prompts or host preflight checks",
+      "motivation": "understand what the installer is asking for and why",
+      "outcome": "continue setup without granting unnecessary access",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-get-started/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-get-started-quickstart-003",
+      "group": "Get Started",
+      "situation": "finishing onboarding",
+      "motivation": "verify the sandbox, inference route, and OpenClaw agent are connected",
+      "outcome": "know the setup succeeded end to end",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-get-started/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-get-started-quickstart-hermes-001",
+      "group": "Get Started",
+      "situation": "choosing Hermes instead of OpenClaw",
+      "motivation": "launch a sandboxed Hermes API endpoint",
+      "outcome": "serve the agent workflow my downstream clients expect",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-get-started/references/quickstart-hermes.md"
+      }
+    },
+    {
+      "id": "docs-get-started-quickstart-hermes-002",
+      "group": "Get Started",
+      "situation": "moving through onboarding for Hermes",
+      "motivation": "confirm NemoClaw selected Hermes-specific setup and configuration",
+      "outcome": "avoid accidentally creating the default OpenClaw environment",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-get-started/references/quickstart-hermes.md"
+      }
+    },
+    {
+      "id": "docs-get-started-quickstart-hermes-003",
+      "group": "Get Started",
+      "situation": "checking the sandboxed Hermes endpoint",
+      "motivation": "run a small request that proves the endpoint is live",
+      "outcome": "hand it to clients or tests with confidence",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-get-started/references/quickstart-hermes.md"
+      }
+    },
+    {
+      "id": "docs-deployment-deploy-to-remote-gpu-001",
+      "group": "Deployment",
+      "situation": "deploying NemoClaw to a remote GPU instance",
+      "motivation": "move the sandboxed assistant off my local machine",
+      "outcome": "support persistent or GPU-backed operation",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-deployment-deploy-to-remote-gpu-002",
+      "group": "Deployment",
+      "situation": "using the legacy Brev compatibility flow",
+      "motivation": "understand what the flow still does and where it is deprecated",
+      "outcome": "avoid depending on an outdated path blindly",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-deployment-deploy-to-remote-gpu-003",
+      "group": "Deployment",
+      "situation": "after remote deployment succeeds",
+      "motivation": "find the connection, operation, and recovery details",
+      "outcome": "operate the sandbox after initial setup",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-deployment-brev-web-ui-001",
+      "group": "Deployment",
+      "situation": "launching NemoClaw from the Brev web UI",
+      "motivation": "avoid local CLI setup and local GPU requirements",
+      "outcome": "start a hosted sandbox quickly",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/references/brev-web-ui.md"
+      }
+    },
+    {
+      "id": "docs-deployment-brev-web-ui-002",
+      "group": "Deployment",
+      "situation": "reviewing hosted launch choices",
+      "motivation": "understand each web UI option before creating the instance",
+      "outcome": "choose settings that match my expected sandbox workflow",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/references/brev-web-ui.md"
+      }
+    },
+    {
+      "id": "docs-deployment-brev-web-ui-003",
+      "group": "Deployment",
+      "situation": "the hosted sandbox is created",
+      "motivation": "confirm where to connect and how to start using it",
+      "outcome": "move from provisioning to actual agent work",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/references/brev-web-ui.md"
+      }
+    },
+    {
+      "id": "docs-deployment-install-openclaw-plugins-001",
+      "group": "Deployment",
+      "situation": "installing an OpenClaw plugin in a NemoClaw-managed sandbox",
+      "motivation": "add a new agent capability inside the sandbox",
+      "outcome": "extend the assistant without weakening the host boundary",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/references/install-openclaw-plugins.md"
+      }
+    },
+    {
+      "id": "docs-deployment-install-openclaw-plugins-002",
+      "group": "Deployment",
+      "situation": "deciding where to install a plugin",
+      "motivation": "distinguish host environment changes from sandbox environment changes",
+      "outcome": "modify the right filesystem and runtime",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/references/install-openclaw-plugins.md"
+      }
+    },
+    {
+      "id": "docs-deployment-install-openclaw-plugins-003",
+      "group": "Deployment",
+      "situation": "verifying a plugin installation",
+      "motivation": "confirm the agent can discover and use the plugin",
+      "outcome": "trust that the capability works inside NemoClaw's security model",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/references/install-openclaw-plugins.md"
+      }
+    },
+    {
+      "id": "docs-deployment-sandbox-hardening-001",
+      "group": "Deployment",
+      "situation": "reviewing sandbox image hardening",
+      "motivation": "understand which container risks NemoClaw reduces",
+      "outcome": "decide whether unattended agents are acceptable in my environment",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/references/sandbox-hardening.md"
+      }
+    },
+    {
+      "id": "docs-deployment-sandbox-hardening-002",
+      "group": "Deployment",
+      "situation": "mapping NemoClaw to an organizational security baseline",
+      "motivation": "identify capability drops, least privilege, and runtime protections",
+      "outcome": "document how the sandbox meets or misses required controls",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/references/sandbox-hardening.md"
+      }
+    },
+    {
+      "id": "docs-deployment-sandbox-hardening-003",
+      "group": "Deployment",
+      "situation": "considering production use",
+      "motivation": "see the limitations and residual risks of the hardened image",
+      "outcome": "avoid overstating what container hardening guarantees",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-deploy-remote/references/sandbox-hardening.md"
+      }
+    },
+    {
+      "id": "docs-inference-inference-options-001",
+      "group": "Inference",
+      "situation": "choosing an inference option during onboarding",
+      "motivation": "compare hosted providers, local servers, and compatible endpoints",
+      "outcome": "select a model path that fits my privacy, cost, and reliability needs",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/inference-options.md"
+      }
+    },
+    {
+      "id": "docs-inference-inference-options-002",
+      "group": "Inference",
+      "situation": "preparing provider credentials",
+      "motivation": "know which provider capabilities and secrets onboarding requires",
+      "outcome": "complete setup without avoidable credential errors",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/inference-options.md"
+      }
+    },
+    {
+      "id": "docs-inference-inference-options-003",
+      "group": "Inference",
+      "situation": "evaluating routed inference",
+      "motivation": "understand how the sandbox calls models through the gateway",
+      "outcome": "trust that model credentials stay outside the sandbox",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/inference-options.md"
+      }
+    },
+    {
+      "id": "docs-inference-use-local-inference-001",
+      "group": "Inference",
+      "situation": "connecting a local inference server",
+      "motivation": "route NemoClaw model traffic to Ollama, vLLM, TensorRT-LLM, NIM, or another compatible endpoint",
+      "outcome": "meet privacy, latency, or cost goals",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-inference-use-local-inference-002",
+      "group": "Inference",
+      "situation": "debugging local endpoint reachability",
+      "motivation": "separate NemoClaw routing issues from model-server issues",
+      "outcome": "fix the right component first",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-inference-use-local-inference-003",
+      "group": "Inference",
+      "situation": "configuring traffic through `inference.local`",
+      "motivation": "understand the required host, port, and model settings",
+      "outcome": "make sandboxed inference calls resolve to my local server",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-inference-switch-inference-providers-001",
+      "group": "Inference",
+      "situation": "switching inference models during a running session",
+      "motivation": "change model behavior without restarting the sandbox",
+      "outcome": "adapt to task, cost, or reliability needs quickly",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/switch-inference-providers.md"
+      }
+    },
+    {
+      "id": "docs-inference-switch-inference-providers-002",
+      "group": "Inference",
+      "situation": "confirming a runtime model change",
+      "motivation": "verify the agent is using the new active model",
+      "outcome": "avoid mistaking host configuration changes for live routing changes",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/switch-inference-providers.md"
+      }
+    },
+    {
+      "id": "docs-inference-switch-inference-providers-003",
+      "group": "Inference",
+      "situation": "trying a different model during active work",
+      "motivation": "know how to roll back to the previous model",
+      "outcome": "experiment without disrupting the assistant workflow",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/switch-inference-providers.md"
+      }
+    },
+    {
+      "id": "docs-inference-set-up-sub-agent-001",
+      "group": "Inference",
+      "situation": "configuring a task-specific sub-agent",
+      "motivation": "assign a specialized model to work the default agent should not handle",
+      "outcome": "improve task fit without changing the whole assistant",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/set-up-sub-agent.md"
+      }
+    },
+    {
+      "id": "docs-inference-set-up-sub-agent-002",
+      "group": "Inference",
+      "situation": "editing sub-agent model configuration",
+      "motivation": "understand where files, credentials, and workspace settings live",
+      "outcome": "avoid leaking secrets or changing the wrong agent",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/set-up-sub-agent.md"
+      }
+    },
+    {
+      "id": "docs-inference-set-up-sub-agent-003",
+      "group": "Inference",
+      "situation": "testing a new sub-agent",
+      "motivation": "send a prompt that exercises the intended routing",
+      "outcome": "prove it uses the expected provider and model",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/set-up-sub-agent.md"
+      }
+    },
+    {
+      "id": "docs-inference-tool-calling-reliability-001",
+      "group": "Inference",
+      "situation": "seeing tool calls leak as plain text",
+      "motivation": "diagnose whether the model, server, or parser is incompatible",
+      "outcome": "restore reliable tool execution",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/tool-calling-reliability.md"
+      }
+    },
+    {
+      "id": "docs-inference-tool-calling-reliability-002",
+      "group": "Inference",
+      "situation": "comparing local inference runtimes",
+      "motivation": "understand whether Ollama, vLLM, or parser settings better support tool calls",
+      "outcome": "choose a runtime that matches the agent's tool needs",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/tool-calling-reliability.md"
+      }
+    },
+    {
+      "id": "docs-inference-tool-calling-reliability-003",
+      "group": "Inference",
+      "situation": "letting an always-on assistant use tools unattended",
+      "motivation": "define the reliability bar for local tool calling",
+      "outcome": "avoid silent failures or unsafe plain-text tool outputs",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-inference/references/tool-calling-reliability.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-lifecycle-001",
+      "group": "Sandbox Operations",
+      "situation": "managing a NemoClaw sandbox",
+      "motivation": "check status, health, logs, ports, providers, upgrades, and uninstall paths",
+      "outcome": "operate the sandbox safely after quickstart",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-lifecycle-002",
+      "group": "Sandbox Operations",
+      "situation": "choosing a lifecycle command",
+      "motivation": "understand which commands inspect, restart, rebuild, or destroy state",
+      "outcome": "avoid accidental data loss",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-lifecycle-003",
+      "group": "Sandbox Operations",
+      "situation": "planning an upgrade, rebuild, or uninstall",
+      "motivation": "know when to preserve workspace files first",
+      "outcome": "recover useful agent state after disruptive changes",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-runtime-controls-001",
+      "group": "Sandbox Operations",
+      "situation": "changing a running sandbox",
+      "motivation": "know which controls can change without rebuild or re-onboarding",
+      "outcome": "make safe adjustments with minimal downtime",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/runtime-controls.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-runtime-controls-002",
+      "group": "Sandbox Operations",
+      "situation": "reviewing a runtime control",
+      "motivation": "classify it as hot-reloadable, rebuild-only, or onboarding-only",
+      "outcome": "choose the correct operational path",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/runtime-controls.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-runtime-controls-003",
+      "group": "Sandbox Operations",
+      "situation": "responding to an incident or risky agent behavior",
+      "motivation": "use `shields up`, `shields down`, and `shields status` correctly",
+      "outcome": "tighten or inspect controls without confusion",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/runtime-controls.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-backup-restore-001",
+      "group": "Sandbox Operations",
+      "situation": "backing up workspace files before a destructive operation",
+      "motivation": "preserve agent memory, identity, and useful configuration",
+      "outcome": "rebuild or migrate without losing important state",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/backup-restore.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-backup-restore-002",
+      "group": "Sandbox Operations",
+      "situation": "handling a workspace archive",
+      "motivation": "understand credential stripping and integrity checks",
+      "outcome": "trust the archive without exposing secrets",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/backup-restore.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-backup-restore-003",
+      "group": "Sandbox Operations",
+      "situation": "restoring workspace files",
+      "motivation": "verify the agent's useful memory returned",
+      "outcome": "continue work without reintroducing sensitive host data",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/backup-restore.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-workspace-files-001",
+      "group": "Sandbox Operations",
+      "situation": "inspecting workspace files",
+      "motivation": "understand where personality, identity, and configuration live",
+      "outcome": "predict how the agent will behave across sessions",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/workspace-files.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-workspace-files-002",
+      "group": "Sandbox Operations",
+      "situation": "adding durable instructions for the agent",
+      "motivation": "know which files persist and who owns them",
+      "outcome": "put guidance in the right place",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/workspace-files.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-workspace-files-003",
+      "group": "Sandbox Operations",
+      "situation": "restarting, rebuilding, or migrating a sandbox",
+      "motivation": "understand how each action affects workspace state",
+      "outcome": "avoid losing or duplicating important files",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/workspace-files.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-messaging-channels-001",
+      "group": "Sandbox Operations",
+      "situation": "connecting a messaging channel",
+      "motivation": "let users reach the sandboxed agent through Telegram, Discord, Slack, or another channel",
+      "outcome": "support real-world always-on interactions",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/messaging-channels.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-messaging-channels-002",
+      "group": "Sandbox Operations",
+      "situation": "configuring channel credentials and processes",
+      "motivation": "understand what OpenShell supervises and where secrets live",
+      "outcome": "trust the messaging integration operationally",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/messaging-channels.md"
+      }
+    },
+    {
+      "id": "docs-manage-sandboxes-messaging-channels-003",
+      "group": "Sandbox Operations",
+      "situation": "testing a new messaging channel",
+      "motivation": "send and receive a message through the full path",
+      "outcome": "prove the channel, gateway, and sandboxed agent are wired correctly",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-sandboxes/references/messaging-channels.md"
+      }
+    },
+    {
+      "id": "docs-network-policy-customize-network-policy-001",
+      "group": "Network Policy",
+      "situation": "customizing sandbox network policy",
+      "motivation": "allow the agent to reach a required external service",
+      "outcome": "enable the integration while preserving least privilege",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-manage-policy/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-network-policy-customize-network-policy-002",
+      "group": "Network Policy",
+      "situation": "writing an egress rule",
+      "motivation": "specify the minimum necessary host, port, and protocol",
+      "outcome": "avoid opening broader access than the agent needs",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-manage-policy/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-network-policy-customize-network-policy-003",
+      "group": "Network Policy",
+      "situation": "validating a policy change",
+      "motivation": "test that the intended integration works and unrelated egress remains blocked",
+      "outcome": "ship a safer policy update",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-manage-policy/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-network-policy-approve-network-requests-001",
+      "group": "Network Policy",
+      "situation": "reviewing a blocked network request",
+      "motivation": "understand why the agent wants to reach that endpoint",
+      "outcome": "approve only requests that support the current job",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-policy/references/approve-network-requests.md"
+      }
+    },
+    {
+      "id": "docs-network-policy-approve-network-requests-002",
+      "group": "Network Policy",
+      "situation": "using the approval UI",
+      "motivation": "spot unexpected or prompt-injection-driven egress",
+      "outcome": "deny suspicious access before it becomes policy",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-policy/references/approve-network-requests.md"
+      }
+    },
+    {
+      "id": "docs-network-policy-approve-network-requests-003",
+      "group": "Network Policy",
+      "situation": "after approving or denying a request",
+      "motivation": "understand audit, rollback, and policy update behavior",
+      "outcome": "keep operator decisions traceable",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-policy/references/approve-network-requests.md"
+      }
+    },
+    {
+      "id": "docs-network-policy-integration-policy-examples-001",
+      "group": "Network Policy",
+      "situation": "following an integration policy example",
+      "motivation": "enable a common third-party workflow quickly",
+      "outcome": "avoid writing a policy from scratch",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-policy/references/integration-policy-examples.md"
+      }
+    },
+    {
+      "id": "docs-network-policy-integration-policy-examples-002",
+      "group": "Network Policy",
+      "situation": "adapting an example to my organization",
+      "motivation": "replace sample hosts and ports with exact production endpoints",
+      "outcome": "create a policy that matches our real integration",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-policy/references/integration-policy-examples.md"
+      }
+    },
+    {
+      "id": "docs-network-policy-integration-policy-examples-003",
+      "group": "Network Policy",
+      "situation": "copying an example into a stricter environment",
+      "motivation": "identify broad rules or assumptions that need tightening",
+      "outcome": "avoid weakening production egress controls",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-manage-policy/references/integration-policy-examples.md"
+      }
+    },
+    {
+      "id": "docs-security-best-practices-001",
+      "group": "Security",
+      "situation": "evaluating NemoClaw security best practices",
+      "motivation": "understand the risk posture of each configurable control",
+      "outcome": "justify the setup to my team or security reviewers",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-security/references/best-practices.md"
+      }
+    },
+    {
+      "id": "docs-security-best-practices-002",
+      "group": "Security",
+      "situation": "balancing developer convenience with lockdown",
+      "motivation": "compare the trade-offs of changing security controls",
+      "outcome": "choose a posture that fits the environment",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-security/references/best-practices.md"
+      }
+    },
+    {
+      "id": "docs-security-best-practices-003",
+      "group": "Security",
+      "situation": "preparing for production-like use",
+      "motivation": "see which defaults are acceptable and which require changes",
+      "outcome": "avoid shipping with accidental weak spots",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-security/references/best-practices.md"
+      }
+    },
+    {
+      "id": "docs-security-credential-storage-001",
+      "group": "Security",
+      "situation": "inspecting NemoClaw credential storage",
+      "motivation": "verify how secrets are stored and protected",
+      "outcome": "decide whether the setup meets my secret-handling expectations",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-security/references/credential-storage.md"
+      }
+    },
+    {
+      "id": "docs-security-credential-storage-002",
+      "group": "Security",
+      "situation": "tracing where credentials live",
+      "motivation": "distinguish host, gateway, and sandbox storage boundaries",
+      "outcome": "avoid assuming secrets are available in the wrong place",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-security/references/credential-storage.md"
+      }
+    },
+    {
+      "id": "docs-security-credential-storage-003",
+      "group": "Security",
+      "situation": "rotating or inspecting credentials",
+      "motivation": "follow a workflow that does not print secrets in logs or docs",
+      "outcome": "recover or update access safely",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-security/references/credential-storage.md"
+      }
+    },
+    {
+      "id": "docs-security-openclaw-controls-001",
+      "group": "Security",
+      "situation": "reading about controls outside NemoClaw's scope",
+      "motivation": "understand which security responsibilities remain with OpenClaw",
+      "outcome": "avoid treating sandbox isolation as a complete application security model",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-security/references/openclaw-controls.md"
+      }
+    },
+    {
+      "id": "docs-security-openclaw-controls-002",
+      "group": "Security",
+      "situation": "assessing application-layer agent risk",
+      "motivation": "identify the controls NemoClaw does not add",
+      "outcome": "plan separate mitigations for authentication, prompt handling, and agent behavior",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-security/references/openclaw-controls.md"
+      }
+    },
+    {
+      "id": "docs-security-openclaw-controls-003",
+      "group": "Security",
+      "situation": "documenting the security boundary",
+      "motivation": "explain where NemoClaw protection ends",
+      "outcome": "set accurate expectations for reviewers and operators",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-configure-security/references/openclaw-controls.md"
+      }
+    },
+    {
+      "id": "docs-monitoring-monitor-sandbox-activity-001",
+      "group": "Monitoring",
+      "situation": "monitoring sandbox activity",
+      "motivation": "understand what the agent and sandbox are doing now",
+      "outcome": "detect unhealthy or unexpected behavior early",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-monitor-sandbox/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-monitoring-monitor-sandbox-activity-002",
+      "group": "Monitoring",
+      "situation": "diagnosing a runtime failure",
+      "motivation": "use health, logs, and traces to locate the failing layer",
+      "outcome": "separate host, gateway, sandbox, policy, and inference issues",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-monitor-sandbox/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-monitoring-monitor-sandbox-activity-003",
+      "group": "Monitoring",
+      "situation": "collecting debugging evidence",
+      "motivation": "gather enough information without weakening controls",
+      "outcome": "investigate safely and share useful diagnostics",
+      "terget_context": {
+        "type": "skill",
+        "path": ".agents/skills/nemoclaw-user-monitor-sandbox/SKILL.md"
+      }
+    },
+    {
+      "id": "docs-reference-architecture-001",
+      "group": "Reference",
+      "situation": "using the architecture reference",
+      "motivation": "verify implementation and operations details",
+      "outcome": "make changes or debug behavior from the right mental model",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/architecture.md"
+      }
+    },
+    {
+      "id": "docs-reference-architecture-002",
+      "group": "Reference",
+      "situation": "locating the right layer for a change",
+      "motivation": "connect structure, lifecycle, and ownership",
+      "outcome": "edit the plugin, blueprint, or sandbox layer intentionally",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/architecture.md"
+      }
+    },
+    {
+      "id": "docs-reference-architecture-003",
+      "group": "Reference",
+      "situation": "modifying architecture-sensitive files",
+      "motivation": "understand the invariants that must remain true",
+      "outcome": "avoid breaking sandbox creation or operation",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/architecture.md"
+      }
+    },
+    {
+      "id": "docs-reference-cli-selection-guide-001",
+      "group": "Reference",
+      "situation": "choosing between `nemoclaw` and `openshell`",
+      "motivation": "pick the command surface that owns my operation",
+      "outcome": "complete the task without breaking NemoClaw management",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/cli-selection-guide.md"
+      }
+    },
+    {
+      "id": "docs-reference-cli-selection-guide-002",
+      "group": "Reference",
+      "situation": "tempted to run a low-level OpenShell command",
+      "motivation": "understand when it bypasses NemoClaw lifecycle expectations",
+      "outcome": "avoid unsupported or confusing states",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/cli-selection-guide.md"
+      }
+    },
+    {
+      "id": "docs-reference-cli-selection-guide-003",
+      "group": "Reference",
+      "situation": "doing onboarding, policy, debugging, or low-level sandbox work",
+      "motivation": "apply a simple CLI selection rule",
+      "outcome": "move quickly without memorizing every command boundary",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/cli-selection-guide.md"
+      }
+    },
+    {
+      "id": "docs-reference-commands-001",
+      "group": "Reference",
+      "situation": "opening the CLI command reference",
+      "motivation": "find the exact action, flag, or recovery path I need",
+      "outcome": "run the right command without scanning source code",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/commands.md"
+      }
+    },
+    {
+      "id": "docs-reference-commands-002",
+      "group": "Reference",
+      "situation": "choosing among setup, lifecycle, policy, inference, and diagnostic commands",
+      "motivation": "see command groups and examples clearly",
+      "outcome": "locate the right command faster",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/commands.md"
+      }
+    },
+    {
+      "id": "docs-reference-commands-003",
+      "group": "Reference",
+      "situation": "using `nemoclaw` in scripts or CI",
+      "motivation": "understand example output and exit behavior",
+      "outcome": "automate safely and handle failures correctly",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/commands.md"
+      }
+    },
+    {
+      "id": "docs-reference-network-policies-001",
+      "group": "Reference",
+      "situation": "reading the network policy reference",
+      "motivation": "understand baseline access decisions",
+      "outcome": "assess the sandbox's default exposure",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/network-policies.md"
+      }
+    },
+    {
+      "id": "docs-reference-network-policies-002",
+      "group": "Reference",
+      "situation": "reviewing default rules and filesystem constraints",
+      "motivation": "know what is allowed before any customization",
+      "outcome": "decide what needs to change for my environment",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/network-policies.md"
+      }
+    },
+    {
+      "id": "docs-reference-network-policies-003",
+      "group": "Reference",
+      "situation": "tracing a denied request",
+      "motivation": "understand how operator approval turns into policy",
+      "outcome": "audit and reason about egress changes",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/network-policies.md"
+      }
+    },
+    {
+      "id": "docs-reference-troubleshooting-001",
+      "group": "Reference",
+      "situation": "troubleshooting a NemoClaw problem",
+      "motivation": "map my symptom to the fastest safe recovery step",
+      "outcome": "get unstuck without making the environment worse",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/troubleshooting.md"
+      }
+    },
+    {
+      "id": "docs-reference-troubleshooting-002",
+      "group": "Reference",
+      "situation": "uncertain which subsystem failed",
+      "motivation": "run diagnostics that separate install, onboarding, runtime, policy, and inference issues",
+      "outcome": "focus on the likely cause",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/troubleshooting.md"
+      }
+    },
+    {
+      "id": "docs-reference-troubleshooting-003",
+      "group": "Reference",
+      "situation": "asking the community or filing an issue",
+      "motivation": "collect the right logs, versions, and error details",
+      "outcome": "give maintainers enough information to help",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-reference/references/troubleshooting.md"
+      }
+    },
+    {
+      "id": "docs-resources-agent-skills-001",
+      "group": "Resources",
+      "situation": "looking at NemoClaw agent skills",
+      "motivation": "find a skill that can guide installation, policy, inference, or operations",
+      "outcome": "delegate the right workflow to my AI coding assistant",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-agent-skills/references/agent-skills.md"
+      }
+    },
+    {
+      "id": "docs-resources-agent-skills-002",
+      "group": "Resources",
+      "situation": "choosing among multiple NemoClaw skills",
+      "motivation": "understand what each skill is designed to do",
+      "outcome": "avoid using a broad assistant when a targeted skill exists",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-agent-skills/references/agent-skills.md"
+      }
+    },
+    {
+      "id": "docs-resources-agent-skills-003",
+      "group": "Resources",
+      "situation": "letting an agent follow NemoClaw-specific instructions",
+      "motivation": "see why the skill guidance is trustworthy and scoped",
+      "outcome": "use agent assistance without losing operational control",
+      "terget_context": {
+        "type": "reference",
+        "path": ".agents/skills/nemoclaw-user-agent-skills/references/agent-skills.md"
+      }
+    }
+  ]
+}

@@ -7,6 +7,7 @@ __pycache__/
 coverage/
 dist/
 docs/_build/
+docs/eval-runs/
 node_modules/
 
 # OS metadata
