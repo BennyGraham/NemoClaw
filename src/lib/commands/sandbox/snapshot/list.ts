@@ -3,7 +3,7 @@
 
 import { NemoClawCommand } from "../../../cli/nemoclaw-oclif-command";
 
-import { getSnapshotRuntimeBridge, sandboxNameArg } from "./common";
+import { getSnapshotRuntimeBridge, sandboxNameArg, snapshotCommandError } from "./common";
 
 export default class SnapshotListCommand extends NemoClawCommand {
   static id = "sandbox:snapshot:list";
@@ -29,6 +29,15 @@ export default class SnapshotListCommand extends NemoClawCommand {
 
   public async run(): Promise<void> {
     const { args } = await this.parse(SnapshotListCommand);
-    await getSnapshotRuntimeBridge().sandboxSnapshot(args.sandboxName, ["list"]);
+    try {
+      await getSnapshotRuntimeBridge().sandboxSnapshot(args.sandboxName, ["list"]);
+    } catch (error) {
+      const snapshotError = snapshotCommandError(error);
+      if (snapshotError) {
+        this.failWithLines(snapshotError.lines, snapshotError.exitCode);
+        return;
+      }
+      throw error;
+    }
   }
 }

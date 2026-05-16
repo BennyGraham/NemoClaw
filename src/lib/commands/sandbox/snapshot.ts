@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { NemoClawCommand } from "../../cli/nemoclaw-oclif-command";
-import { getSnapshotRuntimeBridge, sandboxNameArg } from "./snapshot/common";
+import { getSnapshotRuntimeBridge, sandboxNameArg, snapshotCommandError } from "./snapshot/common";
 
 export default class SnapshotCommand extends NemoClawCommand {
   static id = "sandbox:snapshot";
@@ -21,6 +21,15 @@ export default class SnapshotCommand extends NemoClawCommand {
 
   public async run(): Promise<void> {
     const { args } = await this.parse(SnapshotCommand);
-    await getSnapshotRuntimeBridge().sandboxSnapshot(args.sandboxName, []);
+    try {
+      await getSnapshotRuntimeBridge().sandboxSnapshot(args.sandboxName, []);
+    } catch (error) {
+      const snapshotError = snapshotCommandError(error);
+      if (snapshotError) {
+        this.failWithLines(snapshotError.lines, snapshotError.exitCode);
+        return;
+      }
+      throw error;
+    }
   }
 }

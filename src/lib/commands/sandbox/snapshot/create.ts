@@ -4,7 +4,7 @@
 import { Flags } from "@oclif/core";
 import { NemoClawCommand } from "../../../cli/nemoclaw-oclif-command";
 
-import { getSnapshotRuntimeBridge, sandboxNameArg } from "./common";
+import { getSnapshotRuntimeBridge, sandboxNameArg, snapshotCommandError } from "./common";
 
 export default class SnapshotCreateCommand extends NemoClawCommand {
   static id = "sandbox:snapshot:create";
@@ -39,6 +39,15 @@ export default class SnapshotCreateCommand extends NemoClawCommand {
     if (flags.name) {
       subArgs.push("--name", flags.name);
     }
-    await getSnapshotRuntimeBridge().sandboxSnapshot(args.sandboxName, subArgs);
+    try {
+      await getSnapshotRuntimeBridge().sandboxSnapshot(args.sandboxName, subArgs);
+    } catch (error) {
+      const snapshotError = snapshotCommandError(error);
+      if (snapshotError) {
+        this.failWithLines(snapshotError.lines, snapshotError.exitCode);
+        return;
+      }
+      throw error;
+    }
   }
 }
