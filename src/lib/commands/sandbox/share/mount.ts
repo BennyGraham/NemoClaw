@@ -4,7 +4,7 @@
 import { Args } from "@oclif/core";
 import { NemoClawCommand } from "../../../cli/nemoclaw-oclif-command";
 
-import { runShareMount } from "../../../share-command";
+import { runShareMount, ShareCommandError } from "../../../share-command";
 import { sandboxNameArg } from "../common";
 
 export default class ShareMountCommand extends NemoClawCommand {
@@ -35,10 +35,18 @@ export default class ShareMountCommand extends NemoClawCommand {
 
   public async run(): Promise<void> {
     const { args } = await this.parse(ShareMountCommand);
-    await runShareMount({
-      sandboxName: args.sandboxName,
-      remotePath: args.sandboxPath,
-      localMount: args.localMountPoint,
-    });
+    try {
+      await runShareMount({
+        sandboxName: args.sandboxName,
+        remotePath: args.sandboxPath,
+        localMount: args.localMountPoint,
+      });
+    } catch (error) {
+      if (error instanceof ShareCommandError) {
+        this.failWithLines(error.lines, error.exitCode);
+        return;
+      }
+      throw error;
+    }
   }
 }

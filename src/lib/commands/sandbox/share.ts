@@ -3,7 +3,7 @@
 
 import { NemoClawCommand } from "../../cli/nemoclaw-oclif-command";
 
-import { printShareUsageAndExit } from "../../share-command";
+import { printShareUsageAndExit, ShareCommandError } from "../../share-command";
 import { sandboxNameArg } from "./common";
 
 export default class ShareCommand extends NemoClawCommand {
@@ -25,6 +25,14 @@ export default class ShareCommand extends NemoClawCommand {
 
   public async run(): Promise<void> {
     await this.parse(ShareCommand);
-    printShareUsageAndExit(1);
+    try {
+      printShareUsageAndExit(1);
+    } catch (error) {
+      if (error instanceof ShareCommandError) {
+        this.failWithLines(error.lines, error.exitCode);
+        return;
+      }
+      throw error;
+    }
   }
 }
