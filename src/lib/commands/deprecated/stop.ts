@@ -3,7 +3,6 @@
 
 import { NemoClawCommand } from "../../cli/nemoclaw-oclif-command";
 
-import { CLI_NAME } from "../../cli/branding";
 import { stopAll } from "../../tunnel/services";
 import { runStopCommand } from "../../tunnel/service-command";
 import { serviceDeps } from "../tunnel/common";
@@ -15,6 +14,10 @@ export default class DeprecatedStopCommand extends NemoClawCommand {
   static description = "Deprecated alias for tunnel stop.";
   static usage = ["stop"];
   static examples = ["<%= config.bin %> stop"];
+  static state = "deprecated" as const;
+  static deprecationOptions = {
+    message: "Deprecated: 'nemoclaw stop' is now 'nemoclaw tunnel stop'. See 'nemoclaw help'.",
+  };
   static display = [
     {
       usage: "nemoclaw stop",
@@ -30,9 +33,6 @@ export default class DeprecatedStopCommand extends NemoClawCommand {
 
   public async run(): Promise<void> {
     await this.parse(DeprecatedStopCommand);
-    this.logToStderr(
-      `  Deprecated: '${CLI_NAME} stop' is now '${CLI_NAME} tunnel stop'. See '${CLI_NAME} help'.`,
-    );
     runStopCommand({ ...serviceDeps(), stopAll });
   }
 }

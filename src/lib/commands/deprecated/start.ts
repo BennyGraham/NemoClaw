@@ -3,7 +3,6 @@
 
 import { NemoClawCommand } from "../../cli/nemoclaw-oclif-command";
 
-import { CLI_NAME } from "../../cli/branding";
 import { startAll } from "../../tunnel/services";
 import { runStartCommand } from "../../tunnel/service-command";
 import { serviceDeps } from "../tunnel/common";
@@ -15,6 +14,10 @@ export default class DeprecatedStartCommand extends NemoClawCommand {
   static description = "Deprecated alias for tunnel start.";
   static usage = ["start"];
   static examples = ["<%= config.bin %> start"];
+  static state = "deprecated" as const;
+  static deprecationOptions = {
+    message: "Deprecated: 'nemoclaw start' is now 'nemoclaw tunnel start'. See 'nemoclaw help'.",
+  };
   static display = [
     {
       usage: "nemoclaw start",
@@ -30,9 +33,6 @@ export default class DeprecatedStartCommand extends NemoClawCommand {
 
   public async run(): Promise<void> {
     await this.parse(DeprecatedStartCommand);
-    this.logToStderr(
-      `  Deprecated: '${CLI_NAME} start' is now '${CLI_NAME} tunnel start'. See '${CLI_NAME} help'.`,
-    );
     await runStartCommand({ ...serviceDeps(), startAll });
   }
 }
