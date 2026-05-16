@@ -4,7 +4,7 @@
 import { Args, Flags } from "@oclif/core";
 import { NemoClawCommand } from "../cli/nemoclaw-oclif-command";
 
-import { runGatewayTokenCommand } from "../gateway-token-command";
+import { GatewayTokenCommandError, runGatewayTokenCommand } from "../gateway-token-command";
 
 type GatewayTokenRuntimeBridge = {
   fetchGatewayAuthTokenFromSandbox: (sandboxName: string) => string | null;
@@ -85,18 +85,24 @@ export default class GatewayTokenCliCommand extends NemoClawCommand {
     });
 
     const runtime = getRuntimeBridge();
-    const exitCode = runGatewayTokenCommand(
-      args.sandboxName,
-      { quiet: flags.quiet === true },
-      {
-        fetchToken: runtime.fetchGatewayAuthTokenFromSandbox,
-        getSandboxAgent: runtime.getSandboxAgent,
-      },
-    );
-    // NCQ #3180: avoid throwing ExitError. The legacy
-    // `nemoclaw <name> gateway-token` dispatch historically leaked raw JS
-    // stacks for thrown exits; the shared helper records the status without
-    // throwing and clears stale non-zero codes on success.
-    this.setExitCode(exitCode);
+    try {
+      runGatewayTokenCommand(
+        args.sandboxName,
+        { quiet: flags.quiet === true },
+        {
+          fetchToken: runtime.fetchGatewayAuthTokenFromSandbox,
+          getSandboxAgent: runtime.getSandboxAgent,
+        },
+      );
+      // CodeRabbit #3182: if a prior run() left process.exitCode = 1, a later
+      // successful invocation must still report success. Always overwrite.
+      this.setExitCode(0);
+    } catch (error) {
+      if (error instanceof GatewayTokenCommandError) {
+        this.failWithLines(error.lines, error.exitCode);
+        return;
+      }
+      throw error;
+    }
   }
 }

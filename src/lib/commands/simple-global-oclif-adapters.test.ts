@@ -3,25 +3,40 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  buildVersionedUninstallUrl: vi.fn((version: string) => `https://example.test/${version}/uninstall.sh`),
-  fetchGatewayAuthTokenFromSandbox: vi.fn(() => "token"),
-  getVersion: vi.fn(() => "1.2.3"),
-  captureOpenshellCommand: vi.fn(() => ({ status: 0, output: "alpha\n" })),
-  listSandboxes: vi.fn(() => ({ sandboxes: [] })),
-  resolveOpenshell: vi.fn(() => "/usr/bin/openshell"),
-  runDebugCommandWithOptions: vi.fn(),
-  runDeployAction: vi.fn().mockResolvedValue(undefined),
-  runGatewayTokenCommand: vi.fn(() => 0),
-  runStartCommand: vi.fn().mockResolvedValue(undefined),
-  runStopCommand: vi.fn(),
-  runUninstallCommand: vi.fn(),
-  showRootHelp: vi.fn(),
-  showVersion: vi.fn(),
-  spawnSync: vi.fn(),
-  startAll: vi.fn(),
-  stopAll: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  class GatewayTokenCommandError extends Error {
+    lines: readonly string[];
+    exitCode: number;
+
+    constructor(lines: string | readonly string[], exitCode = 1) {
+      const normalized = Array.isArray(lines) ? lines : [lines];
+      super(normalized.join("\n"));
+      this.lines = normalized;
+      this.exitCode = exitCode;
+    }
+  }
+
+  return {
+    buildVersionedUninstallUrl: vi.fn((version: string) => `https://example.test/${version}/uninstall.sh`),
+    fetchGatewayAuthTokenFromSandbox: vi.fn(() => "token"),
+    getVersion: vi.fn(() => "1.2.3"),
+    captureOpenshellCommand: vi.fn(() => ({ status: 0, output: "alpha\n" })),
+    listSandboxes: vi.fn(() => ({ sandboxes: [] })),
+    resolveOpenshell: vi.fn(() => "/usr/bin/openshell"),
+    runDebugCommandWithOptions: vi.fn(),
+    runDeployAction: vi.fn().mockResolvedValue(undefined),
+    runGatewayTokenCommand: vi.fn(() => undefined),
+    runStartCommand: vi.fn().mockResolvedValue(undefined),
+    runStopCommand: vi.fn(),
+    runUninstallCommand: vi.fn(),
+    showRootHelp: vi.fn(),
+    showVersion: vi.fn(),
+    spawnSync: vi.fn(),
+    startAll: vi.fn(),
+    stopAll: vi.fn(),
+    GatewayTokenCommandError,
+  };
+});
 
 vi.mock("node:child_process", () => ({ spawnSync: mocks.spawnSync }));
 vi.mock("../diagnostics/debug", () => ({ runDebug: vi.fn() }));
@@ -29,6 +44,7 @@ vi.mock("../diagnostics/debug-command", () => ({
   runDebugCommandWithOptions: mocks.runDebugCommandWithOptions,
 }));
 vi.mock("../gateway-token-command", () => ({
+  GatewayTokenCommandError: mocks.GatewayTokenCommandError,
   runGatewayTokenCommand: mocks.runGatewayTokenCommand,
 }));
 vi.mock("../actions/global", () => ({
@@ -115,7 +131,9 @@ describe("simple global oclif adapters", () => {
     // NCQ #3180: legacy dispatch did not catch the @oclif/core ExitError
     // thrown by this.exit(1), surfacing a raw JS stack trace to the user.
     // The adapter must signal failure via process.exitCode instead.
-    mocks.runGatewayTokenCommand.mockReturnValueOnce(1);
+    mocks.runGatewayTokenCommand.mockImplementationOnce(() => {
+      throw new mocks.GatewayTokenCommandError("not applicable");
+    });
     setGatewayTokenRuntimeBridgeFactoryForTest(() => ({
       fetchGatewayAuthTokenFromSandbox: mocks.fetchGatewayAuthTokenFromSandbox,
       getSandboxAgent: () => "hermes",
@@ -133,7 +151,7 @@ describe("simple global oclif adapters", () => {
   it("clears a stale non-zero process.exitCode on a successful gateway-token run", async () => {
     // CodeRabbit #3182: if a prior run() left process.exitCode = 1, a later
     // successful invocation must still report success. Always overwrite.
-    mocks.runGatewayTokenCommand.mockReturnValueOnce(0);
+    mocks.runGatewayTokenCommand.mockReturnValueOnce(undefined);
     setGatewayTokenRuntimeBridgeFactoryForTest(() => ({
       fetchGatewayAuthTokenFromSandbox: mocks.fetchGatewayAuthTokenFromSandbox,
       getSandboxAgent: () => "openclaw",
