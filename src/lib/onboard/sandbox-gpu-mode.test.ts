@@ -40,7 +40,7 @@ describe("sandbox GPU mode helpers", () => {
     expect(disabled.mode).toBe("0");
     expect(disabled.sandboxGpuEnabled).toBe(false);
     expect(disabled.sandboxGpuDevice).toBeNull();
-    expect(disabled.errors).toEqual([]);
+    expect(disabled.errors.join("\n")).toContain("requires sandbox GPU mode 1");
   });
 
   it("requires explicit sandbox GPU enablement before honoring a device selector", () => {
