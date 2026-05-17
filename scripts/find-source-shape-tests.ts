@@ -127,19 +127,17 @@ function hasDirectProductionPathHint(text: string): boolean {
     /["'`]\.\.\/scripts\//.test(text) ||
     /["'`]\.\.\/src\//.test(text) ||
     /["'`]\.\.\/dist\//.test(text) ||
-    /["'`]\.\.\/["'`]\s*,\s*["'`](?:\.github|agents|bin|dist|nemoclaw|nemoclaw-blueprint|scripts|src|Dockerfile(?:\.base)?|install\.sh|package\.json)["'`]/.test(
-      text,
-    ) ||
+    /["'`]scripts["'`]/.test(text) ||
+    /["'`]src["'`]/.test(text) ||
+    /["'`]dist["'`]/.test(text) ||
+    /["'`]nemoclaw-blueprint["'`]/.test(text) ||
     /["'`]nemoclaw["'`].*["'`]src["'`]/.test(text) ||
     /["'`](nemoclaw|nemohermes)\.js["'`]/.test(text)
   );
 }
 
 function isPathLikeVariableName(name: string): boolean {
-  return (
-    /^(REPO_ROOT|ROOT)$/.test(name) ||
-    /(path|file|script|source|src|dockerfile|payload|installer)/i.test(name)
-  );
+  return /(path|file|script|source|src|dockerfile|payload|installer)/i.test(name);
 }
 
 function isReadFileCall(node: ts.CallExpression): boolean {
@@ -223,15 +221,12 @@ function collectProductionPathVars(
       if (pathVars.has(variable.name)) continue;
       const initText = normalizePathText(variable.initializer.getText(sourceFile));
       const directlyNamesProductionPath = hasDirectProductionPathHint(initText);
-      const isRepositoryRoot =
-        /^(REPO_ROOT|ROOT)$/.test(variable.name) &&
-        /(import\.meta\.dirname|import\.meta\.url|fileURLToPath|process\.cwd\(\))/.test(initText);
       const derivesNamedProductionPath =
         isPathLikeVariableName(variable.name) &&
         [...pathVars].some((name) => textContainsIdentifier(initText, name));
       if (
         !looksLikeTestFixturePath(initText) &&
-        (isRepositoryRoot || directlyNamesProductionPath || derivesNamedProductionPath)
+        (directlyNamesProductionPath || derivesNamedProductionPath)
       ) {
         pathVars.add(variable.name);
         changed = true;
