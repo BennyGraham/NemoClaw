@@ -266,7 +266,6 @@ function collectProductionPathVars(
 
 function callTargetName(expression: ts.Expression): string | null {
   if (ts.isIdentifier(expression)) return expression.text;
-  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
   return null;
 }
 
@@ -657,6 +656,26 @@ function collectAssertionsInNode(
   return assertions;
 }
 
+function dedupeAssertions(assertions: readonly Assertion[]): Assertion[] {
+  const seen = new Set<string>();
+  const uniqueAssertions: Assertion[] = [];
+
+  for (const assertion of assertions) {
+    const key = [
+      assertion.line,
+      assertion.column,
+      assertion.subject,
+      assertion.matcher,
+      assertion.text,
+    ].join("\0");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniqueAssertions.push(assertion);
+  }
+
+  return uniqueAssertions;
+}
+
 function fallbackLineScan(sourceFile: ts.SourceFile, root: ts.Node): Assertion[] {
   const rootText = root.getText(sourceFile);
   const sourceVars = new Set<string>();
@@ -703,10 +722,10 @@ function scanFile(absPath: string): SourceShapeCase[] {
           productionPathVars,
           sourceFunctions,
         );
-        const assertions = [
+        const assertions = dedupeAssertions([
           ...collectAssertionsInNode(sourceFile, body, sourceVars, productionPathVars),
           ...fallbackLineScan(sourceFile, body),
-        ];
+        ]);
         if (assertions.length > 0) {
           const { line, character } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
           cases.push({
