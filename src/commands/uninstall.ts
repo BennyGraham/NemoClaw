@@ -40,10 +40,7 @@ export default class UninstallCliCommand extends NemoClawCommand {
       spawnSyncImpl: spawnSync,
       log: console.log,
       error: console.error,
-      exit: (code: number): never => {
-        this.setExitCode(code);
-        return undefined as never;
-      },
+      exit: (code: number): never => process.exit(code),
     });
   }
 }
