@@ -35,6 +35,7 @@ start_fake_discord_rest_api() {
   FAKE_DISCORD_REST_CONTAINER="nemoclaw-fake-discord-rest-$$-$RANDOM"
   FAKE_DISCORD_REST_HOST="host.docker.internal"
   : >"$FAKE_DISCORD_REST_CAPTURE_FILE"
+  append_exit_trap_for_fake_discord_rest_api cleanup_fake_discord_rest_api
 
   if ! openssl req -x509 -newkey rsa:2048 \
     -keyout "$FAKE_DISCORD_REST_KEY_PATH" \
@@ -64,7 +65,6 @@ start_fake_discord_rest_api() {
     cat "$FAKE_DISCORD_REST_DIR/server.log" >&2 || true
     return 1
   fi
-  append_exit_trap_for_fake_discord_rest_api cleanup_fake_discord_rest_api
 
   for _ in $(seq 1 50); do
     if [ -s "$FAKE_DISCORD_REST_PORT_FILE" ]; then

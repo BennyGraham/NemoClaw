@@ -8546,15 +8546,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 993,
-          "text": "M13-curl: curl is blocked by the Discord preset binary whitelist (#3477)",
-          "polarity": "pass",
-          "normalized_id": "m13.curl.curl.is.blocked.by.the.discord.preset.binary.whitelist.3477",
-          "mapping_status": "deferred"
-        },
-        {
-          "script": "test/e2e/test-messaging-providers.sh",
-          "line": 995,
+          "line": 996,
           "text": "M13-curl: curl unexpectedly established a tunnel to Discord; binary whitelist may be too broad",
           "polarity": "fail",
           "normalized_id": "m13.curl.curl.unexpectedly.established.a.tunnel.to.discord.binary.whitelist.may.be.too.broad",
@@ -8562,15 +8554,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 997,
-          "text": "M13-curl: curl Discord denial had unexpected shape: ${live_dc_curl:0:300}",
-          "polarity": "fail",
-          "normalized_id": "m13.curl.curl.discord.denial.had.unexpected.shape.live.dc.curl.0.300",
-          "mapping_status": "deferred"
-        },
-        {
-          "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1038,
+          "line": 1039,
           "text": "M13: Node.js reached Discord API and CDN through the same proxy (${dc_reach//$'\\n'/ })",
           "polarity": "pass",
           "normalized_id": "m13.node.js.reached.discord.api.and.cdn.through.the.same.proxy.dc.reach.n",
@@ -8578,7 +8562,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1040,
+          "line": 1041,
           "text": "M13: Node.js was denied by the proxy despite the Discord preset being applied: ${dc_reach:0:300}",
           "polarity": "fail",
           "normalized_id": "m13.node.js.was.denied.by.the.proxy.despite.the.discord.preset.being.applied.dc.reach.0.300",
@@ -8586,7 +8570,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1044,
+          "line": 1045,
           "text": "M13: Node.js could not reach Discord API/CDN (${dc_reach:0:200})",
           "polarity": "fail",
           "normalized_id": "m13.node.js.could.not.reach.discord.api.cdn.dc.reach.0.200",
@@ -8594,7 +8578,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1051,
+          "line": 1052,
           "text": "M13-rest-a: Hermetic fake Discord REST API started on host port ${FAKE_DISCORD_REST_PORT}",
           "polarity": "pass",
           "normalized_id": "m13.rest.a.hermetic.fake.discord.rest.api.started.on.host.port.fake.discord.rest.port",
@@ -8602,7 +8586,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1060,
+          "line": 1061,
           "text": "M13-rest-b: Applied Node-only HTTPS policy for fake Discord REST API",
           "polarity": "pass",
           "normalized_id": "m13.rest.b.applied.node.only.https.policy.for.fake.discord.rest.api",
@@ -8610,7 +8594,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1062,
+          "line": 1063,
           "text": "M13-rest-b: Failed to apply fake Discord REST policy: $(tail -20 /tmp/nemoclaw-fake-discord-rest-policy.log 2>/dev/null | tr '\\n' ' ' | cut -c1-300)",
           "polarity": "fail",
           "normalized_id": "m13.rest.b.failed.to.apply.fake.discord.rest.policy.tail.20.tmp.nemoclaw.fake.discord.rest.policy.log.2.dev.null.tr.n.cut.c1.300",
@@ -8618,7 +8602,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1076,
+          "line": 1077,
           "text": "M13-rest-c: Node reached the fake Discord REST API through OpenShell",
           "polarity": "pass",
           "normalized_id": "m13.rest.c.node.reached.the.fake.discord.rest.api.through.openshell",
@@ -8626,7 +8610,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1078,
+          "line": 1079,
           "text": "M13-rest-c: Node failed to reach fake Discord REST API: ${fake_rest_node:0:300}",
           "polarity": "fail",
           "normalized_id": "m13.rest.c.node.failed.to.reach.fake.discord.rest.api.fake.rest.node.0.300",
@@ -8634,7 +8618,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1090,
+          "line": 1091,
           "text": "M13-rest-d: curl was denied before reaching the fake Discord REST API",
           "polarity": "pass",
           "normalized_id": "m13.rest.d.curl.was.denied.before.reaching.the.fake.discord.rest.api",
@@ -8642,7 +8626,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1092,
+          "line": 1093,
           "text": "M13-rest-d: curl unexpectedly established a tunnel to the fake Discord REST API",
           "polarity": "fail",
           "normalized_id": "m13.rest.d.curl.unexpectedly.established.a.tunnel.to.the.fake.discord.rest.api",
@@ -8650,7 +8634,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1094,
+          "line": 1095,
           "text": "M13-rest-d: Fake Discord REST curl denial had unexpected shape: ${fake_rest_curl:0:300}",
           "polarity": "fail",
           "normalized_id": "m13.rest.d.fake.discord.rest.curl.denial.had.unexpected.shape.fake.rest.curl.0.300",
@@ -8658,7 +8642,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1106,
+          "line": 1107,
           "text": "M13-rest-e: Fake server saw Node but no curl request",
           "polarity": "pass",
           "normalized_id": "m13.rest.e.fake.server.saw.node.but.no.curl.request",
@@ -8666,7 +8650,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1108,
+          "line": 1109,
           "text": "M13-rest-e: Unexpected fake Discord REST capture counts: ${fake_rest_capture}",
           "polarity": "fail",
           "normalized_id": "m13.rest.e.unexpected.fake.discord.rest.capture.counts.fake.rest.capture",
@@ -8674,7 +8658,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1115,
+          "line": 1116,
           "text": "M13b: Hermetic fake Discord Gateway started on host port ${FAKE_DISCORD_GATEWAY_PORT}",
           "polarity": "pass",
           "normalized_id": "m13b.hermetic.fake.discord.gateway.started.on.host.port.fake.discord.gateway.port",
@@ -8682,7 +8666,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1117,
+          "line": 1118,
           "text": "M13b: Failed to start hermetic fake Discord Gateway",
           "polarity": "fail",
           "normalized_id": "m13b.failed.to.start.hermetic.fake.discord.gateway",
@@ -8690,7 +8674,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1122,
+          "line": 1123,
           "text": "M13c: Applied native WebSocket policy with credential rewrite for fake Discord Gateway",
           "polarity": "pass",
           "normalized_id": "m13c.applied.native.websocket.policy.with.credential.rewrite.for.fake.discord.gateway",
@@ -8698,7 +8682,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1124,
+          "line": 1125,
           "text": "M13c: Failed to apply fake Discord Gateway policy: $(tail -20 /tmp/nemoclaw-fake-discord-policy.log 2>/dev/null | tr '\\n' ' ' | cut -c1-300)",
           "polarity": "fail",
           "normalized_id": "m13c.failed.to.apply.fake.discord.gateway.policy.tail.20.tmp.nemoclaw.fake.discord.policy.log.2.dev.null.tr.n.cut.c1.300",
@@ -8706,7 +8690,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1134,
+          "line": 1135,
           "text": "M13d: Native WebSocket upgrade reached fake Discord Gateway through OpenShell",
           "polarity": "pass",
           "normalized_id": "m13d.native.websocket.upgrade.reached.fake.discord.gateway.through.openshell",
@@ -8714,7 +8698,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1136,
+          "line": 1137,
           "text": "M13d: Native WebSocket upgrade failed: ${dc_ws_native:0:300}",
           "polarity": "fail",
           "normalized_id": "m13d.native.websocket.upgrade.failed.dc.ws.native.0.300",
@@ -8722,7 +8706,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1143,
+          "line": 1144,
           "text": "M13e: Discord HELLO, placeholder IDENTIFY, READY, and heartbeat ACK completed",
           "polarity": "pass",
           "normalized_id": "m13e.discord.hello.placeholder.identify.ready.and.heartbeat.ack.completed",
@@ -8730,7 +8714,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1145,
+          "line": 1146,
           "text": "M13e: Discord Gateway protocol proof incomplete: ${dc_ws_native:0:400}",
           "polarity": "fail",
           "normalized_id": "m13e.discord.gateway.protocol.proof.incomplete.dc.ws.native.0.400",
@@ -8738,7 +8722,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1151,
+          "line": 1152,
           "text": "M13f: Fake Gateway received host-side Discord token; sandbox-visible IDENTIFY used only the placeholder",
           "polarity": "pass",
           "normalized_id": "m13f.fake.gateway.received.host.side.discord.token.sandbox.visible.identify.used.only.the.placeholder",
@@ -8746,7 +8730,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1156,
+          "line": 1157,
           "text": "M13f: Fake Gateway did not prove placeholder-to-token rewrite at the relay boundary",
           "polarity": "fail",
           "normalized_id": "m13f.fake.gateway.did.not.prove.placeholder.to.token.rewrite.at.the.relay.boundary",
@@ -8754,7 +8738,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1172,
+          "line": 1173,
           "text": "M13g: Unregistered Discord WebSocket placeholder is rejected before upstream token exposure",
           "polarity": "pass",
           "normalized_id": "m13g.unregistered.discord.websocket.placeholder.is.rejected.before.upstream.token.exposure",
@@ -8762,7 +8746,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1174,
+          "line": 1175,
           "text": "M13g: Unregistered Discord WebSocket placeholder reached READY or leaked upstream",
           "polarity": "fail",
           "normalized_id": "m13g.unregistered.discord.websocket.placeholder.reached.ready.or.leaked.upstream",
@@ -8770,7 +8754,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1180,
+          "line": 1181,
           "text": "M14: curl to api.telegram.org blocked (binary restriction enforced)",
           "polarity": "pass",
           "normalized_id": "m14.curl.to.api.telegram.org.blocked.binary.restriction.enforced",
@@ -8778,7 +8762,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1182,
+          "line": 1183,
           "text": "M14: curl returned empty (likely blocked by policy)",
           "polarity": "pass",
           "normalized_id": "m14.curl.returned.empty.likely.blocked.by.policy",
@@ -8786,7 +8770,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1186,
+          "line": 1187,
           "text": "M14: curl not available in sandbox (defense in depth)",
           "polarity": "pass",
           "normalized_id": "m14.curl.not.available.in.sandbox.defense.in.depth",
@@ -8794,7 +8778,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1220,
+          "line": 1221,
           "text": "M15: Telegram getMe returned 200 — real token verified!",
           "polarity": "pass",
           "normalized_id": "m15.telegram.getme.returned.200.real.token.verified",
@@ -8802,7 +8786,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1225,
+          "line": 1226,
           "text": "M15: Telegram getMe returned $tg_status — L7 proxy rewrote placeholder (fake token rejected by API)",
           "polarity": "pass",
           "normalized_id": "m15.telegram.getme.returned.tg.status.l7.proxy.rewrote.placeholder.fake.token.rejected.by.api",
@@ -8810,7 +8794,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1226,
+          "line": 1227,
           "text": "M16: Full chain verified: sandbox → proxy → token rewrite → Telegram API",
           "polarity": "pass",
           "normalized_id": "m16.full.chain.verified.sandbox.proxy.token.rewrite.telegram.api",
@@ -8818,7 +8802,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1232,
+          "line": 1233,
           "text": "M15: Telegram API call failed with error: ${tg_api:0:200}",
           "polarity": "fail",
           "normalized_id": "m15.telegram.api.call.failed.with.error.tg.api.0.200",
@@ -8826,7 +8810,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1234,
+          "line": 1235,
           "text": "M15: Unexpected Telegram response (status=$tg_status): ${tg_api:0:200}",
           "polarity": "fail",
           "normalized_id": "m15.unexpected.telegram.response.status.tg.status.tg.api.0.200",
@@ -8834,7 +8818,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1261,
+          "line": 1262,
           "text": "M17: Discord users/@me returned 200 — real token verified!",
           "polarity": "pass",
           "normalized_id": "m17.discord.users.me.returned.200.real.token.verified",
@@ -8842,7 +8826,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1263,
+          "line": 1264,
           "text": "M17: Discord users/@me returned 401 — L7 proxy rewrote placeholder (fake token rejected by API)",
           "polarity": "pass",
           "normalized_id": "m17.discord.users.me.returned.401.l7.proxy.rewrote.placeholder.fake.token.rejected.by.api",
@@ -8850,7 +8834,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1267,
+          "line": 1268,
           "text": "M17: Discord API call failed with error: ${dc_api:0:200}",
           "polarity": "fail",
           "normalized_id": "m17.discord.api.call.failed.with.error.dc.api.0.200",
@@ -8858,7 +8842,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1269,
+          "line": 1270,
           "text": "M17: Unexpected Discord response (status=$dc_status): ${dc_api:0:200}",
           "polarity": "fail",
           "normalized_id": "m17.unexpected.discord.response.status.dc.status.dc.api.0.200",
@@ -8866,7 +8850,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1281,
+          "line": 1282,
           "text": "M-S14a: Hermetic fake Slack API started on host port ${FAKE_SLACK_API_PORT}",
           "polarity": "pass",
           "normalized_id": "m.s14a.hermetic.fake.slack.api.started.on.host.port.fake.slack.api.port",
@@ -8874,7 +8858,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1283,
+          "line": 1284,
           "text": "M-S14a: Failed to start hermetic fake Slack API",
           "polarity": "fail",
           "normalized_id": "m.s14a.failed.to.start.hermetic.fake.slack.api",
@@ -8882,7 +8866,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1288,
+          "line": 1289,
           "text": "M-S14b: Applied REST policy for hermetic fake Slack API",
           "polarity": "pass",
           "normalized_id": "m.s14b.applied.rest.policy.for.hermetic.fake.slack.api",
@@ -8890,7 +8874,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1290,
+          "line": 1291,
           "text": "M-S14b: Failed to apply fake Slack API policy: $(tail -20 /tmp/nemoclaw-fake-slack-policy.log 2>/dev/null | tr '\\n' ' ' | cut -c1-300)",
           "polarity": "fail",
           "normalized_id": "m.s14b.failed.to.apply.fake.slack.api.policy.tail.20.tmp.nemoclaw.fake.slack.policy.log.2.dev.null.tr.n.cut.c1.300",
@@ -8898,7 +8882,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1341,
+          "line": 1342,
           "text": "M-S15: Slack auth.test returned ok:true — real token round-trip verified!",
           "polarity": "pass",
           "normalized_id": "m.s15.slack.auth.test.returned.ok.true.real.token.round.trip.verified",
@@ -8906,7 +8890,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1343,
+          "line": 1344,
           "text": "M-S15: Slack auth.test returned invalid_auth — full chain verified (OpenShell alias rewrite → fake Slack)",
           "polarity": "pass",
           "normalized_id": "m.s15.slack.auth.test.returned.invalid.auth.full.chain.verified.openshell.alias.rewrite.fake.slack",
@@ -8914,7 +8898,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1346,
+          "line": 1347,
           "text": "M-S15a: fake Slack saw host-side bot token in header and urlencoded body",
           "polarity": "pass",
           "normalized_id": "m.s15a.fake.slack.saw.host.side.bot.token.in.header.and.urlencoded.body",
@@ -8922,7 +8906,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1348,
+          "line": 1349,
           "text": "M-S15a: fake Slack capture did not prove bot header/body rewrite: ${sl_capture:0:300}",
           "polarity": "fail",
           "normalized_id": "m.s15a.fake.slack.capture.did.not.prove.bot.header.body.rewrite.sl.capture.0.300",
@@ -8930,7 +8914,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1353,
+          "line": 1354,
           "text": "M-S15: Slack API call failed with error: ${sl_api:0:200}",
           "polarity": "fail",
           "normalized_id": "m.s15.slack.api.call.failed.with.error.sl.api.0.200",
@@ -8938,7 +8922,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1355,
+          "line": 1356,
           "text": "M-S15: OpenShell did not resolve the Bolt-shape alias",
           "polarity": "fail",
           "normalized_id": "m.s15.openshell.did.not.resolve.the.bolt.shape.alias",
@@ -8946,7 +8930,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1357,
+          "line": 1358,
           "text": "M-S15: L7 proxy did not substitute the canonical placeholder — substitution chain broken",
           "polarity": "fail",
           "normalized_id": "m.s15.l7.proxy.did.not.substitute.the.canonical.placeholder.substitution.chain.broken",
@@ -8954,7 +8938,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1359,
+          "line": 1360,
           "text": "M-S15: Unexpected Slack response (status=$sl_status): ${sl_api:0:200}",
           "polarity": "fail",
           "normalized_id": "m.s15.unexpected.slack.response.status.sl.status.sl.api.0.200",
@@ -8962,7 +8946,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1380,
+          "line": 1381,
           "text": "M-S15b: L7 proxy substitutes openshell:resolve:env:SLACK_BOT_TOKEN at egress (parallels Telegram M15 / Discord M17)",
           "polarity": "pass",
           "normalized_id": "m.s15b.l7.proxy.substitutes.openshell.resolve.env.slack.bot.token.at.egress.parallels.telegram.m15.discord.m17",
@@ -8970,7 +8954,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1384,
+          "line": 1385,
           "text": "M-S15b: L7 proxy passed canonical placeholder through unchanged — substitution not happening for SLACK_BOT_TOKEN",
           "polarity": "fail",
           "normalized_id": "m.s15b.l7.proxy.passed.canonical.placeholder.through.unchanged.substitution.not.happening.for.slack.bot.token",
@@ -8978,7 +8962,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1386,
+          "line": 1387,
           "text": "M-S15b: Unexpected response (status=$sl_canon_status): ${sl_canonical:0:200}",
           "polarity": "fail",
           "normalized_id": "m.s15b.unexpected.response.status.sl.canon.status.sl.canonical.0.200",
@@ -8986,7 +8970,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1407,
+          "line": 1408,
           "text": "M-S15c: unset-var failed closed before upstream exposure",
           "polarity": "pass",
           "normalized_id": "m.s15c.unset.var.failed.closed.before.upstream.exposure",
@@ -8994,7 +8978,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1409,
+          "line": 1410,
           "text": "M-S15c: unset-var triggered connection-level failure — proxy refuses to forward unsubstituted placeholder",
           "polarity": "pass",
           "normalized_id": "m.s15c.unset.var.triggered.connection.level.failure.proxy.refuses.to.forward.unsubstituted.placeholder",
@@ -9002,7 +8986,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1411,
+          "line": 1412,
           "text": "M-S15c: unset-var returned HTTP 200 — proxy passed canonical placeholder through unchanged for unset env (substitution may be a no-op)",
           "polarity": "fail",
           "normalized_id": "m.s15c.unset.var.returned.http.200.proxy.passed.canonical.placeholder.through.unchanged.for.unset.env.substitution.may.be.a.no.op",
@@ -9010,7 +8994,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1413,
+          "line": 1414,
           "text": "M-S15c: unset-var request reached fake Slack — unresolved placeholder escaped the proxy boundary",
           "polarity": "fail",
           "normalized_id": "m.s15c.unset.var.request.reached.fake.slack.unresolved.placeholder.escaped.the.proxy.boundary",
@@ -9018,7 +9002,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1434,
+          "line": 1435,
           "text": "M-S16: apps.connections.open returned ok:true — real xapp token round-trip verified!",
           "polarity": "pass",
           "normalized_id": "m.s16.apps.connections.open.returned.ok.true.real.xapp.token.round.trip.verified",
@@ -9026,7 +9010,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1436,
+          "line": 1437,
           "text": "M-S16: apps.connections.open auth-rejected — Socket Mode HTTPS leg verified (OpenShell alias rewrite → fake Slack)",
           "polarity": "pass",
           "normalized_id": "m.s16.apps.connections.open.auth.rejected.socket.mode.https.leg.verified.openshell.alias.rewrite.fake.slack",
@@ -9034,7 +9018,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1439,
+          "line": 1440,
           "text": "M-S16a: fake Slack saw host-side app token in header and urlencoded body",
           "polarity": "pass",
           "normalized_id": "m.s16a.fake.slack.saw.host.side.app.token.in.header.and.urlencoded.body",
@@ -9042,7 +9026,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1441,
+          "line": 1442,
           "text": "M-S16a: fake Slack capture did not prove app header/body rewrite: ${sl_app_capture:0:300}",
           "polarity": "fail",
           "normalized_id": "m.s16a.fake.slack.capture.did.not.prove.app.header.body.rewrite.sl.app.capture.0.300",
@@ -9050,7 +9034,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1446,
+          "line": 1447,
           "text": "M-S16: OpenShell did not resolve the xapp- alias for Socket Mode path",
           "polarity": "fail",
           "normalized_id": "m.s16.openshell.did.not.resolve.the.xapp.alias.for.socket.mode.path",
@@ -9058,7 +9042,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1448,
+          "line": 1449,
           "text": "M-S16: Unexpected apps.connections.open response (status=$sl_app_status): ${sl_app_api:0:200}",
           "polarity": "fail",
           "normalized_id": "m.s16.unexpected.apps.connections.open.response.status.sl.app.status.sl.app.api.0.200",
@@ -9066,7 +9050,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1472,
+          "line": 1473,
           "text": "M-S16b: unset app-token failed closed before upstream exposure",
           "polarity": "pass",
           "normalized_id": "m.s16b.unset.app.token.failed.closed.before.upstream.exposure",
@@ -9074,7 +9058,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1474,
+          "line": 1475,
           "text": "M-S16b: L7 proxy substitutes openshell:resolve:env:SLACK_APP_TOKEN at egress (unset-var control diverged)",
           "polarity": "pass",
           "normalized_id": "m.s16b.l7.proxy.substitutes.openshell.resolve.env.slack.app.token.at.egress.unset.var.control.diverged",
@@ -9082,7 +9066,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1476,
+          "line": 1477,
           "text": "M-S16b: unset app-token env returned HTTP 200 — proxy may be passing canonical placeholders through unchanged",
           "polarity": "fail",
           "normalized_id": "m.s16b.unset.app.token.env.returned.http.200.proxy.may.be.passing.canonical.placeholders.through.unchanged",
@@ -9090,7 +9074,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1478,
+          "line": 1479,
           "text": "M-S16b: unset app-token request reached fake Slack — unresolved placeholder escaped the proxy boundary",
           "polarity": "fail",
           "normalized_id": "m.s16b.unset.app.token.request.reached.fake.slack.unresolved.placeholder.escaped.the.proxy.boundary",
@@ -9098,7 +9082,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1487,
+          "line": 1488,
           "text": "M-S16b: L7 proxy passed canonical placeholder through unchanged for SLACK_APP_TOKEN",
           "polarity": "fail",
           "normalized_id": "m.s16b.l7.proxy.passed.canonical.placeholder.through.unchanged.for.slack.app.token",
@@ -9106,7 +9090,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1489,
+          "line": 1490,
           "text": "M-S16b: Unexpected response (status=$sl_app_canon_status): ${sl_app_canonical:0:200}",
           "polarity": "fail",
           "normalized_id": "m.s16b.unexpected.response.status.sl.app.canon.status.sl.app.canonical.0.200",
@@ -9114,7 +9098,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1504,
+          "line": 1505,
           "text": "M18: Telegram getMe returned 200 with real token",
           "polarity": "pass",
           "normalized_id": "m18.telegram.getme.returned.200.with.real.token",
@@ -9122,7 +9106,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1506,
+          "line": 1507,
           "text": "M18b: Telegram response contains ok:true",
           "polarity": "pass",
           "normalized_id": "m18b.telegram.response.contains.ok.true",
@@ -9130,7 +9114,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1509,
+          "line": 1510,
           "text": "M18: Expected Telegram getMe 200 with real token, got: $tg_status",
           "polarity": "fail",
           "normalized_id": "m18.expected.telegram.getme.200.with.real.token.got.tg.status",
@@ -9138,7 +9122,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1539,
+          "line": 1540,
           "text": "M19: Telegram sendMessage succeeded",
           "polarity": "pass",
           "normalized_id": "m19.telegram.sendmessage.succeeded",
@@ -9146,7 +9130,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1541,
+          "line": 1542,
           "text": "M19: Telegram sendMessage failed: ${send_result:0:200}",
           "polarity": "fail",
           "normalized_id": "m19.telegram.sendmessage.failed.send.result.0.200",
@@ -9154,7 +9138,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1553,
+          "line": 1554,
           "text": "M20: Discord users/@me returned 200 with real token",
           "polarity": "pass",
           "normalized_id": "m20.discord.users.me.returned.200.with.real.token",
@@ -9162,7 +9146,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1555,
+          "line": 1556,
           "text": "M20: Expected Discord users/@me 200 with real token, got: $dc_status",
           "polarity": "fail",
           "normalized_id": "m20.expected.discord.users.me.200.with.real.token.got.dc.status",
@@ -9170,7 +9154,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1587,
+          "line": 1588,
           "text": "S1: Gateway is serving on port 18789 — Slack auth failure did not crash it",
           "polarity": "pass",
           "normalized_id": "s1.gateway.is.serving.on.port.18789.slack.auth.failure.did.not.crash.it",
@@ -9178,7 +9162,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1589,
+          "line": 1590,
           "text": "S1: Gateway is not serving on port 18789 (${gw_port:0:200})",
           "polarity": "fail",
           "normalized_id": "s1.gateway.is.not.serving.on.port.18789.gw.port.0.200",
@@ -9186,7 +9170,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1615,
+          "line": 1616,
           "text": "S2: Gateway log shows Slack rejection was caught by channel guard",
           "polarity": "pass",
           "normalized_id": "s2.gateway.log.shows.slack.rejection.was.caught.by.channel.guard",
@@ -9194,7 +9178,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1640,
+          "line": 1641,
           "text": "Cleanup: Sandbox '$SANDBOX_NAME' intentionally kept",
           "polarity": "pass",
           "normalized_id": "cleanup.sandbox.sandbox.name.intentionally.kept",
@@ -9202,7 +9186,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1642,
+          "line": 1643,
           "text": "Cleanup: Sandbox '$SANDBOX_NAME' still present after cleanup",
           "polarity": "fail",
           "normalized_id": "cleanup.sandbox.sandbox.name.still.present.after.cleanup",
@@ -9210,7 +9194,7 @@
         },
         {
           "script": "test/e2e/test-messaging-providers.sh",
-          "line": 1644,
+          "line": 1645,
           "text": "Cleanup: Sandbox '$SANDBOX_NAME' removed",
           "polarity": "pass",
           "normalized_id": "cleanup.sandbox.sandbox.name.removed",
@@ -16602,7 +16586,7 @@
   ],
   "totals": {
     "scripts": 52,
-    "assertions": 2042,
+    "assertions": 2040,
     "zero_assertion_scripts": 1
   }
 }

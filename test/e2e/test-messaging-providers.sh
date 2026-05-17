@@ -975,9 +975,10 @@ else
   fail "M13-proxy: Sandbox proxy env does not point at OpenShell gateway: ${live_proxy_env:0:200}"
 fi
 
-# Regression for #3477: curl is intentionally not in the Discord preset's
-# binary whitelist. A curl CONNECT 403 is local OpenShell policy behavior, not
-# evidence that an upstream/corporate proxy is blocking Discord.
+# Regression context for #3477: curl is intentionally not in the Discord
+# preset's binary whitelist, but a live curl CONNECT 403 is ambiguous because
+# an upstream network policy can produce the same symptom. Treat the live probe
+# as diagnostics only; M13-rest-d/e below provide the hermetic whitelist proof.
 live_dc_curl=$(sandbox_exec 'set +e
 rm -f /tmp/nemoclaw-discord-curl.err /tmp/nemoclaw-discord-curl.body
 curl -v --max-time 10 https://discord.com/ \
@@ -990,11 +991,11 @@ grep -E "Uses proxy|CONNECT discord.com:443|HTTP/1\\.[01] 403|CONNECT tunnel fai
 info "Discord curl probe: ${live_dc_curl:0:500}"
 if echo "$live_dc_curl" | grep -qiE "CONNECT tunnel failed.*403|CONNECT discord\.com:443|HTTP/1\.[01] 403|policy_denied|Forbidden" \
   && ! echo "$live_dc_curl" | grep -qiE "Connection established|200 Connection"; then
-  pass "M13-curl: curl is blocked by the Discord preset binary whitelist (#3477)"
+  info "M13-curl: ambiguous live CONNECT 403 may be upstream or local; hermetic M13-rest-d/e prove whitelist behavior; output: ${live_dc_curl:0:300}"
 elif echo "$live_dc_curl" | grep -qiE "Connection established|200 Connection"; then
   fail "M13-curl: curl unexpectedly established a tunnel to Discord; binary whitelist may be too broad"
 else
-  fail "M13-curl: curl Discord denial had unexpected shape: ${live_dc_curl:0:300}"
+  info "M13-curl: live curl probe inconclusive; hermetic M13-rest-d/e prove whitelist behavior; output: ${live_dc_curl:0:200}"
 fi
 
 dc_reach=$(sandbox_exec 'node - <<'"'"'NODE'"'"'
