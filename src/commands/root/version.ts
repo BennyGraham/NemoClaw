@@ -9,7 +9,7 @@ export default class VersionCommand extends NemoClawCommand {
   static hidden = true;
   static strict = true;
   static summary = "Show version";
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw version",
       description: "Show version",

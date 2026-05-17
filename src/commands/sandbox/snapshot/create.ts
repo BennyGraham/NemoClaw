@@ -16,7 +16,7 @@ export default class SnapshotCreateCommand extends NemoClawCommand {
     "<%= config.bin %> sandbox snapshot create alpha",
     "<%= config.bin %> sandbox snapshot create alpha --name before-upgrade",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> snapshot create",
       description: "Create a snapshot of sandbox state",

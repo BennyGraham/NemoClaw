@@ -14,7 +14,7 @@ export default class ListCommand extends NemoClawCommand {
     "List all registered sandboxes with their model, provider, and policy presets.";
   static usage = ["list [--json]"];
   static examples = ["<%= config.bin %> list", "<%= config.bin %> list --json"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw list",
       description: "List all sandboxes",

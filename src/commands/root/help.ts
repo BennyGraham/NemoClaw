@@ -9,7 +9,7 @@ export default class RootHelpCommand extends NemoClawCommand {
   static hidden = true;
   static strict = false;
   static summary = "Show help";
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw help",
       description: "Show help",

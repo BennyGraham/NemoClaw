@@ -17,7 +17,7 @@ export default class ShareStatusCommand extends NemoClawCommand {
     "<%= config.bin %> sandbox share status alpha",
     "<%= config.bin %> sandbox share status alpha ~/mnt/alpha",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> share status",
       description: "Check whether the sandbox filesystem is currently mounted",

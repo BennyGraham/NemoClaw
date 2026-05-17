@@ -22,7 +22,7 @@ describe("public command display metadata", () => {
   it("derives command display entries from oclif command-class metadata", () => {
     const metadata = getRegisteredOclifCommandsMetadata();
     const discoveredDisplay = Object.entries(metadata).flatMap(([commandId, commandMetadata]) =>
-      (commandMetadata.display ?? []).map((entry) => ({ commandId, usage: entry.usage })),
+      (commandMetadata.publicDisplay ?? []).map((entry) => ({ commandId, usage: entry.usage })),
     );
 
     expect(discoveredDisplay).toHaveLength(COMMANDS.length);

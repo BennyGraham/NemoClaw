@@ -17,7 +17,7 @@ export default class ConnectCliCommand extends NemoClawCommand {
     "<%= config.bin %> sandbox connect alpha",
     "<%= config.bin %> sandbox connect alpha --probe-only",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> connect",
       description: "Shell into a running sandbox",

@@ -13,7 +13,7 @@ export default class SandboxStatusCommand extends NemoClawCommand {
   static description = "Show sandbox health, OpenShell gateway state, and local NIM status.";
   static usage = ["<name>"];
   static examples = ["<%= config.bin %> sandbox status alpha"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> status",
       description: "Sandbox health + NIM status",

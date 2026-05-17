@@ -18,7 +18,7 @@ export default class DestroyCliCommand extends NemoClawCommand {
     "<%= config.bin %> sandbox destroy alpha --yes",
     "<%= config.bin %> sandbox destroy alpha --yes --cleanup-gateway",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> destroy",
       description: "Stop NIM + delete sandbox",

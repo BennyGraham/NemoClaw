@@ -12,7 +12,7 @@ export default class SnapshotListCommand extends NemoClawCommand {
   static description = "List available snapshots for a sandbox.";
   static usage = ["<name>"];
   static examples = ["<%= config.bin %> sandbox snapshot list alpha"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> snapshot list",
       description: "List available snapshots",

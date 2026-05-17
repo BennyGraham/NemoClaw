@@ -15,7 +15,7 @@
  */
 
 import { CLI_NAME } from "./branding";
-import type { CommandDisplayEntry, CommandGroup } from "./command-display";
+import type { CommandGroup, PublicCommandDisplayEntry } from "./command-display";
 import { getRegisteredOclifCommandsMetadata } from "./oclif-metadata";
 
 export type { CommandGroup } from "./command-display";
@@ -25,7 +25,7 @@ export function brandedUsage(usage: string): string {
   return usage.replace(/^nemoclaw/, CLI_NAME);
 }
 
-export interface CommandDef extends Omit<CommandDisplayEntry, "order"> {
+export interface CommandDef extends Omit<PublicCommandDisplayEntry, "order"> {
   /** Registered internal oclif command ID that handles this public command shape. */
   commandId: string;
 }
@@ -46,12 +46,13 @@ export const GROUP_ORDER: readonly CommandGroup[] = [
   "Cleanup",
 ] as const;
 
-type RegisteredCommandDisplayEntry = CommandDisplayEntry & { commandId: string };
+type RegisteredCommandDisplayEntry = PublicCommandDisplayEntry & { commandId: string };
 
 function displayEntriesFromOclifMetadata(): CommandDef[] {
   const entries: RegisteredCommandDisplayEntry[] = [];
   for (const [commandId, metadata] of Object.entries(getRegisteredOclifCommandsMetadata())) {
-    for (const displayEntry of metadata.display ?? []) {
+    const publicDisplay = metadata.publicDisplay ?? metadata.display ?? [];
+    for (const displayEntry of publicDisplay) {
       entries.push({ ...displayEntry, commandId });
     }
   }

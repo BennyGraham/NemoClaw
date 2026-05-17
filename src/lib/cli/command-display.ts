@@ -15,32 +15,58 @@ export type CommandGroup =
   | "Upgrade"
   | "Cleanup";
 
-export interface CommandDisplayEntry {
-  /** Canonical command signature, e.g. "nemoclaw <name> snapshot create" */
+/**
+ * Public compatibility display metadata for root help, docs checks, and
+ * legacy `nemoclaw <sandbox-name> <action>` routing.
+ *
+ * Keep oclif-native parser metadata (`summary`, `description`, `usage`,
+ * `flags`, `args`) on the command class itself. Use `static publicDisplay`
+ * only when the public NemoClaw grammar differs from the oclif-native command
+ * shape or when a command needs root-help grouping/order metadata.
+ */
+export interface PublicCommandDisplayEntry {
+  /** Canonical public command signature, e.g. "nemoclaw <name> snapshot create" */
   usage: string;
-  /** One-line description for help output */
+  /** One-line description for public help output */
   description: string;
-  /** Optional flag syntax, e.g. "[--name <label>]" */
+  /** Optional public flag syntax, e.g. "[--name <label>]" */
   flags?: string;
-  /** Section header in help output */
+  /** Section header in public help output */
   group: CommandGroup;
-  /** Deprecated commands show dimmed in help */
+  /** Deprecated commands show dimmed in public help */
   deprecated?: boolean;
   /** Hidden commands are excluded from help and canonical list but included in dispatch */
   hidden?: boolean;
-  /** Whether this command is global or sandbox-scoped */
+  /** Whether this public command is global or sandbox-scoped */
   scope: "global" | "sandbox";
   /** Stable display order used when rendering grouped root help. */
   order: number;
 }
 
-export type CommandDisplayClass<T> = T & {
-  display?: readonly CommandDisplayEntry[];
+/** @deprecated Use PublicCommandDisplayEntry for new code. */
+export type CommandDisplayEntry = PublicCommandDisplayEntry;
+
+export type PublicCommandDisplayClass<T> = T & {
+  publicDisplay?: readonly PublicCommandDisplayEntry[];
 };
 
+export function withPublicCommandDisplay<T>(
+  commandClass: T,
+  publicDisplay: readonly PublicCommandDisplayEntry[],
+): PublicCommandDisplayClass<T> {
+  (commandClass as PublicCommandDisplayClass<T>).publicDisplay = publicDisplay;
+  return commandClass as PublicCommandDisplayClass<T>;
+}
+
+/** @deprecated Prefer static publicDisplay or withPublicCommandDisplay(). */
+export type CommandDisplayClass<T> = PublicCommandDisplayClass<T> & {
+  display?: readonly PublicCommandDisplayEntry[];
+};
+
+/** @deprecated Prefer static publicDisplay or withPublicCommandDisplay(). */
 export function withCommandDisplay<T>(
   commandClass: T,
-  display: readonly CommandDisplayEntry[],
+  display: readonly PublicCommandDisplayEntry[],
 ): CommandDisplayClass<T> {
   (commandClass as CommandDisplayClass<T>).display = display;
   return commandClass as CommandDisplayClass<T>;

@@ -12,7 +12,7 @@ export default class HostsListCommand extends NemoClawCommand {
   static description = "List host aliases configured on the sandbox resource.";
   static usage = ["<name>"];
   static examples = ["<%= config.bin %> sandbox hosts list alpha"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> hosts-list",
       description: "List sandbox host aliases",

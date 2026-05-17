@@ -17,7 +17,7 @@ export default class ChannelsStartCommand extends NemoClawCommand {
   static description = "Re-enable a previously stopped messaging channel.";
   static usage = ["<name> <channel> [--dry-run]"];
   static examples = ["<%= config.bin %> sandbox channels start alpha discord"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> channels start",
       description: "Re-enable a previously stopped channel",

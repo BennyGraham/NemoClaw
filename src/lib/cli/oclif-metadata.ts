@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { CommandDisplayEntry } from "./command-display";
+import type { PublicCommandDisplayEntry } from "./command-display";
 
 export type OclifCommandMetadata = {
   args?: Record<string, unknown>;
@@ -17,7 +17,10 @@ export type OclifCommandMetadata = {
   strict?: boolean;
   summary?: string;
   usage?: string[];
-  display?: readonly CommandDisplayEntry[];
+  /** Public compatibility help/listing metadata for `nemoclaw <name> action` grammar. */
+  publicDisplay?: readonly PublicCommandDisplayEntry[];
+  /** @deprecated Use publicDisplay for NemoClaw public compatibility metadata. */
+  display?: readonly PublicCommandDisplayEntry[];
 };
 
 type CommandExport = {

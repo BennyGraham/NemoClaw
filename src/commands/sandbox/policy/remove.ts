@@ -20,7 +20,7 @@ export default class PolicyRemoveCommand extends NemoClawCommand {
     "<%= config.bin %> sandbox policy remove alpha slack --yes",
     "<%= config.bin %> sandbox policy remove alpha slack --dry-run",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> policy-remove",
       description: "Remove an applied policy preset (built-in or custom)",

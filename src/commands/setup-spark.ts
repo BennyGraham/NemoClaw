@@ -13,7 +13,7 @@ export default class SetupSparkCliCommand extends NemoClawCommand {
   static description = "Deprecated alias for onboard.";
   static usage = ["setup-spark [flags]"];
   static examples = ["<%= config.bin %> setup-spark --name alpha"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw setup-spark",
       description: "Deprecated alias for nemoclaw onboard",

@@ -15,7 +15,7 @@ export default class CredentialsListCommand extends NemoClawCommand {
   static description = "List provider credentials registered with the OpenShell gateway.";
   static usage = ["credentials list"];
   static examples = ["<%= config.bin %> credentials list"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw credentials list",
       description: "List stored credential keys",

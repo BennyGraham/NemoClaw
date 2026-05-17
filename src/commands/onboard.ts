@@ -19,7 +19,7 @@ export default class OnboardCliCommand extends NemoClawCommand {
   static description = "Configure inference, credentials, and sandbox settings.";
   static usage = onboardUsage;
   static examples = onboardExamples;
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw onboard",
       description: "Configure inference endpoint and credentials",

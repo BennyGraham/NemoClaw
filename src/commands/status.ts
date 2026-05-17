@@ -13,7 +13,7 @@ export default class StatusCommand extends NemoClawCommand {
   static description = "Show registered sandboxes, live inference, services, and messaging health.";
   static usage = ["status [--json]"];
   static examples = ["<%= config.bin %> status", "<%= config.bin %> status --json"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw status",
       description: "Show sandbox list and service status",

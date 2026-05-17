@@ -111,8 +111,8 @@ describe("command-registry", () => {
         const hasSubcommands = discoveredIds.some((id) => id.startsWith(`${commandId}:`));
         if (hasSubcommands) continue;
 
-        expect(metadataById[commandId].display, commandId).toBeTruthy();
-        expect(metadataById[commandId].display?.length, commandId).toBeGreaterThan(0);
+        expect(metadataById[commandId].publicDisplay, commandId).toBeTruthy();
+        expect(metadataById[commandId].publicDisplay?.length, commandId).toBeGreaterThan(0);
       }
     });
 

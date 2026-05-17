@@ -76,7 +76,7 @@ export default class DebugCliCommand extends NemoClawCommand {
     "<%= config.bin %> debug --sandbox alpha",
     "<%= config.bin %> debug --output /tmp/nemoclaw-debug.tar.gz",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw debug",
       description: "Collect diagnostics for bug reports",

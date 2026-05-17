@@ -17,7 +17,7 @@ export default class ChannelsAddCommand extends NemoClawCommand {
   static description = "Store credentials for a messaging channel and queue a sandbox rebuild.";
   static usage = ["<name> <channel> [--dry-run]"];
   static examples = ["<%= config.bin %> sandbox channels add alpha telegram"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> channels add",
       description: "Save credentials and rebuild",

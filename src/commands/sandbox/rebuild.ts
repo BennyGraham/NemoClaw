@@ -17,7 +17,7 @@ export default class RebuildCliCommand extends NemoClawCommand {
     "<%= config.bin %> sandbox rebuild alpha",
     "<%= config.bin %> sandbox rebuild alpha --yes --verbose",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> rebuild",
       description: "Upgrade sandbox to current agent version",

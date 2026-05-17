@@ -14,7 +14,7 @@ export default class TunnelStopCommand extends NemoClawCommand {
   static description = "Stop the cloudflared public-URL tunnel for the default sandbox dashboard.";
   static usage = ["tunnel stop"];
   static examples = ["<%= config.bin %> tunnel stop"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw tunnel stop",
       description: "Stop the cloudflared public-URL tunnel",

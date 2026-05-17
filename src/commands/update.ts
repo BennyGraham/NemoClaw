@@ -21,7 +21,7 @@ export default class UpdateCommand extends NemoClawCommand {
     "<%= config.bin %> update",
     "<%= config.bin %> update --yes",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw update",
       description: `Run the maintained ${CLI_DISPLAY_NAME} installer update flow`,

@@ -13,7 +13,7 @@ export default class SandboxPolicyListCommand extends NemoClawCommand {
   static description = "List built-in and custom policy presets and show which are applied.";
   static usage = ["<name>"];
   static examples = ["<%= config.bin %> sandbox policy list alpha"];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> policy-list",
       description: "List presets (\u25cf = applied)",

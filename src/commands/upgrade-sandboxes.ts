@@ -17,7 +17,7 @@ export default class UpgradeSandboxesCommand extends NemoClawCommand {
     "<%= config.bin %> upgrade-sandboxes --check",
     "<%= config.bin %> upgrade-sandboxes --auto --yes",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw upgrade-sandboxes",
       description: "Detect and rebuild stale sandboxes",

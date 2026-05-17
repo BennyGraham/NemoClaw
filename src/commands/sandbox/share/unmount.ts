@@ -17,7 +17,7 @@ export default class ShareUnmountCommand extends NemoClawCommand {
     "<%= config.bin %> sandbox share unmount alpha",
     "<%= config.bin %> sandbox share unmount alpha ~/mnt/alpha",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> share unmount",
       description: "Unmount a previously mounted sandbox filesystem",

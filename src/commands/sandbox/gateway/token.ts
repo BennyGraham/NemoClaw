@@ -52,7 +52,7 @@ export default class GatewayTokenCliCommand extends NemoClawCommand {
     "<%= config.bin %> alpha gateway-token",
     "<%= config.bin %> alpha gateway-token --quiet",
   ];
-  static display = [
+  static publicDisplay = [
     {
       usage: "nemoclaw <name> gateway-token",
       description: "Print the OpenClaw gateway auth token to stdout",
