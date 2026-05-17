@@ -79,6 +79,24 @@ describe("resolveLegacySandboxDispatch", () => {
     });
   });
 
+  it("rewrites the legacy exec action and forwards the user command verbatim", () => {
+    expect(
+      resolveLegacySandboxDispatch("alpha", "exec", [
+        "--",
+        "openclaw",
+        "agent",
+        "--agent",
+        "main",
+        "-m",
+        "hi",
+      ]),
+    ).toEqual({
+      kind: "oclif",
+      commandId: "sandbox:exec",
+      args: ["alpha", "--", "openclaw", "agent", "--agent", "main", "-m", "hi"],
+    });
+  });
+
   it("rewrites legacy hyphenated actions to oclif-native command ids", () => {
     expect(resolveLegacySandboxDispatch("alpha", "policy-add", ["--from-file"])).toEqual({
       kind: "oclif",
