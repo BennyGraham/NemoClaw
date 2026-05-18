@@ -45,7 +45,16 @@ function renderLegacyParitySummary(meta: ResolverInput): string[] {
     scripts?: Record<string, { bucket?: string }>;
   };
   const counts = { mapped: 0, deferred: 0, retired: 0, unmapped: 0 };
-  const buckets = new Map<string, { scripts: Set<string>; mapped: number; deferred: number; retired: number; unmapped: number }>();
+  const buckets = new Map<
+    string,
+    {
+      scripts: Set<string>;
+      mapped: number;
+      deferred: number;
+      retired: number;
+      unmapped: number;
+    }
+  >();
 
   for (const entrypoint of inventory.entrypoints) {
     const script = path.basename(entrypoint.script);
@@ -61,7 +70,11 @@ function renderLegacyParitySummary(meta: ResolverInput): string[] {
     buckets.set(bucket, row);
     for (const assertion of entrypoint.assertions) {
       const status = assertion.mapping_status;
-      if (status === "mapped" || status === "deferred" || status === "retired") {
+      if (
+        status === "mapped" ||
+        status === "deferred" ||
+        status === "retired"
+      ) {
         counts[status]++;
         row[status]++;
       } else {
@@ -82,7 +95,9 @@ function renderLegacyParitySummary(meta: ResolverInput): string[] {
   lines.push("");
   lines.push("| Bucket | Scripts | Mapped | Deferred | Retired | Unmapped |");
   lines.push("|---|---:|---:|---:|---:|---:|");
-  for (const [bucket, row] of [...buckets.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [bucket, row] of [...buckets.entries()].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
     lines.push(
       `| ${bucket} | ${row.scripts.size} | ${row.mapped} | ${row.deferred} | ${row.retired} | ${row.unmapped} |`,
     );
@@ -108,24 +123,36 @@ export function renderCoverageReport(
   lines.push("");
   lines.push("| Base | Platform | Install | Runtime | Requirements |");
   lines.push("|---|---|---|---|---|");
-  for (const [id, base] of Object.entries(scenarios.base_scenarios ?? {}).sort(([a], [b]) => a.localeCompare(b))) {
-    lines.push(`| ${id} | ${base.platform} | ${base.install} | ${base.runtime} | ${(base.runner_requirements ?? []).join(", ") || "_none_"} |`);
+  for (const [id, base] of Object.entries(scenarios.base_scenarios ?? {}).sort(
+    ([a], [b]) => a.localeCompare(b),
+  )) {
+    lines.push(
+      `| ${id} | ${base.platform} | ${base.install} | ${base.runtime} | ${(base.runner_requirements ?? []).join(", ") || "_none_"} |`,
+    );
   }
   lines.push("");
   lines.push("## Onboarding Profiles");
   lines.push("");
   lines.push("| Profile | Path | Provider | Agent | Route |");
   lines.push("|---|---|---|---|---|");
-  for (const [id, profile] of Object.entries(scenarios.onboarding_profiles ?? {}).sort(([a], [b]) => a.localeCompare(b))) {
-    lines.push(`| ${id} | ${profile.path ?? ""} | ${profile.provider ?? ""} | ${profile.agent ?? ""} | ${profile.inference_route ?? ""} |`);
+  for (const [id, profile] of Object.entries(
+    scenarios.onboarding_profiles ?? {},
+  ).sort(([a], [b]) => a.localeCompare(b))) {
+    lines.push(
+      `| ${id} | ${profile.path ?? ""} | ${profile.provider ?? ""} | ${profile.agent ?? ""} | ${profile.inference_route ?? ""} |`,
+    );
   }
   lines.push("");
   lines.push("## Test Plans");
   lines.push("");
   lines.push("| Plan | Base | Onboarding | Expected state | Suites |");
   lines.push("|---|---|---|---|---|");
-  for (const [id, plan] of Object.entries(scenarios.test_plans ?? {}).sort(([a], [b]) => a.localeCompare(b))) {
-    lines.push(`| ${id} | ${plan.base} | ${plan.onboarding} | ${plan.expected_state} | ${plan.suites.join(", ") || "_(none)_"} |`);
+  for (const [id, plan] of Object.entries(scenarios.test_plans ?? {}).sort(
+    ([a], [b]) => a.localeCompare(b),
+  )) {
+    lines.push(
+      `| ${id} | ${plan.base} | ${plan.onboarding} | ${plan.expected_state} | ${(plan.suites ?? []).join(", ") || "_(none)_"} |`,
+    );
   }
   lines.push("");
   lines.push("## Suites");
@@ -134,7 +161,8 @@ export function renderCoverageReport(
   lines.push("");
   lines.push("## Scenarios");
   lines.push("");
-  const hasStatus = options.lastRunStatus && Object.keys(options.lastRunStatus).length > 0;
+  const hasStatus =
+    options.lastRunStatus && Object.keys(options.lastRunStatus).length > 0;
   const header = hasStatus
     ? "| Scenario | Platform | Install | Runtime | Onboarding | Expected state | Suites | Last run |"
     : "| Scenario | Platform | Install | Runtime | Onboarding | Expected state | Suites |";
@@ -175,7 +203,10 @@ export function renderCoverageReport(
     .filter(({ scenario }) => (scenario.suites ?? []).length === 0)
     .map(({ id }) => id);
   const skippedScenarios = scenarioEntries
-    .map(({ id, scenario }) => ({ id, skips: scenario.skipped_capabilities ?? [] }))
+    .map(({ id, scenario }) => ({
+      id,
+      skips: scenario.skipped_capabilities ?? [],
+    }))
     .filter(({ skips }) => skips.length > 0);
   const referencedStates = new Set<string>(
     scenarioEntries
@@ -188,7 +219,11 @@ export function renderCoverageReport(
 
   lines.push("## Gaps");
   lines.push("");
-  if (scenariosWithoutSuites.length === 0 && unusedStates.length === 0 && skippedScenarios.length === 0) {
+  if (
+    scenariosWithoutSuites.length === 0 &&
+    unusedStates.length === 0 &&
+    skippedScenarios.length === 0
+  ) {
     lines.push("_No gaps detected._");
   } else {
     if (scenariosWithoutSuites.length > 0) {
@@ -204,7 +239,10 @@ export function renderCoverageReport(
       lines.push("");
       for (const { id, skips } of skippedScenarios) {
         for (const skip of skips) {
-          const suites = Array.isArray(skip.suites) && skip.suites.length > 0 ? ` Suites: ${skip.suites.map((suite) => `\`${suite}\``).join(", ")}.` : "";
+          const suites =
+            Array.isArray(skip.suites) && skip.suites.length > 0
+              ? ` Suites: ${skip.suites.map((suite) => `\`${suite}\``).join(", ")}.`
+              : "";
           lines.push(`- \`${id}\` / \`${skip.id}\`: ${skip.reason}${suites}`);
         }
       }

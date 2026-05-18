@@ -497,5 +497,5 @@ onboarding_assertions:
     assertion_id: onboarding.preflight.passed
   preflight-expected-failed:
     stage: onboarding
-    script: onboarding_assertions/preflight/00-preflight-passed.sh
+    script: onboarding_assertions/preflight/00-preflight-expected-failed.sh
     assertion_id: onboarding.preflight.expected-failed
