@@ -95,7 +95,7 @@ Containers and other hosts on the local network reach Ollama only through the
 proxy, which validates a Bearer token before forwarding requests.
 On that path, NemoClaw never exposes Ollama without authentication.
 
-The proxy is skipped only when Docker Desktop on WSL bridges the host's loopback into containers via `host.docker.internal` — there, raw Ollama on `127.0.0.1:11434` is directly reachable and the auth proxy adds no value.
+NemoClaw skips the proxy only when Docker Desktop on WSL bridges the host's loopback into containers via `host.docker.internal` — there, raw Ollama on `127.0.0.1:11434` is directly reachable and the auth proxy adds no value.
 **Native Docker installed inside a WSL distro** (the more common WSL2 setup with `docker-ce`) does **not** see the host's loopback from its bridge network, so the proxy runs there too.
 Windows-host Ollama uses the Windows daemon through `host.docker.internal`.
 

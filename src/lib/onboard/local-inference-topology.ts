@@ -7,6 +7,7 @@ import {
   type ContainerRuntime,
   inferContainerRuntime,
 } from "../platform";
+import { ensureOllamaLoopbackSystemdOverride } from "./ollama-systemd";
 
 export function getContainerRuntime(): ContainerRuntime {
   return inferContainerRuntime(dockerInfo({ ignoreError: true }));
@@ -18,4 +19,21 @@ export function getContainerRuntime(): ContainerRuntime {
 // host.docker.internal. (#3695)
 export function shouldFrontOllamaWithProxy(): boolean {
   return !containerCanReachHostLoopback(getContainerRuntime());
+}
+
+// Repair the Ollama systemd loopback override for ollama-local providers.
+// No-ops for any other provider. Exits non-zero when the restart fails to
+// recover, matching the existing fail-closed posture in setupNim. (#3342)
+export function repairLocalInferenceSystemdOverrideOrExit(
+  provider: string | null | undefined,
+  isNonInteractive: () => boolean,
+): void {
+  if (provider !== "ollama-local") return;
+  const state = ensureOllamaLoopbackSystemdOverride({ isNonInteractive });
+  if (state === "failed") {
+    console.error(
+      "  Ollama systemd restart did not recover after applying the loopback override.",
+    );
+    process.exit(1);
+  }
 }

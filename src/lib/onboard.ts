@@ -241,8 +241,11 @@ const {
 const { sleepSeconds, waitForHttp, waitUntil } = require("./core/wait");
 const platformUtils: typeof import("./platform") = require("./platform");
 const { isWsl, shouldPatchCoredns } = platformUtils;
-const { getContainerRuntime, shouldFrontOllamaWithProxy }:
-  typeof import("./onboard/local-inference-topology") = require("./onboard/local-inference-topology");
+const {
+  getContainerRuntime,
+  repairLocalInferenceSystemdOverrideOrExit,
+  shouldFrontOllamaWithProxy,
+}: typeof import("./onboard/local-inference-topology") = require("./onboard/local-inference-topology");
 const { resolveOpenshell } = require("./adapters/openshell/resolve");
 const credentials: typeof import("./credentials/store") = require("./credentials/store");
 const {
@@ -9762,13 +9765,10 @@ async function onboard(opts: OnboardOptions = {}): Promise<void> {
       if (resumeProviderSelection) {
         skippedStepMessage("provider_selection", `${provider} / ${model}`);
         hydrateCredentialEnv(credentialEnv);
-        // #3342: provider selection short-circuits on resume, so the
-        // systemd loopback override repair in setupNim is skipped. Run
-        // it here for ollama-local so legacy 0.0.0.0 drop-ins from older
-        // NemoClaw versions get rewritten to loopback on every resume.
-        if (provider === "ollama-local") {
-          ensureOllamaLoopbackSystemdOverride({ isNonInteractive });
-        }
+        // #3342: resume short-circuits provider selection — repair the
+        // ollama-local systemd loopback override here so legacy 0.0.0.0
+        // drop-ins from older NemoClaw versions get rewritten every resume.
+        repairLocalInferenceSystemdOverrideOrExit(provider, isNonInteractive);
       } else {
         // #2753: do not persist sandboxName to onboard-session.json before
         // the sandbox actually exists in the gateway (Step 6 markStepComplete
