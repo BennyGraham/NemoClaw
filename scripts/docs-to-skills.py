@@ -469,9 +469,80 @@ def _format_admonition(title: str, body: str) -> str:
     return f"**{clean_title}:**\n\n" + "\n".join(lines).strip()
 
 
+def _format_markdown_table(rows: list[list[str]], header_rows: int = 1) -> str:
+    """Format parsed directive table rows as standard Markdown."""
+    if not rows:
+        return ""
+    width = max(len(row) for row in rows)
+    normalized_rows = [row + [""] * (width - len(row)) for row in rows]
+    header = normalized_rows[0] if header_rows else [""] * width
+    body_rows = normalized_rows[1:] if header_rows else normalized_rows
+
+    lines = [
+        "| " + " | ".join(cell.strip() for cell in header) + " |",
+        "| " + " | ".join("---" for _ in range(width)) + " |",
+    ]
+    for row in body_rows:
+        lines.append("| " + " | ".join(cell.strip() for cell in row) + " |")
+    return "\n".join(lines)
+
+
+def _format_myst_list_table(block: str) -> str:
+    """Convert a MyST ``list-table`` directive into a Markdown table."""
+    option_lines: list[str] = []
+    content_lines: list[str] = []
+    for line in block.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith(":"):
+            option_lines.append(stripped)
+        else:
+            content_lines.append(line)
+
+    header_rows = 1
+    for option in option_lines:
+        if option.startswith(":header-rows:"):
+            _, _, value = option.partition(":header-rows:")
+            try:
+                header_rows = int(value.strip())
+            except ValueError:
+                header_rows = 1
+
+    rows: list[list[str]] = []
+    current_row: list[str] | None = None
+    for line in content_lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("* - "):
+            current_row = [stripped[4:].strip()]
+            rows.append(current_row)
+        elif stripped.startswith("- ") and current_row is not None:
+            current_row.append(stripped[2:].strip())
+        elif current_row is not None:
+            current_row[-1] = f"{current_row[-1]} {stripped}".strip()
+
+    return _format_markdown_table(rows, header_rows=header_rows)
+
+
+def _format_myst_figure(block: str) -> str:
+    """Convert a MyST ``figure`` directive into Markdown image syntax."""
+    first_line, _, rest = block.partition("\n")
+    image_path = first_line.strip()
+    alt = ""
+    for line in rest.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith(":alt:"):
+            alt = stripped[len(":alt:") :].strip()
+            break
+    return f"![{alt}]({image_path})"
+
+
 def clean_myst_directives(text: str) -> str:
     """Convert MyST/Sphinx directives to standard markdown equivalents."""
     text = strip_commented_out_blocks(text)
+
+    # MyST explicit anchors -> HTML anchors, matching Fern MDX source.
+    text = re.sub(r"(?m)^\(([-A-Za-z0-9_:.]+)\)=\s*$", r'<a id="\1"></a>', text)
 
     # Multi-line {include} directives with :start-after: etc.
     text = re.sub(
@@ -484,6 +555,13 @@ def clean_myst_directives(text: str) -> str:
     text = re.sub(
         r"```\{include\}\s*([^\n]+)\n```",
         r"> *Content included from \1 — see the original doc for full text.*",
+        text,
+    )
+
+    # {figure} blocks -> standard image syntax.
+    text = re.sub(
+        r"```\{figure\}\s*([^\n]+(?:\n(?::[^\n]+|[ \t]*))*?)\n```",
+        lambda m: _format_myst_figure(m.group(1)),
         text,
     )
 
@@ -501,6 +579,14 @@ def clean_myst_directives(text: str) -> str:
         text,
     )
 
+    # :::{list-table} ... ::: -> Markdown table.
+    text = re.sub(
+        r":{3,}\{list-table\}[^\n]*\n(.*?)\n:{3,}",
+        lambda m: _format_myst_list_table(m.group(1)),
+        text,
+        flags=re.DOTALL,
+    )
+
     # :::{admonition} with optional :class: etc. — must come before note/tip/warning
     text = re.sub(
         r":{3,}\{admonition\}\s*([^\n]*)\n(.*?)\n:{3,}",
@@ -509,22 +595,36 @@ def clean_myst_directives(text: str) -> str:
         flags=re.DOTALL,
     )
 
-    # :::{note} ... ::: -> > **Note:** ...
+    # :::{note} ... ::: -> **Note:** ...
     text = re.sub(
-        r":{3,}\{note\}\s*\n(.*?)\n:{3,}",
-        lambda m: _format_admonition("Note", m.group(1)),
+        r":{3,}\{note\}[ \t]*([^\n]*)\n(.*?)\n:{3,}",
+        lambda m: _format_admonition(m.group(1).strip() or "Note", m.group(2)),
         text,
         flags=re.DOTALL,
     )
     text = re.sub(
-        r":{3,}\{tip\}\s*\n(.*?)\n:{3,}",
-        lambda m: _format_admonition("Tip", m.group(1)),
+        r":{3,}\{tip\}[ \t]*([^\n]*)\n(.*?)\n:{3,}",
+        lambda m: _format_admonition(m.group(1).strip() or "Tip", m.group(2)),
         text,
         flags=re.DOTALL,
     )
     text = re.sub(
-        r":{3,}\{warning\}\s*\n(.*?)\n:{3,}",
-        lambda m: _format_admonition("Warning", m.group(1)),
+        r":{3,}\{warning\}[ \t]*([^\n]*)\n(.*?)\n:{3,}",
+        lambda m: _format_admonition(m.group(1).strip() or "Warning", m.group(2)),
+        text,
+        flags=re.DOTALL,
+    )
+    text = re.sub(
+        r":{3,}\{caution\}[ \t]*([^\n]*)\n(.*?)\n:{3,}",
+        lambda m: _format_admonition(m.group(1).strip() or "Warning", m.group(2)),
+        text,
+        flags=re.DOTALL,
+    )
+
+    # :::{dropdown} ... ::: -> bold titled details block.
+    text = re.sub(
+        r":{3,}\{dropdown\}[ \t]*([^\n]*)\n(.*?)\n:{3,}",
+        lambda m: _format_admonition(m.group(1).strip() or "Details", m.group(2)),
         text,
         flags=re.DOTALL,
     )
@@ -698,7 +798,7 @@ def rewrite_doc_paths(
             ]
 
         suffix = Path(path_no_frag).suffix
-        if suffix not in {".md", ".mdx", ".html"}:
+        if suffix not in {".md", ".mdx", ".html", ".png", ".jpg", ".jpeg", ".svg"}:
             return []
 
         resolved = (source_dir / path_no_frag).resolve()
@@ -850,7 +950,7 @@ def _split_description_trigger(desc: str) -> tuple[str, str]:
 
 
 _MYST_WARNING_BLOCK_RE = re.compile(
-    r":{3,}\{warning\}(?:[ \t]+([^\n]+))?\n(.*?)\n:{3,}",
+    r":{3,}\{(?:warning|caution)\}(?:[ \t]+([^\n]+))?\n(.*?)\n:{3,}",
     re.DOTALL,
 )
 _FERN_WARNING_BLOCK_RE = re.compile(r"<Warning\b([^>]*)>(.*?)</Warning>", re.DOTALL)
@@ -1299,6 +1399,15 @@ def markdown_spdx_header() -> str:
     )
 
 
+def canonicalize_leading_h1(body: str, title: str) -> str:
+    """Replace a source page's leading H1 with the canonical frontmatter title."""
+    if not title:
+        return body
+    if re.match(r"^#\s+.+(?:\n|$)", body):
+        return re.sub(r"^#\s+.+(?:\n|$)", f"# {title}\n", body, count=1)
+    return f"# {title}\n\n{body}".rstrip()
+
+
 def partition_skill_pages(
     pages: list[DocPage],
 ) -> tuple[list[DocPage], list[DocPage], list[DocPage], list[DocPage]]:
@@ -1535,7 +1644,9 @@ def generate_skill(
     for rp in deferred_procedures + reference_pages + context_pages:
         ref_name = rp.path.stem + ".md"
         body = _clean(rp.body, rp)
-        if doc_platform == "fern-mdx" and rp.title and not body.startswith("# "):
+        if doc_platform == "myst-md" and rp.title:
+            body = canonicalize_leading_h1(body, rp.title)
+        elif doc_platform == "fern-mdx" and rp.title and not body.startswith("# "):
             body = f"# {rp.title}\n\n{body}".rstrip()
         body = normalize_heading_levels(body)
         ref_files[ref_name] = body
