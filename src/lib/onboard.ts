@@ -102,7 +102,6 @@ const {
   dockerContainerInspectFormat,
   dockerExecArgv,
   dockerImageInspect,
-  dockerInfo,
   dockerInfoFormat,
   dockerInspect,
   dockerRemoveVolumesByPrefix,
@@ -241,8 +240,9 @@ const {
 };
 const { sleepSeconds, waitForHttp, waitUntil } = require("./core/wait");
 const platformUtils: typeof import("./platform") = require("./platform");
-const { containerCanReachHostLoopback, inferContainerRuntime, isWsl, shouldPatchCoredns } =
-  platformUtils;
+const { isWsl, shouldPatchCoredns } = platformUtils;
+const { getContainerRuntime, shouldFrontOllamaWithProxy }:
+  typeof import("./onboard/local-inference-topology") = require("./onboard/local-inference-topology");
 const { resolveOpenshell } = require("./adapters/openshell/resolve");
 const credentials: typeof import("./credentials/store") = require("./credentials/store");
 const {
@@ -2487,11 +2487,6 @@ function getResumeConfigConflicts(
   }
 
   return conflicts;
-}
-
-function getContainerRuntime(): ContainerRuntime {
-  const info = dockerInfo({ ignoreError: true });
-  return inferContainerRuntime(info);
 }
 
 function printRemediationActions(
@@ -7000,11 +6995,8 @@ async function setupNim(
         }
         if (!ollamaReady) {
           console.log("  Starting Ollama...");
-          // Keep raw Ollama loopback-only. Containers reach it through the
-          // authenticated proxy on OLLAMA_PROXY_PORT, except under Docker
-          // Desktop on WSL where the daemon's host-network bridge can reach
-          // the WSL host's loopback directly.
-          // Shell required: backgrounding (&), env var prefix, output redirection.
+          // Keep raw Ollama loopback-only; the auth proxy (or Docker Desktop
+          // on WSL via host.docker.internal) fronts container access.
           runShell(`OLLAMA_HOST=127.0.0.1:${OLLAMA_PORT} ollama serve > /dev/null 2>&1 &`, {
             ignoreError: true,
           });
@@ -7014,17 +7006,13 @@ async function setupNim(
             continue selectionLoop;
           }
         }
-        if (containerCanReachHostLoopback(getContainerRuntime())) {
-          // Docker Desktop on WSL publishes the host's 127.0.0.1 into containers
-          // via host.docker.internal — no auth proxy needed.
-          console.log(`  ✓ Using Ollama on localhost:${OLLAMA_PORT}`);
-        } else {
-          if (!startOllamaAuthProxy()) {
-            process.exit(1);
-          }
+        if (shouldFrontOllamaWithProxy()) {
+          if (!startOllamaAuthProxy()) process.exit(1);
           console.log(
             `  ✓ Using Ollama on localhost:${OLLAMA_PORT} (proxy on :${OLLAMA_PROXY_PORT})`,
           );
+        } else {
+          console.log(`  ✓ Using Ollama on localhost:${OLLAMA_PORT}`);
         }
         provider = "ollama-local";
         // Local Ollama needs no user-supplied API key — the auth proxy uses
@@ -7180,17 +7168,13 @@ async function setupNim(
             }
           }
         }
-        if (containerCanReachHostLoopback(getContainerRuntime())) {
-          // Docker Desktop on WSL publishes the host's 127.0.0.1 into containers
-          // via host.docker.internal — no auth proxy needed.
-          console.log(`  ✓ Using Ollama on localhost:${OLLAMA_PORT}`);
-        } else {
-          if (!startOllamaAuthProxy()) {
-            process.exit(1);
-          }
+        if (shouldFrontOllamaWithProxy()) {
+          if (!startOllamaAuthProxy()) process.exit(1);
           console.log(
             `  ✓ Using Ollama on localhost:${OLLAMA_PORT} (proxy on :${OLLAMA_PROXY_PORT})`,
           );
+        } else {
+          console.log(`  ✓ Using Ollama on localhost:${OLLAMA_PORT}`);
         }
         provider = "ollama-local";
         // See above ollama branch — internal proxy token, no user API key.
@@ -7619,7 +7603,7 @@ async function setupInference(
     }
     const baseUrl = getLocalProviderBaseUrl(provider);
     let ollamaCredential = "ollama";
-    if (!isWsl()) {
+    if (shouldFrontOllamaWithProxy()) {
       // Skip if already started during the fallback recovery above.
       if (!proxyReady) ensureOllamaAuthProxy();
       const proxyToken = getOllamaProxyToken();
@@ -9778,6 +9762,13 @@ async function onboard(opts: OnboardOptions = {}): Promise<void> {
       if (resumeProviderSelection) {
         skippedStepMessage("provider_selection", `${provider} / ${model}`);
         hydrateCredentialEnv(credentialEnv);
+        // #3342: provider selection short-circuits on resume, so the
+        // systemd loopback override repair in setupNim is skipped. Run
+        // it here for ollama-local so legacy 0.0.0.0 drop-ins from older
+        // NemoClaw versions get rewritten to loopback on every resume.
+        if (provider === "ollama-local") {
+          ensureOllamaLoopbackSystemdOverride({ isNonInteractive });
+        }
       } else {
         // #2753: do not persist sandboxName to onboard-session.json before
         // the sandbox actually exists in the gateway (Step 6 markStepComplete

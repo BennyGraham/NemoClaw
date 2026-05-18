@@ -12,7 +12,6 @@ const {
   findReachableOllamaHost,
   resetOllamaHostCache,
 }: typeof import("../inference/local") = require("../inference/local");
-const { isWsl }: typeof import("../platform") = require("../platform");
 
 const OLLAMA_SYSTEMD_OVERRIDE_PATH = "/etc/systemd/system/ollama.service.d/override.conf";
 const NON_INTERACTIVE_SUDO_MODE_ENV = "NEMOCLAW_NON_INTERACTIVE_SUDO_MODE";
