@@ -26,6 +26,7 @@ import {
   resolveGlobalOclifDispatch,
   resolveLegacySandboxDispatch,
   type DispatchResult,
+  type HelpDispatch,
 } from "./oclif-dispatch";
 
 // ── Global commands (derived from command registry) ──────────────
@@ -160,20 +161,24 @@ async function recoverRequestedSandboxIfNeeded(
   process.exit(1);
 }
 
+function renderDispatchHelp(result: HelpDispatch): void {
+  if (result.message) console.error(`  ${result.message}`);
+  renderPublicOclifHelp(result.commandId, result.publicUsage, {
+    error: typeof result.exitCode === "number" && result.exitCode !== 0,
+  });
+  if (typeof result.exitCode === "number") process.exit(result.exitCode);
+}
+
 async function runDispatchResult(
   result: DispatchResult,
-  opts: { sandboxName?: string; actionArgs?: string[] } = {},
+  opts: { sandboxName?: string } = {},
 ): Promise<void> {
   switch (result.kind) {
     case "oclif":
       await runOclif(result.commandId, result.args);
       return;
     case "help":
-      if (result.message) console.error(`  ${result.message}`);
-      renderPublicOclifHelp(result.commandId, result.publicUsage, {
-        error: typeof result.exitCode === "number" && result.exitCode !== 0,
-      });
-      if (typeof result.exitCode === "number") process.exit(result.exitCode);
+      renderDispatchHelp(result);
       return;
     case "usageError":
       printDispatchUsageError(result, opts.sandboxName);
@@ -241,7 +246,6 @@ export async function dispatchCli(argv: string[] = process.argv.slice(2)): Promi
       resolveLegacySandboxDispatch(cmd, requestedSandboxAction, requestedSandboxActionArgs),
       {
         sandboxName: cmd,
-        actionArgs: requestedSandboxActionArgs,
       },
     );
     return;
@@ -270,7 +274,6 @@ export async function dispatchCli(argv: string[] = process.argv.slice(2)): Promi
     }
     await runDispatchResult(resolveLegacySandboxDispatch(cmd, action, actionArgs), {
       sandboxName: cmd,
-      actionArgs,
     });
     return;
   }
