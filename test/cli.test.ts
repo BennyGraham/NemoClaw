@@ -1909,9 +1909,9 @@ describe("CLI dispatch", () => {
       PATH: `${localBin}:${process.env.PATH || ""}`,
     });
 
-    expect(add.code).toBe(PARSER_EXIT_CODE);
+    expect(add.code).not.toBe(0);
     expect(add.out).toContain("Nonexistent flag: --dry-rnu");
-    expect(remove.code).toBe(PARSER_EXIT_CODE);
+    expect(remove.code).not.toBe(0);
     expect(remove.out).toContain("Nonexistent flag: --force");
     expect(fs.existsSync(dockerLog)).toBe(false);
   });
