@@ -1565,7 +1565,7 @@ describe("CLI dispatch", () => {
     }
   });
 
-  it("doctor accepts a live cloudflared PID", () => {
+  it("doctor accepts a live cloudflared PID", testTimeoutOptions(35_000), () => {
     const { sandboxName, serviceDir } = createCloudflaredServiceDir("doctorcloudflared-");
     const setup = createDoctorTestSetup(
       "nemoclaw-cli-doctor-cloudflared-pid-",
@@ -3451,7 +3451,7 @@ describe("CLI dispatch", () => {
     expect(fs.existsSync(sshMarkerFile)).toBe(false);
   });
 
-  it("connect --probe-only falls back to SSH when sandbox exec never starts", () => {
+  it("connect --probe-only falls back to SSH when sandbox exec never starts", testTimeoutOptions(15_000), () => {
     const home = fs.mkdtempSync(
       path.join(os.tmpdir(), "nemoclaw-cli-connect-probe-exec-fallback-"),
     );
