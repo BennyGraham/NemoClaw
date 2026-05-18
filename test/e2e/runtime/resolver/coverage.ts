@@ -145,14 +145,17 @@ export function renderCoverageReport(
   lines.push(sep);
   for (const id of scenarioIds) {
     const sc = scenarios.setup_scenarios[id];
-    const suiteCell = sc.suites.length === 0 ? "_(none)_" : sc.suites.join(", ");
+    if (!sc) continue;
+    const suites = sc.suites ?? [];
+    const dimensions = sc.dimensions;
+    const suiteCell = suites.length === 0 ? "_(none)_" : suites.join(", ");
     const row = [
       id,
-      sc.dimensions.platform,
-      sc.dimensions.install,
-      sc.dimensions.runtime,
-      sc.dimensions.onboarding,
-      sc.expected_state,
+      dimensions?.platform ?? "",
+      dimensions?.install ?? "",
+      dimensions?.runtime ?? "",
+      dimensions?.onboarding ?? "",
+      sc.expected_state ?? "",
       suiteCell,
     ];
     if (hasStatus) {
@@ -164,14 +167,20 @@ export function renderCoverageReport(
   lines.push(...renderLegacyParitySummary(meta));
 
   // Gaps section.
-  const scenariosWithoutSuites = scenarioIds.filter(
-    (id) => scenarios.setup_scenarios[id].suites.length === 0,
-  );
-  const skippedScenarios = scenarioIds
-    .map((id) => ({ id, skips: scenarios.setup_scenarios[id].skipped_capabilities ?? [] }))
+  const scenarioEntries = scenarioIds.flatMap((id) => {
+    const scenario = scenarios.setup_scenarios[id];
+    return scenario ? [{ id, scenario }] : [];
+  });
+  const scenariosWithoutSuites = scenarioEntries
+    .filter(({ scenario }) => (scenario.suites ?? []).length === 0)
+    .map(({ id }) => id);
+  const skippedScenarios = scenarioEntries
+    .map(({ id, scenario }) => ({ id, skips: scenario.skipped_capabilities ?? [] }))
     .filter(({ skips }) => skips.length > 0);
   const referencedStates = new Set<string>(
-    scenarioIds.map((id) => scenarios.setup_scenarios[id].expected_state),
+    scenarioEntries
+      .map(({ scenario }) => scenario.expected_state)
+      .filter((state): state is string => Boolean(state)),
   );
   const unusedStates = Object.keys(expectedStates.expected_states)
     .filter((s) => !referencedStates.has(s))
