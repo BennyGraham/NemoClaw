@@ -465,11 +465,8 @@ def _format_admonition(title: str, body: str) -> str:
     while lines and not lines[-1].strip():
         lines.pop()
     if not lines:
-        return f"> **{clean_title}**"
-    result = f"> **{clean_title}:** {lines[0].strip()}"
-    for line in lines[1:]:
-        result += f"\n> {line}" if line.strip() else "\n>"
-    return result
+        return f"**{clean_title}**"
+    return f"**{clean_title}:**\n\n" + "\n".join(lines).strip()
 
 
 def clean_myst_directives(text: str) -> str:
@@ -572,7 +569,7 @@ def clean_fern_mdx(text: str) -> str:
         ("Accordion", "Details"),
     ):
         text = re.sub(
-            rf"<{component}\b([^>]*)>\s*(.*?)\s*</{component}>",
+            rf"<{component}\b((?:\"[^\"]*\"|'[^']*'|[^'\">])*)>\s*(.*?)\s*</{component}>",
             lambda m, default=default_title: _format_admonition(
                 _mdx_title_attr(m.group(1), default), m.group(2)
             ),

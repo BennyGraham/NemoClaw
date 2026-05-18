@@ -48,8 +48,10 @@ Use this command for new installs and for recreating a sandbox after changes to 
 $ nemoclaw onboard [--non-interactive] [--resume | --fresh] [--recreate-sandbox] [--gpu | --no-gpu] [--from <Dockerfile>] [--name <sandbox>] [--sandbox-gpu | --no-sandbox-gpu] [--sandbox-gpu-device <device>] [--agent <name>] [--control-ui-port <N>] [--yes | -y] [--yes-i-accept-third-party-software]
 ```
 
-> **Warning:** For NemoClaw-managed environments, use `nemoclaw onboard` when you need to create or recreate the OpenShell gateway or sandbox.
-> Avoid `openshell self-update`, `npm update -g openshell`, `openshell gateway start --recreate`, or `openshell sandbox create` directly unless you intend to manage OpenShell separately and then rerun `nemoclaw onboard`.
+**Warning:**
+
+For NemoClaw-managed environments, use `nemoclaw onboard` when you need to create or recreate the OpenShell gateway or sandbox.
+Avoid `openshell self-update`, `npm update -g openshell`, `openshell gateway start --recreate`, or `openshell sandbox create` directly unless you intend to manage OpenShell separately and then rerun `nemoclaw onboard`.
 
 The installer detects existing sandbox sessions before onboarding and prints a warning if any are found.
 To make the installer abort instead of continuing, set `NEMOCLAW_SINGLE_SESSION=1`:
@@ -272,8 +274,10 @@ $ nemoclaw list --json
 
 ### `nemoclaw deploy`
 
-> **Warning:** The `nemoclaw deploy` command is deprecated.
-> Prefer provisioning the remote host separately, then running the standard NemoClaw installer and `nemoclaw onboard` on that host.
+**Warning:**
+
+The `nemoclaw deploy` command is deprecated.
+Prefer provisioning the remote host separately, then running the standard NemoClaw installer and `nemoclaw onboard` on that host.
 
 Deploy NemoClaw to a remote GPU instance through [Brev](https://brev.nvidia.com).
 This command remains as a compatibility wrapper for the older Brev-specific bootstrap flow.
@@ -418,8 +422,10 @@ The token is written to stdout with no surrounding text.
 A one-line security warning is written to stderr; pass `--quiet` (or `-q`) to suppress it.
 The command exits non-zero with a diagnostic on stderr when the sandbox is not registered or when the token cannot be retrieved (for example, if the sandbox is not running).
 
-> **Warning:** Treat the gateway token like a password.
-> Do not log it, share it, or commit it to version control.
+**Warning:**
+
+Treat the gateway token like a password.
+Do not log it, share it, or commit it to version control.
 
 ### `nemoclaw <name> destroy`
 
@@ -427,10 +433,12 @@ Stop the NIM container, remove the host-side Docker image built during onboard, 
 This removes the sandbox from the registry.
 For Ollama-backed sandboxes, `destroy` also asks Ollama to unload currently loaded models and clears stale auth proxy state on a best-effort basis.
 
-> **Warning:** This command permanently deletes the sandbox **and its persistent volume**.
-> All workspace files (use the `nemoclaw-user-manage-sandboxes` skill) (SOUL.md, USER.md, IDENTITY.md, AGENTS.md, MEMORY.md, and daily memory notes) are lost.
-> Back up your workspace first with `nemoclaw <name> snapshot create` or see Backup and Restore (use the `nemoclaw-user-manage-sandboxes` skill).
-> If you want to upgrade the sandbox while preserving state, use `nemoclaw <name> rebuild` instead.
+**Warning:**
+
+This command permanently deletes the sandbox **and its persistent volume**.
+All workspace files (use the `nemoclaw-user-manage-sandboxes` skill) (SOUL.md, USER.md, IDENTITY.md, AGENTS.md, MEMORY.md, and daily memory notes) are lost.
+Back up your workspace first with `nemoclaw <name> snapshot create` or see Backup and Restore (use the `nemoclaw-user-manage-sandboxes` skill).
+If you want to upgrade the sandbox while preserving state, use `nemoclaw <name> rebuild` instead.
 
 If another terminal has an active SSH session to the sandbox, `destroy` prints an active-session warning and requires a second confirmation before it proceeds.
 Pass `--yes`, `-y`, or `--force` to skip the prompt in scripted workflows.
@@ -810,8 +818,6 @@ Prerequisites:
 - `sshfs` must be installed on the host (`sudo apt-get install sshfs` on Linux, `brew install macfuse && brew install sshfs` on macOS).
 - The sandbox must be running.
 - Sandboxes created before the `openssh-sftp-server` base image update must be rebuilt with `nemoclaw <name> rebuild`.
-- The local mount path must be on a writable filesystem; FUSE creates the mount on the host side.
-  If the default `~/.nemoclaw/mounts/<name>` lives on a read-only filesystem, pass an explicit writable path as the second positional argument.
 
 ```console
 # mount a specific path to a custom local directory
@@ -877,13 +883,17 @@ $ nemoclaw tunnel stop
 
 ### `nemoclaw start`
 
-> **Warning:** Deprecated. Use `nemoclaw tunnel start` instead.
+**Warning:**
+
+Deprecated. Use `nemoclaw tunnel start` instead.
 
 This command remains as a compatibility alias to `nemoclaw tunnel start`.
 
 ### `nemoclaw stop`
 
-> **Warning:** Deprecated. Use `nemoclaw tunnel stop` instead.
+**Warning:**
+
+Deprecated. Use `nemoclaw tunnel stop` instead.
 
 This command remains as a compatibility alias to `nemoclaw tunnel stop`.
 
@@ -933,8 +943,10 @@ Use `--no-verify` only when OpenShell cannot verify the provider at switch time 
 
 ### `nemoclaw setup`
 
-> **Warning:** The `nemoclaw setup` command is deprecated.
-> Use `nemoclaw onboard` instead.
+**Warning:**
+
+The `nemoclaw setup` command is deprecated.
+Use `nemoclaw onboard` instead.
 
 This command remains as a compatibility alias to `nemoclaw onboard` and accepts the same flags: `--non-interactive`, `--resume`, `--fresh`, `--recreate-sandbox`, `--gpu` / `--no-gpu`, `--from`, `--name`, `--sandbox-gpu` / `--no-sandbox-gpu`, `--sandbox-gpu-device`, `--agent`, `--control-ui-port`, `--yes` / `-y`, `--yes-i-accept-third-party-software`.
 
@@ -944,8 +956,10 @@ $ nemoclaw setup
 
 ### `nemoclaw setup-spark`
 
-> **Warning:** The `nemoclaw setup-spark` command is deprecated.
-> Use the standard installer and run `nemoclaw onboard` instead, because current OpenShell releases handle the older DGX Spark cgroup behavior.
+**Warning:**
+
+The `nemoclaw setup-spark` command is deprecated.
+Use the standard installer and run `nemoclaw onboard` instead, because current OpenShell releases handle the older DGX Spark cgroup behavior.
 
 This command remains as a compatibility alias to `nemoclaw onboard` and accepts the same flags: `--non-interactive`, `--resume`, `--fresh`, `--recreate-sandbox`, `--gpu` / `--no-gpu`, `--from`, `--name`, `--sandbox-gpu` / `--no-sandbox-gpu`, `--sandbox-gpu-device`, `--agent`, `--control-ui-port`, `--yes` / `-y`, `--yes-i-accept-third-party-software`.
 
