@@ -119,6 +119,23 @@ sandbox_exec() {
   echo "$result"
 }
 
+quote_for_remote_sh() {
+  local value="${1:-}"
+  printf "'%s'" "$(printf '%s' "$value" | sed "s/'/'\\\\''/g")"
+}
+
+sandbox_exec_sh_script() {
+  local script="$1"
+  shift
+  local encoded remote_cmd arg
+  encoded="$(printf '%s' "$script" | base64 | tr -d '\n')"
+  remote_cmd="tmp=\$(mktemp); trap 'rm -f \"\$tmp\"' EXIT; printf %s $(quote_for_remote_sh "$encoded") | base64 -d > \"\$tmp\"; sh \"\$tmp\""
+  for arg in "$@"; do
+    remote_cmd+=" $(quote_for_remote_sh "$arg")"
+  done
+  openshell sandbox exec --name "$SANDBOX_NAME" -- sh -lc "$remote_cmd"
+}
+
 # shellcheck source=test/e2e/lib/sandbox-teardown.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib/sandbox-teardown.sh"
 register_sandbox_for_teardown "$SANDBOX_NAME"
@@ -364,17 +381,24 @@ else
   fail "Failed to apply fake Slack websocket policy: $(tail -20 /tmp/nemoclaw-fake-slack-pairing-ws-policy.log 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
 fi
 
-gateway_issue_output=$(
-  openshell sandbox exec --name "$SANDBOX_NAME" -- sh -lc '
+gateway_issue_script=$(
+  cat <<'SCRIPT'
     set -a
     [ -f /tmp/nemoclaw-proxy-env.sh ] && . /tmp/nemoclaw-proxy-env.sh
     set +a
+    fake_slack_api_port="$1"
+    slack_pairing_user="$2"
+    : "${OPENCLAW_HOME:?OPENCLAW_HOME missing from runtime shell env}"
+    : "${OPENCLAW_STATE_DIR:?OPENCLAW_STATE_DIR missing from runtime shell env}"
+    : "${OPENCLAW_CONFIG_PATH:?OPENCLAW_CONFIG_PATH missing from runtime shell env}"
+    : "${OPENCLAW_OAUTH_DIR:?OPENCLAW_OAUTH_DIR missing from runtime shell env}"
+    printf 'GATEWAY_OPENCLAW_ENV OPENCLAW_STATE_DIR=%s OPENCLAW_OAUTH_DIR=%s\n' "$OPENCLAW_STATE_DIR" "$OPENCLAW_OAUTH_DIR"
     exec gosu gateway env \
       HOME=/sandbox \
-      OPENCLAW_HOME=/sandbox \
-      OPENCLAW_STATE_DIR=/sandbox/.openclaw \
-      OPENCLAW_CONFIG_PATH=/sandbox/.openclaw/openclaw.json \
-      OPENCLAW_OAUTH_DIR=/sandbox/.openclaw/credentials \
+      OPENCLAW_HOME="$OPENCLAW_HOME" \
+      OPENCLAW_STATE_DIR="$OPENCLAW_STATE_DIR" \
+      OPENCLAW_CONFIG_PATH="$OPENCLAW_CONFIG_PATH" \
+      OPENCLAW_OAUTH_DIR="$OPENCLAW_OAUTH_DIR" \
       HTTP_PROXY="${HTTP_PROXY:-}" \
       HTTPS_PROXY="${HTTPS_PROXY:-}" \
       http_proxy="${http_proxy:-}" \
@@ -382,10 +406,9 @@ gateway_issue_output=$(
       NO_PROXY="${NO_PROXY:-}" \
       no_proxy="${no_proxy:-}" \
       FAKE_SLACK_API_HOST=host.openshell.internal \
-      FAKE_SLACK_API_PORT='"$FAKE_SLACK_API_PORT"' \
-      SLACK_PAIRING_USER='"$SLACK_PAIRING_USER"' \
-      node --input-type=module
-  ' <<'NODE'
+      FAKE_SLACK_API_PORT="$fake_slack_api_port" \
+      SLACK_PAIRING_USER="$slack_pairing_user" \
+      node --input-type=module <<'NODE'
 import crypto from "node:crypto";
 import http from "node:http";
 import net from "node:net";
@@ -614,7 +637,9 @@ console.log(`PAIRING_E2E_RESULT ${JSON.stringify({
   channelId: event.channel,
 })}`);
 NODE
+SCRIPT
 )
+gateway_issue_output=$(sandbox_exec_sh_script "$gateway_issue_script" "$FAKE_SLACK_API_PORT" "$SLACK_PAIRING_USER" 2>&1)
 gateway_issue_status=$?
 info "Gateway pairing issue output: ${gateway_issue_output:0:600}"
 if [ $gateway_issue_status -eq 0 ] && echo "$gateway_issue_output" | grep -q '^PAIRING_E2E_RESULT '; then
