@@ -13,8 +13,13 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function extractShellFunctionFromSource(src: string, name: string): string {
-  const match = src.match(new RegExp(`${name}\\(\\) \\{([\\s\\S]*?)^\\}`, "m"));
+  const escapedName = escapeRegExp(name);
+  const match = src.match(new RegExp(`${escapedName}\\(\\) \\{([\\s\\S]*?)^\\}`, "m"));
   if (!match) {
     throw new Error(`Expected ${name} in agents/hermes/start.sh`);
   }
