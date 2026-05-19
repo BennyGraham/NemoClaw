@@ -35,8 +35,8 @@
 #                            Switches a running OpenClaw sandbox with `nemoclaw inference set`
 #                            and verifies route, openclaw.json, hashes, and live requests.
 #   openclaw-tui-chat-correlation-e2e
-#                            Verifies the pinned OpenClaw version and rapid TUI/WebChat
-#                            correlation proof for #3145.
+#                            Verifies OpenClaw #3145 visible TUI messages are
+#                            neither duplicated nor reordered after the version bump.
 #   credential-migration-e2e Validates legacy ~/.nemoclaw/credentials.json migration to the
 #                            OpenShell gateway, secure zero-fill on unlink, allowlist filter
 #                            on non-credential env keys, and symlink-safe deletion.
@@ -152,9 +152,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: install-log
-          path: |
-            /tmp/nemoclaw-e2e-install.log
-            /tmp/nemoclaw-openclaw-diagnostics-*
+          path: /tmp/nemoclaw-e2e-install.log
           if-no-files-found: ignore
 
   # ── Cloud Onboard E2E ──────────────────────────────────────────
@@ -375,9 +373,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: install-log-messaging-compatible-endpoint
-          path: |
-            /tmp/nemoclaw-e2e-messaging-compatible-endpoint-install.log
-            /tmp/nemoclaw-openclaw-diagnostics-*
+          path: /tmp/nemoclaw-e2e-messaging-compatible-endpoint-install.log
           if-no-files-found: ignore
 
   # ── Channels stop/start/remove lifecycle E2E (#3462, #3671) ─────────
@@ -1042,9 +1038,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sandbox-operations-test-log
-          path: |
-            test-sandbox-operations-*.log
-            /tmp/nemoclaw-openclaw-diagnostics-*
+          path: test-sandbox-operations-*.log
           if-no-files-found: ignore
 
   # ── Inference routing (credential isolation + error classification) ──
@@ -1114,15 +1108,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openclaw-inference-switch-install-log
-          path: |
-            /tmp/nemoclaw-e2e-openclaw-inference-switch-install.log
-            /tmp/nemoclaw-openclaw-diagnostics-*
+          path: /tmp/nemoclaw-e2e-openclaw-inference-switch-install.log
           if-no-files-found: ignore
 
-  # ── OpenClaw TUI chat correlation E2E ───────────────────────
+  # ── OpenClaw TUI duplicate-message regression E2E (#3145) ───
   # Verifies the pinned OpenClaw version that contains the upstream #3145 fix,
   # then drives the user path: `nemoclaw <sandbox> connect`, `openclaw tui`,
-  # rapid sequential messages, and rendered TUI history assertions.
+  # rapid sequential messages, and rendered visible-screen assertions.
   openclaw-tui-chat-correlation-e2e:
     if: >-
       github.repository == 'NVIDIA/NemoClaw' &&
@@ -1137,7 +1129,7 @@ jobs:
         with:
           ref: ${{ inputs.target_ref || github.ref }}
 
-      - name: Run OpenClaw TUI chat correlation E2E test
+      - name: Run OpenClaw TUI duplicate-message E2E test
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           NEMOCLAW_NON_INTERACTIVE: "1"
@@ -1158,7 +1150,6 @@ jobs:
             /tmp/nemoclaw-issue3145-tui-raw.log
             /tmp/nemoclaw-issue3145-tui-analysis.json
             /tmp/nemoclaw-issue3145-tui-interesting.log
-            /tmp/nemoclaw-openclaw-diagnostics-*
           if-no-files-found: ignore
 
   # ── Network policy E2E ───────────────────────────────────────
@@ -1954,9 +1945,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: launchable-smoke-test-log
-          path: |
-            /tmp/nemoclaw-launchable-test.log
-            /tmp/nemoclaw-openclaw-diagnostics-*
+          path: /tmp/nemoclaw-launchable-test.log
           if-no-files-found: ignore
 
   # ── GPU E2E (Ollama local inference) ──────────────────────────

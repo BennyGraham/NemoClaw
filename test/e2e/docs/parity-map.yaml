@@ -7121,7 +7121,7 @@ scripts:
     - &openclaw_tui_correlation_deferred
       legacy: Pre-cleanup complete
       status: deferred
-      reason: "live #3145 regression guard retained until scenario framework has a TUI/WebChat correlation suite"
+      reason: "live #3145 regression guard retained until scenario framework has a visible TUI duplicate-message suite"
       owner: e2e-maintainers
       runner_requirement: Docker-capable sandbox runner with NemoClaw/OpenShell CLIs and NVIDIA_API_KEY
     - <<: *openclaw_tui_correlation_deferred
@@ -7155,19 +7155,13 @@ scripts:
     - <<: *openclaw_tui_correlation_deferred
       legacy: Sandbox uses OpenClaw ${expected_openclaw_version}
     - <<: *openclaw_tui_correlation_deferred
+      legacy: 'OpenClaw expected_version must stay pinned to 2026.4.25 for #3145, got: ${expected_openclaw_version:-unset}'
+    - <<: *openclaw_tui_correlation_deferred
       legacy: 'Sandbox OpenClaw version mismatch; expected ${expected_openclaw_version:-unknown}, got: ${plain_openclaw_version:0:240}'
     - <<: *openclaw_tui_correlation_deferred
-      legacy: nemoclaw inference set completed
+      legacy: OpenClaw TUI rendered five messages once and in order
     - <<: *openclaw_tui_correlation_deferred
-      legacy: 'nemoclaw inference set failed (exit ${switch_rc}): ${switch_output:0:500}'
-    - <<: *openclaw_tui_correlation_deferred
-      legacy: OpenShell route points at ${SWITCH_PROVIDER} / ${SWITCH_MODEL}
-    - <<: *openclaw_tui_correlation_deferred
-      legacy: 'OpenShell route did not switch to ${SWITCH_PROVIDER} / ${SWITCH_MODEL}: ${plain_route_output:0:400}'
-    - <<: *openclaw_tui_correlation_deferred
-      legacy: OpenClaw live chat correlation proof passed
-    - <<: *openclaw_tui_correlation_deferred
-      legacy: OpenClaw live chat correlation proof failed
+      legacy: OpenClaw TUI reported duplicate, missing, or out-of-order visible messages
     - <<: *openclaw_tui_correlation_deferred
       legacy: Sandbox ${SANDBOX_NAME} still in registry after destroy
     - <<: *openclaw_tui_correlation_deferred

@@ -8,10 +8,8 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const LIVE_REPRO_ENV = "NEMOCLAW_TUI_CHAT_CORRELATION_LIVE";
-const LIVE_REPRO_ENV_ALIASES = ["NEMOCLAW_ISSUE_3145_LIVE", "NEMOCLAW_ISSUE_2603_LIVE"];
-const LIVE_SANDBOX_ENV = "NEMOCLAW_TUI_CHAT_CORRELATION_SANDBOX";
-const LIVE_SANDBOX_ENV_ALIASES = ["NEMOCLAW_ISSUE_3145_SANDBOX", "NEMOCLAW_ISSUE_2603_SANDBOX"];
+const LIVE_REPRO_ENV = "NEMOCLAW_ISSUE_2603_LIVE";
+const LIVE_SANDBOX_ENV = "NEMOCLAW_ISSUE_2603_SANDBOX";
 const LIVE_SCRIPT_NAME = "openclaw-issue2603-chat-correlation.cjs";
 
 const ISSUE_2603_FIX_EXPECTATIONS = [
@@ -183,18 +181,6 @@ function buildFailureSummary(analysis: Issue2603Analysis): string {
   );
 }
 
-function isLiveReproEnabled(): boolean {
-  return [LIVE_REPRO_ENV, ...LIVE_REPRO_ENV_ALIASES].some((name) => process.env[name] === "1");
-}
-
-function resolveLiveSandboxName(): string {
-  for (const name of [LIVE_SANDBOX_ENV, ...LIVE_SANDBOX_ENV_ALIASES]) {
-    const value = process.env[name];
-    if (value) return value;
-  }
-  return "hclaw";
-}
-
 const capturedIssue2603Trace: Issue2603Trace = {
   sentRuns: [
     {
@@ -335,45 +321,12 @@ const ws = new WebSocket("ws://127.0.0.1:18789/ws", { headers: { Origin: "http:/
 const events = [];
 const pending = new Map();
 let requestId = 0;
-const STARTUP_CHAT_HISTORY_RETRY_TIMEOUT_MS = 60_000;
-const STARTUP_CHAT_HISTORY_DEFAULT_RETRY_MS = 500;
-const STARTUP_CHAT_HISTORY_MAX_RETRY_MS = 5_000;
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function toGatewayError(frame) {
-  const raw = frame.error;
-  const message = raw && typeof raw === "object" && typeof raw.message === "string" ? raw.message : JSON.stringify(raw ?? frame);
-  const error = new Error(message);
-  if (raw && typeof raw === "object") {
-    if (typeof raw.code === "string") error.code = raw.code;
-    if (typeof raw.retryable === "boolean") error.retryable = raw.retryable;
-    if (typeof raw.retryAfterMs === "number") error.retryAfterMs = raw.retryAfterMs;
-    if (raw.details && typeof raw.details === "object") error.details = raw.details;
-  }
-  return error;
-}
-
-function isRetryableStartupUnavailable(error, method) {
-  if (!error || typeof error !== "object") return false;
-  if (error.code !== "UNAVAILABLE" || error.retryable !== true) return false;
-  const details = error.details;
-  if (!details || typeof details !== "object") return true;
-  const detailMethod = details.method;
-  return typeof detailMethod !== "string" || detailMethod === method;
-}
-
-function resolveStartupRetryDelayMs(error) {
-  const retryAfterMs = typeof error?.retryAfterMs === "number" ? error.retryAfterMs : STARTUP_CHAT_HISTORY_DEFAULT_RETRY_MS;
-  return Math.min(Math.max(retryAfterMs, 100), STARTUP_CHAT_HISTORY_MAX_RETRY_MS);
-}
 
 function request(method, params = {}, timeoutMs = 30_000) {
   const id = ` +
     "`r${++requestId}`" +
     String.raw`;
+  ws.send(JSON.stringify({ type: "req", id, method, params }));
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       pending.delete(id);
@@ -382,37 +335,7 @@ function request(method, params = {}, timeoutMs = 30_000) {
     String.raw`));
     }, timeoutMs);
     pending.set(id, { resolve, reject, timeout });
-    try {
-      ws.send(JSON.stringify({ type: "req", id, method, params }));
-    } catch (error) {
-      pending.delete(id);
-      clearTimeout(timeout);
-      reject(error);
-    }
   });
-}
-
-async function loadHistoryWithStartupRetry(sessionKey, limit, requestTimeoutMs = 30_000) {
-  const startedAt = Date.now();
-  for (;;) {
-    try {
-      return await request("chat.history", { sessionKey, limit }, requestTimeoutMs);
-    } catch (error) {
-      if (Date.now() - startedAt < STARTUP_CHAT_HISTORY_RETRY_TIMEOUT_MS && isRetryableStartupUnavailable(error, "chat.history")) {
-        await sleep(resolveStartupRetryDelayMs(error));
-        continue;
-      }
-      throw error;
-    }
-  }
-}
-
-function rejectPending(error) {
-  for (const [id, entry] of pending.entries()) {
-    pending.delete(id);
-    clearTimeout(entry.timeout);
-    entry.reject(error);
-  }
 }
 
 function textFromMessage(message) {
@@ -434,7 +357,7 @@ ws.on("message", (data) => {
     const entry = pending.get(frame.id);
     pending.delete(frame.id);
     clearTimeout(entry.timeout);
-    if (frame.ok === false || frame.error) entry.reject(toGatewayError(frame));
+    if (frame.ok === false || frame.error) entry.reject(new Error(JSON.stringify(frame.error ?? frame)));
     else entry.resolve(frame.payload ?? frame.result ?? frame);
     return;
   }
@@ -447,13 +370,6 @@ ws.on("error", (error) => {
   console.error(` +
     "`ISSUE2603_ERROR ${String(error)}`" +
     String.raw`);
-  rejectPending(error);
-});
-
-ws.on("close", (code, reason) => {
-  rejectPending(new Error(` +
-    "`gateway closed (${code}): ${String(reason)}`" +
-    String.raw`));
 });
 
 ws.on("open", async () => {
@@ -474,6 +390,8 @@ ws.on("open", async () => {
       auth: { token },
     });
 
+    await request("chat.history", { sessionKey, limit: 20 });
+
     const sentRuns = [];
     const messages = [
       ["A2603", "A2603-REPLY", "A2603: First task. Wait 8 seconds, then reply exactly A2603-REPLY and nothing else."],
@@ -485,28 +403,28 @@ ws.on("open", async () => {
       const idempotencyKey = randomUUID();
       const response = await request("chat.send", { sessionKey, message, deliver: false, timeoutMs: 90_000, idempotencyKey });
       sentRuns.push({ promptToken, replyToken, message, runId: response.runId ?? idempotencyKey });
-      await sleep(1_000);
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
     }
 
     const submittedRunIds = new Set(sentRuns.map((entry) => entry.runId));
     const hasEmptyFinalForSubmittedRun = () => events.some((event) => event.event === "chat" && event.payload?.state === "final" && submittedRunIds.has(event.payload?.runId) && !textFromMessage(event.payload?.message).trim());
 
     if (hasEmptyFinalForSubmittedRun()) {
-      await sleep(2_000);
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
     } else {
       const deadline = Date.now() + 120_000;
       while (Date.now() < deadline && !sawAllReplies(messages.map((entry) => entry[1]))) {
-        await sleep(2_000);
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
       }
     }
 
-    const history = await loadHistoryWithStartupRetry(sessionKey, 50, 60_000);
+    const history = await request("chat.history", { sessionKey, limit: 50 });
     console.log(` +
     "`ISSUE2603_RESULT ${JSON.stringify({ sessionKey, sentRuns, events, historyMessages: history.messages ?? [] })}`" +
     String.raw`);
   } catch (error) {
     console.log(` +
-    "`ISSUE2603_RESULT ${JSON.stringify({ error: String(error), sessionKey, events })}`" +
+    "`ISSUE2603_RESULT ${JSON.stringify({ error: String(error), events })}`" +
     String.raw`);
   } finally {
     ws.close();
@@ -526,7 +444,7 @@ function runLiveIssue2603Repro(sandboxName: string): LiveIssue2603Trace {
 
   execOpenShell(["sandbox", "upload", sandboxName, localScript, remoteScript], { timeout: 30_000 });
 
-  const sessionKey = `agent:main:issue3145-${Date.now()}`;
+  const sessionKey = `issue2603-${Date.now()}`;
   const tokenExpression =
     "JSON.parse(require('fs').readFileSync('/sandbox/.openclaw/openclaw.json','utf8')).gateway?.auth?.token||''";
   const output = execInSandbox(
@@ -539,7 +457,7 @@ function runLiveIssue2603Repro(sandboxName: string): LiveIssue2603Trace {
   return JSON.parse(resultLine.slice("ISSUE2603_RESULT ".length)) as LiveIssue2603Trace;
 }
 
-describe("OpenClaw TUI chat correlation regression (#2603/#3145)", () => {
+describe("OpenClaw TUI chat correlation regression (#2603)", () => {
   it("classifies the observed #2603 gateway trace as broken", () => {
     const analysis = analyzeIssue2603Trace(capturedIssue2603Trace);
 
@@ -578,16 +496,12 @@ describe("OpenClaw TUI chat correlation regression (#2603/#3145)", () => {
     ]);
   });
 
-  it.runIf(isLiveReproEnabled())(
+  it.runIf(process.env[LIVE_REPRO_ENV] === "1")(
     "keeps rapid live TUI/webchat sends correlated on a real OpenClaw sandbox",
     () => {
-      const sandboxName = resolveLiveSandboxName();
+      const sandboxName = process.env[LIVE_SANDBOX_ENV] || "hclaw";
       const repro = runLiveIssue2603Repro(sandboxName);
-      if (repro.error) {
-        throw new Error(
-          `live repro failed before assertions: ${repro.error}; events=${JSON.stringify(repro.events ?? []).slice(0, 2000)}`,
-        );
-      }
+      if (repro.error) throw new Error(`live repro failed before assertions: ${repro.error}`);
 
       const analysis = analyzeIssue2603Trace(repro);
       const failureSummary = buildFailureSummary(analysis);

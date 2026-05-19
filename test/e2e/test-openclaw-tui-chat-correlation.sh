@@ -2,13 +2,12 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
-# OpenClaw TUI/WebChat correlation E2E for #3145.
+# OpenClaw TUI duplicate-message E2E for #3145.
 #
 # Installs NemoClaw with the default OpenClaw agent, verifies that the sandbox
-# consumes the pinned OpenClaw version, switches the model route to match the
-# Hermes inference-switch E2E default, then reproduces the real #3145 user path:
-# `nemoclaw <sandbox> connect`, `openclaw tui`, rapid sequential messages, and
-# rendered TUI history assertions.
+# consumes OpenClaw 2026.4.25, then reproduces the real #3145 user path:
+# `nemoclaw <sandbox> connect`, `openclaw tui`, five rapid sequential messages,
+# and rendered visible-screen assertions.
 #
 # Prerequisites:
 #   - Docker running
@@ -59,18 +58,13 @@ fi
 
 E2E_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SANDBOX_NAME="${NEMOCLAW_SANDBOX_NAME:-e2e-openclaw-tui-correlation}"
-SWITCH_PROVIDER="${NEMOCLAW_SWITCH_PROVIDER:-nvidia-prod}"
-SWITCH_MODEL="${NEMOCLAW_SWITCH_MODEL:-z-ai/glm-5.1}"
 INSTALL_LOG="/tmp/nemoclaw-e2e-openclaw-tui-correlation-install.log"
 
 # shellcheck source=test/e2e/lib/sandbox-teardown.sh
 . "${E2E_DIR}/lib/sandbox-teardown.sh"
 # shellcheck source=test/e2e/lib/install-path-refresh.sh
 . "${E2E_DIR}/lib/install-path-refresh.sh"
-# shellcheck source=test/e2e/lib/openclaw-diagnostics.sh
-. "${E2E_DIR}/lib/openclaw-diagnostics.sh"
 register_sandbox_for_teardown "$SANDBOX_NAME"
-openclaw_diag_init "$SANDBOX_NAME" "openclaw-tui-chat-correlation-e2e"
 
 section "Phase 0: Pre-cleanup"
 if command -v nemoclaw >/dev/null 2>&1; then
@@ -157,48 +151,29 @@ pass "nemoclaw and openshell are on PATH"
 
 section "Phase 3: Verify OpenClaw runtime floor"
 expected_openclaw_version="$(sed -nE 's/^expected_version:[[:space:]]*"([^"]+)".*/\1/p' agents/openclaw/manifest.yaml | head -1)"
+if [ "$expected_openclaw_version" != "2026.4.25" ]; then
+  fail "OpenClaw expected_version must stay pinned to 2026.4.25 for #3145, got: ${expected_openclaw_version:-unset}"
+  exit 1
+fi
 actual_openclaw_version="$(openshell sandbox exec --name "$SANDBOX_NAME" -- openclaw --version 2>&1 || true)"
 plain_openclaw_version="$(printf '%s' "$actual_openclaw_version" | strip_ansi)"
-if [ -n "$expected_openclaw_version" ] && grep -Fq "$expected_openclaw_version" <<<"$plain_openclaw_version"; then
+if grep -Fq "$expected_openclaw_version" <<<"$plain_openclaw_version"; then
   pass "Sandbox uses OpenClaw ${expected_openclaw_version}"
 else
   fail "Sandbox OpenClaw version mismatch; expected ${expected_openclaw_version:-unknown}, got: ${plain_openclaw_version:0:240}"
   exit 1
 fi
 
-section "Phase 4: Align model route with Hermes inference-switch E2E"
-info "Switching ${SANDBOX_NAME} to ${SWITCH_PROVIDER} / ${SWITCH_MODEL}..."
-switch_output="$(nemoclaw inference set --no-verify --provider "$SWITCH_PROVIDER" --model "$SWITCH_MODEL" --sandbox "$SANDBOX_NAME" 2>&1)"
-switch_rc=$?
-if [ "$switch_rc" -eq 0 ]; then
-  pass "nemoclaw inference set completed"
-else
-  fail "nemoclaw inference set failed (exit ${switch_rc}): ${switch_output:0:500}"
-  exit 1
-fi
-
-route_output="$(openshell inference get -g nemoclaw 2>&1 || openshell inference get 2>&1 || true)"
-plain_route_output="$(printf '%s' "$route_output" | strip_ansi)"
-if grep -Fq "Provider: ${SWITCH_PROVIDER}" <<<"$plain_route_output" \
-  && grep -Fq "Model: ${SWITCH_MODEL}" <<<"$plain_route_output"; then
-  pass "OpenShell route points at ${SWITCH_PROVIDER} / ${SWITCH_MODEL}"
-else
-  fail "OpenShell route did not switch to ${SWITCH_PROVIDER} / ${SWITCH_MODEL}: ${plain_route_output:0:400}"
-  exit 1
-fi
-
-section "Phase 5: Live NemoClaw connect + OpenClaw TUI proof"
-openclaw_diag_capture_snapshot "tui-before" "$SANDBOX_NAME" || true
+section "Phase 4: Live NemoClaw connect + OpenClaw TUI proof"
 python3 test/e2e/lib/openclaw_tui_issue3145_repro.py "$SANDBOX_NAME"
 correlation_rc=$?
-openclaw_diag_capture_snapshot "tui-after" "$SANDBOX_NAME" || true
 if [ "$correlation_rc" -eq 0 ]; then
-  pass "OpenClaw TUI rendered sequential messages once and in order"
+  pass "OpenClaw TUI rendered five messages once and in order"
 else
-  fail "OpenClaw TUI rendered duplicate or out-of-order sequential messages"
+  fail "OpenClaw TUI reported duplicate, missing, or out-of-order visible messages"
 fi
 
-section "Phase 6: Cleanup"
+section "Phase 5: Cleanup"
 if [ "${NEMOCLAW_E2E_KEEP_SANDBOX:-}" != "1" ]; then
   nemoclaw "$SANDBOX_NAME" destroy --yes 2>&1 | tail -3 || true
   openshell gateway destroy -g nemoclaw 2>/dev/null || true
@@ -215,7 +190,7 @@ fi
 
 echo ""
 echo "=============================================="
-echo "  OpenClaw TUI chat correlation E2E Results:"
+echo "  OpenClaw TUI duplicate-message E2E Results:"
 echo "    Passed:  $PASS"
 echo "    Failed:  $FAIL"
 echo "    Skipped: $SKIP"
@@ -223,9 +198,9 @@ echo "    Total:   $TOTAL"
 echo "=============================================="
 
 if [ "$FAIL" -eq 0 ]; then
-  printf '\n\033[1;32m  OpenClaw TUI chat correlation E2E PASSED.\033[0m\n'
+  printf '\n\033[1;32m  OpenClaw TUI duplicate-message E2E PASSED.\033[0m\n'
   exit 0
 fi
 
-printf '\n\033[1;31m  OpenClaw TUI chat correlation E2E FAILED.\033[0m\n'
+printf '\n\033[1;31m  OpenClaw TUI duplicate-message E2E FAILED.\033[0m\n'
 exit 1

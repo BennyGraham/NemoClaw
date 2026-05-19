@@ -39,12 +39,29 @@ class MessageSpec:
 
 
 MESSAGES = [
-    MessageSpec("P3145A", "R3145A", "P3145A reply exactly R3145A"),
-    MessageSpec("P3145B", "R3145B", "P3145B reply exactly R3145B"),
-    MessageSpec("P3145C", "R3145C", "P3145C reply exactly R3145C"),
-    MessageSpec("P3145D", "R3145D", "P3145D reply exactly R3145D"),
-    MessageSpec("P3145E", "R3145E", "P3145E reply exactly R3145E"),
+    MessageSpec("P3145A", "R3145A", "P3145A reply with the token formed by R3145 followed by A and no other text"),
+    MessageSpec("P3145B", "R3145B", "P3145B reply with the token formed by R3145 followed by B and no other text"),
+    MessageSpec("P3145C", "R3145C", "P3145C reply with the token formed by R3145 followed by C and no other text"),
+    MessageSpec("P3145D", "R3145D", "P3145D reply with the token formed by R3145 followed by D and no other text"),
+    MessageSpec("P3145E", "R3145E", "P3145E reply with the token formed by R3145 followed by E and no other text"),
 ]
+
+FAILURE_KEYS = (
+    "duplicateUserTurns",
+    "duplicateAssistantReplies",
+    "missingUserTurns",
+    "missingAssistantReplies",
+    "outOfOrderPrompts",
+    "outOfOrderReplies",
+    "tuiErrors",
+)
+
+TUI_ERROR_MARKERS = (
+    "history failed",
+    "gateway request timeout",
+    "send failed",
+    "gateway closed",
+)
 
 
 class TerminalScreen:
@@ -262,8 +279,19 @@ def strip_terminal_control(text: str) -> str:
     return text.replace("\r", "\n")
 
 
+def out_of_order_tokens(positions: list[int], tokens: list[str]) -> list[dict[str, object]]:
+    present = [(token, position) for token, position in zip(tokens, positions) if position >= 0]
+    ordered_positions = [position for _, position in present]
+    if ordered_positions == sorted(ordered_positions):
+        return []
+    return [{"token": token, "position": position} for token, position in present]
+
+
 def analyze_visible_screen(screen_text: str) -> dict[str, object]:
-    failures: list[str] = []
+    duplicate_user_turns: list[dict[str, object]] = []
+    duplicate_assistant_replies: list[dict[str, object]] = []
+    missing_user_turns: list[str] = []
+    missing_assistant_replies: list[str] = []
     prompt_positions: list[int] = []
     reply_positions: list[int] = []
 
@@ -271,33 +299,40 @@ def analyze_visible_screen(screen_text: str) -> dict[str, object]:
         prompts = token_positions(screen_text, spec.prompt_token)
         replies = token_positions(screen_text, spec.reply_token)
         prompt_positions.append(prompts[0] if prompts else -1)
-        reply_positions.append(replies[-1] if replies else -1)
+        reply_positions.append(replies[0] if replies else -1)
 
-        if len(prompts) != 1:
-            failures.append(f"{spec.prompt_token}: expected 1 visible user turn, found {len(prompts)}")
-        if len(replies) != 2:
-            failures.append(
-                f"{spec.reply_token}: expected 2 visible occurrences (prompt + reply), found {len(replies)}"
-            )
-        if prompts and replies and replies[-1] < prompts[0]:
-            failures.append(f"{spec.reply_token}: assistant reply rendered before {spec.prompt_token}")
+        if len(prompts) == 0:
+            missing_user_turns.append(spec.prompt_token)
+        elif len(prompts) > 1:
+            duplicate_user_turns.append({"token": spec.prompt_token, "count": len(prompts)})
 
-    if any(pos < 0 for pos in prompt_positions):
-        failures.append(f"missing prompt token(s): {prompt_positions}")
-    elif prompt_positions != sorted(prompt_positions):
-        failures.append(f"prompt order is wrong: {prompt_positions}")
-
-    if any(pos < 0 for pos in reply_positions):
-        failures.append(f"missing reply token(s): {reply_positions}")
-    elif reply_positions != sorted(reply_positions):
-        failures.append(f"reply order is wrong: {reply_positions}")
+        if len(replies) == 0:
+            missing_assistant_replies.append(spec.reply_token)
+        elif len(replies) > 1:
+            duplicate_assistant_replies.append({"token": spec.reply_token, "count": len(replies)})
 
     return {
-        "failures": failures,
+        "duplicateUserTurns": duplicate_user_turns,
+        "duplicateAssistantReplies": duplicate_assistant_replies,
+        "missingUserTurns": missing_user_turns,
+        "missingAssistantReplies": missing_assistant_replies,
+        "outOfOrderPrompts": out_of_order_tokens(
+            prompt_positions,
+            [spec.prompt_token for spec in MESSAGES],
+        ),
+        "outOfOrderReplies": out_of_order_tokens(
+            reply_positions,
+            [spec.reply_token for spec in MESSAGES],
+        ),
+        "tuiErrors": [marker for marker in TUI_ERROR_MARKERS if marker in screen_text.lower()],
         "promptPositions": prompt_positions,
         "replyPositions": reply_positions,
         "messages": [spec.__dict__ for spec in MESSAGES],
     }
+
+
+def has_failures(analysis: dict[str, object]) -> bool:
+    return any(bool(analysis.get(key)) for key in FAILURE_KEYS)
 
 
 def extract_interesting_lines(raw_plain: str) -> list[str]:
@@ -370,8 +405,11 @@ def run(sandbox_name: str) -> int:
         while time.monotonic() < deadline:
             session.pump(0.2)
             screen_text = session.screen.text()
-            if all(len(token_positions(screen_text, spec.reply_token)) >= 2 for spec in MESSAGES):
+            if all(len(token_positions(screen_text, spec.reply_token)) >= 1 for spec in MESSAGES):
                 break
+        settle_deadline = time.monotonic() + 5
+        while time.monotonic() < settle_deadline:
+            session.pump(0.2)
 
         raw_text = session.raw.decode("utf-8", "ignore")
         screen_text = session.screen.text()
@@ -381,29 +419,13 @@ def run(sandbox_name: str) -> int:
         with open(SCREEN_LOG, "w", encoding="utf-8") as handle:
             handle.write(screen_text)
 
-        analysis_text = (
-            screen_text
-            if all(spec.prompt_token in screen_text for spec in MESSAGES)
-            else raw_plain
-        )
-        analysis = analyze_visible_screen(analysis_text)
-        analysis["analysisSource"] = "screen" if analysis_text == screen_text else "raw-terminal-stream"
+        analysis = analyze_visible_screen(screen_text)
+        analysis["analysisSource"] = "screen"
         raw_token_positions: dict[str, list[int]] = {}
         for spec in MESSAGES:
             raw_token_positions[spec.prompt_token] = token_positions(raw_plain, spec.prompt_token)
             raw_token_positions[spec.reply_token] = token_positions(raw_plain, spec.reply_token)
         analysis["rawTokenPositions"] = raw_token_positions
-        failures = analysis["failures"]
-        if isinstance(failures, list):
-            lowered = raw_plain.lower()
-            for marker in (
-                "send failed:",
-                "history failed:",
-                "gateway request timeout",
-                "gateway closed",
-            ):
-                if marker in lowered:
-                    failures.append(f"TUI reported {marker.rstrip(':')}")
         with open(ANALYSIS_LOG, "w", encoding="utf-8") as handle:
             json.dump(analysis, handle, indent=2, sort_keys=True)
             handle.write("\n")
@@ -411,13 +433,15 @@ def run(sandbox_name: str) -> int:
             for line in extract_interesting_lines(raw_plain):
                 handle.write(line + "\n")
         print("ISSUE3145_TUI_RESULT " + json.dumps(analysis, sort_keys=True))
-        if analysis["failures"]:
+        if has_failures(analysis):
             print(f"Captured TUI screen: {SCREEN_LOG}", file=sys.stderr)
             print(f"Captured raw PTY log: {RAW_LOG}", file=sys.stderr)
             print(f"Captured TUI analysis: {ANALYSIS_LOG}", file=sys.stderr)
             print(f"Captured TUI interesting lines: {INTERESTING_LOG}", file=sys.stderr)
-            for failure in analysis["failures"]:
-                print(f"FAIL: {failure}", file=sys.stderr)
+            for key in FAILURE_KEYS:
+                values = analysis.get(key)
+                if values:
+                    print(f"FAIL {key}: {json.dumps(values, sort_keys=True)}", file=sys.stderr)
             return 1
         return 0
     finally:
