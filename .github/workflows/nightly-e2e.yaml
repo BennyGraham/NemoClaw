@@ -1113,8 +1113,8 @@ jobs:
 
   # ── OpenClaw TUI chat correlation E2E ───────────────────────
   # Verifies the pinned OpenClaw version that contains the upstream #3145 fix,
-  # then runs the rapid chat.send/WebSocket correlation proof against a live
-  # NemoClaw-created OpenClaw sandbox.
+  # then drives the user path: `nemoclaw <sandbox> connect`, `openclaw tui`,
+  # rapid sequential messages, and rendered TUI history assertions.
   openclaw-tui-chat-correlation-e2e:
     if: >-
       github.repository == 'NVIDIA/NemoClaw' &&
@@ -1144,7 +1144,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openclaw-tui-chat-correlation-install-log
-          path: /tmp/nemoclaw-e2e-openclaw-tui-correlation-install.log
+          path: |
+            /tmp/nemoclaw-e2e-openclaw-tui-correlation-install.log
+            /tmp/nemoclaw-issue3145-tui-screen.log
+            /tmp/nemoclaw-issue3145-tui-raw.log
           if-no-files-found: ignore
 
   # ── Network policy E2E ───────────────────────────────────────

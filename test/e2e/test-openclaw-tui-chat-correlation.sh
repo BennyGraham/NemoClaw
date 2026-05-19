@@ -6,8 +6,9 @@
 #
 # Installs NemoClaw with the default OpenClaw agent, verifies that the sandbox
 # consumes the pinned OpenClaw version, switches the model route to match the
-# Hermes inference-switch E2E default, then runs the live WebSocket chat
-# correlation proof from test/openclaw-tui-chat-correlation.test.ts.
+# Hermes inference-switch E2E default, then reproduces the real #3145 user path:
+# `nemoclaw <sandbox> connect`, `openclaw tui`, rapid sequential messages, and
+# rendered TUI history assertions.
 #
 # Prerequisites:
 #   - Docker running
@@ -183,22 +184,13 @@ else
   exit 1
 fi
 
-section "Phase 5: Live TUI/WebChat correlation proof"
-info "Installing repository dev dependencies for Vitest..."
-if ! npm ci --ignore-scripts --include=dev --no-audit --no-fund >>"$INSTALL_LOG" 2>&1; then
-  echo "ERROR: Failed to install repository dev dependencies for Vitest."
-  tail -80 "$INSTALL_LOG" || true
-  exit 1
-fi
-
-NEMOCLAW_ISSUE_3145_LIVE=1 \
-  NEMOCLAW_ISSUE_3145_SANDBOX="$SANDBOX_NAME" \
-  npx vitest run test/openclaw-tui-chat-correlation.test.ts
+section "Phase 5: Live NemoClaw connect + OpenClaw TUI proof"
+python3 test/e2e/lib/openclaw_tui_issue3145_repro.py "$SANDBOX_NAME"
 correlation_rc=$?
 if [ "$correlation_rc" -eq 0 ]; then
-  pass "OpenClaw live chat correlation proof passed"
+  pass "OpenClaw TUI rendered sequential messages once and in order"
 else
-  fail "OpenClaw live chat correlation proof failed"
+  fail "OpenClaw TUI rendered duplicate or out-of-order sequential messages"
 fi
 
 section "Phase 6: Cleanup"
