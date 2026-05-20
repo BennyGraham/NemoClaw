@@ -275,6 +275,14 @@ const { resolveSandboxImageTagFromCreateOutput } =
   require("./domain/sandbox/image-tag") as typeof import("./domain/sandbox/image-tag");
 const nim: typeof import("./inference/nim") = require("./inference/nim");
 const onboardSession: typeof import("./state/onboard-session") = require("./state/onboard-session");
+const resumeConfig: typeof import("./onboard/resume-config") = require("./onboard/resume-config");
+const {
+  getRequestedModelHint,
+  getRequestedProviderHint,
+  getRequestedSandboxNameHint,
+  getResumeConfigConflicts,
+  getResumeSandboxConflict,
+} = resumeConfig;
 const { toSessionUpdates }: typeof import("./onboard/session-updates") = require("./onboard/session-updates");
 const messagingConfig: typeof import("./onboard/messaging-config") = require("./onboard/messaging-config");
 const {
@@ -1872,118 +1880,6 @@ const {
 } = require("./inference/ollama/proxy");
 
 const ollamaModelSize: typeof import("./inference/ollama/model-size") = require("./inference/ollama/model-size");
-
-function getRequestedSandboxNameHint(opts: { sandboxName?: string | null } = {}): string | null {
-  const raw =
-    typeof opts.sandboxName === "string" && opts.sandboxName.length > 0
-      ? opts.sandboxName
-      : process.env.NEMOCLAW_SANDBOX_NAME;
-  if (typeof raw !== "string") return null;
-  const normalized = raw.trim().toLowerCase();
-  return normalized || null;
-}
-
-function getResumeSandboxConflict(
-  session: Session | null,
-  opts: { sandboxName?: string | null } = {},
-) {
-  // Use opts.sandboxName as the sole source — the caller has already
-  // resolved it (--name first, NEMOCLAW_SANDBOX_NAME only when prompting
-  // is impossible). Falling back to the env var here would fire spurious
-  // conflicts for interactive resume runs whose shell happens to export
-  // NEMOCLAW_SANDBOX_NAME but which never actually consult it.
-  // #2753: only treat session.sandboxName as a conflict source if the
-  // sandbox step actually completed. A pre-fix incomplete session would
-  // otherwise reject a legitimate `--resume --name <new>` that the user
-  // is supplying precisely to recover from the phantom.
-  const raw = typeof opts.sandboxName === "string" ? opts.sandboxName.trim().toLowerCase() : "";
-  const requestedSandboxName = raw || null;
-  const recordedSandboxName =
-    session?.steps?.sandbox?.status === "complete" ? session?.sandboxName ?? null : null;
-  if (!requestedSandboxName || !recordedSandboxName) {
-    return null;
-  }
-  return requestedSandboxName !== recordedSandboxName
-    ? { requestedSandboxName, recordedSandboxName }
-    : null;
-}
-
-// Provider hint wrappers — supply isNonInteractive() default, delegate to onboard-providers.
-function getRequestedProviderHint(nonInteractive = isNonInteractive()) {
-  return onboardProviders.getRequestedProviderHint(nonInteractive);
-}
-function getRequestedModelHint(nonInteractive = isNonInteractive()) {
-  return onboardProviders.getRequestedModelHint(nonInteractive);
-}
-
-function getResumeConfigConflicts(
-  session: Session | null,
-  opts: {
-    nonInteractive?: boolean;
-    fromDockerfile?: string | null;
-    sandboxName?: string | null;
-    agent?: string | null;
-  } = {},
-) {
-  const conflicts = [];
-  const nonInteractive = opts.nonInteractive ?? isNonInteractive();
-
-  const sandboxConflict = getResumeSandboxConflict(session, { sandboxName: opts.sandboxName });
-  if (sandboxConflict) {
-    conflicts.push({
-      field: "sandbox",
-      requested: sandboxConflict.requestedSandboxName,
-      recorded: sandboxConflict.recordedSandboxName,
-    });
-  }
-
-  const requestedProvider = getRequestedProviderHint(nonInteractive);
-  const effectiveRequestedProvider = getEffectiveProviderName(requestedProvider);
-  if (
-    effectiveRequestedProvider &&
-    session?.provider &&
-    effectiveRequestedProvider !== session.provider
-  ) {
-    conflicts.push({
-      field: "provider",
-      requested: effectiveRequestedProvider,
-      recorded: session.provider,
-    });
-  }
-
-  const requestedModel = getRequestedModelHint(nonInteractive);
-  if (requestedModel && session?.model && requestedModel !== session.model) {
-    conflicts.push({
-      field: "model",
-      requested: requestedModel,
-      recorded: session.model,
-    });
-  }
-
-  const requestedFrom = opts.fromDockerfile ? path.resolve(opts.fromDockerfile) : null;
-  const recordedFrom = session?.metadata?.fromDockerfile
-    ? path.resolve(session.metadata.fromDockerfile)
-    : null;
-  if (requestedFrom !== recordedFrom) {
-    conflicts.push({
-      field: "fromDockerfile",
-      requested: requestedFrom,
-      recorded: recordedFrom,
-    });
-  }
-
-  const requestedAgent = opts.agent || process.env.NEMOCLAW_AGENT || null;
-  const recordedAgent = session?.agent || null;
-  if (requestedAgent && recordedAgent && requestedAgent !== recordedAgent) {
-    conflicts.push({
-      field: "agent",
-      requested: requestedAgent,
-      recorded: recordedAgent,
-    });
-  }
-
-  return conflicts;
-}
 
 function printRemediationActions(
   actions: Array<{ title: string; reason: string; commands?: string[] }> | null | undefined,
