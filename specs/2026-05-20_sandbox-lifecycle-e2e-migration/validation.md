@@ -19,7 +19,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 ## Phase 1: Legacy Assertion Inventory and Parity Classification - Validation Scenarios
 
-### Scenario 1.1: Scoped legacy assertions are fully classified [STATUS: pending]
+### Scenario 1.1: Scoped legacy assertions are fully classified [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Happy Path
 
 **Given**: The four scoped legacy scripts are present in the generated assertion inventory.
@@ -33,7 +33,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 **Tools Required**: Bash, Vitest.
 
-### Scenario 1.2: Invalid scoped parity metadata fails validation [STATUS: pending]
+### Scenario 1.2: Invalid scoped parity metadata fails validation [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Sad Path
 
 **Given**: A scoped lifecycle assertion is deferred without owner or runner/secret requirement in a temporary fixture or targeted unit test.
@@ -49,7 +49,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 ## Phase 2: Sandbox Lifecycle Primitive Library - Validation Scenarios
 
-### Scenario 2.1: Helper library validates lifecycle operations with mocked commands [STATUS: pending]
+### Scenario 2.1: Helper library validates lifecycle operations with mocked commands [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Happy Path
 
 **Given**: A temporary `E2E_CONTEXT_DIR/context.env` and mock `nemoclaw`/`openshell` commands return expected list, status, logs, exec, gateway, and snapshot outputs.
@@ -63,7 +63,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 **Tools Required**: Bash, Vitest.
 
-### Scenario 2.2: Missing context key fails without leaking secrets [STATUS: pending]
+### Scenario 2.2: Missing context key fails without leaking secrets [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Sad Path
 
 **Given**: A temporary `context.env` missing a required sandbox or gateway key and containing a fake secret value.
@@ -77,7 +77,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 **Tools Required**: Bash, Vitest.
 
-### Scenario 2.3: Hung command is bounded by timeout [STATUS: pending]
+### Scenario 2.3: Hung command is bounded by timeout [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Sad Path
 
 **Given**: A mock command sleeps longer than the lifecycle helper timeout.
@@ -93,7 +93,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 ## Phase 3: Lifecycle Suite Integration - Validation Scenarios
 
-### Scenario 3.1: Domain suites replace smoke aliases and resolve plan-only [STATUS: pending]
+### Scenario 3.1: Domain suites replace smoke aliases and resolve plan-only [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Happy Path
 
 **Given**: `suites.yaml` defines sandbox lifecycle, operations, and snapshot suites with domain scripts.
@@ -107,7 +107,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 **Tools Required**: Bash, scenario runner.
 
-### Scenario 3.2: Unsupported scenarios do not receive Docker-dependent lifecycle suites [STATUS: pending]
+### Scenario 3.2: Unsupported scenarios do not receive Docker-dependent lifecycle suites [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Sad Path
 
 **Given**: macOS or negative preflight scenarios lack a running Docker/OpenShell sandbox.
@@ -121,7 +121,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 **Tools Required**: Vitest.
 
-### Scenario 3.3: Snapshot suite remains isolated or opt-in [STATUS: pending]
+### Scenario 3.3: Snapshot suite remains isolated or opt-in [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Sad Path
 
 **Given**: Snapshot restore can mutate sandbox state.
@@ -137,7 +137,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 ## Phase 4: Parity Map and Coverage Report Visibility - Validation Scenarios
 
-### Scenario 4.1: Coverage report shows lifecycle parity accounted for [STATUS: pending]
+### Scenario 4.1: Coverage report shows lifecycle parity accounted for [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Happy Path
 
 **Given**: Parity-map entries for scoped lifecycle scripts are updated.
@@ -151,7 +151,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 **Tools Required**: Bash, Vitest.
 
-### Scenario 4.2: Duplicate mapped IDs are rejected unless explicitly reusable [STATUS: pending]
+### Scenario 4.2: Duplicate mapped IDs are rejected unless explicitly reusable [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Sad Path
 
 **Given**: A parity-map fixture contains duplicate stable assertion IDs for semantically different assertions.
@@ -167,7 +167,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 ## Phase 5: PR-Open and Integration Verification - Validation Scenarios
 
-### Scenario 5.1: Targeted framework and suite tests pass locally or in PR CI [STATUS: pending]
+### Scenario 5.1: Targeted framework and suite tests pass locally or in PR CI [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Happy Path
 
 **Given**: Implementation changes are complete.
@@ -181,7 +181,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 **Tools Required**: Bash, Vitest, GitHub CLI optional.
 
-### Scenario 5.2: Suite failure emits stable assertion ID [STATUS: pending]
+### Scenario 5.2: Suite failure emits stable assertion ID [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Sad Path
 
 **Given**: A mocked lifecycle command returns failure.
@@ -197,7 +197,7 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 ## Phase 6: Clean the House - Validation Scenarios
 
-### Scenario 6.1: Final diff is scoped and free of temporary artifacts [STATUS: pending]
+### Scenario 6.1: Final diff is scoped and free of temporary artifacts [STATUS: passed] [VALIDATED: 365e80c40]
 **Type**: Happy Path
 
 **Given**: The implementation is ready for review.
@@ -215,10 +215,10 @@ Test Spec: `specs/2026-05-20_sandbox-lifecycle-e2e-migration/tests.md`
 
 | Phase | Happy | Sad | Total | Passed | Failed | Pending |
 |-------|-------|-----|-------|--------|--------|---------|
-| Phase 1 | 1 | 1 | 2 | 0 | 0 | 2 |
-| Phase 2 | 1 | 2 | 3 | 0 | 0 | 3 |
-| Phase 3 | 1 | 2 | 3 | 0 | 0 | 3 |
-| Phase 4 | 1 | 1 | 2 | 0 | 0 | 2 |
-| Phase 5 | 1 | 1 | 2 | 0 | 0 | 2 |
-| Phase 6 | 1 | 0 | 1 | 0 | 0 | 1 |
-| **Total** | **6** | **7** | **13** | **0** | **0** | **13** |
+| Phase 1 | 1 | 1 | 2 | 2 | 0 | 0 |
+| Phase 2 | 1 | 2 | 3 | 3 | 0 | 0 |
+| Phase 3 | 1 | 2 | 3 | 3 | 0 | 0 |
+| Phase 4 | 1 | 1 | 2 | 2 | 0 | 0 |
+| Phase 5 | 1 | 1 | 2 | 2 | 0 | 0 |
+| Phase 6 | 1 | 0 | 1 | 1 | 0 | 0 |
+| **Total** | **6** | **7** | **13** | **13** | **0** | **0** |
