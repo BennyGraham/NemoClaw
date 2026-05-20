@@ -39,7 +39,7 @@ const dockerGpuPatch: typeof import("./onboard/docker-gpu-patch") = require("./o
 const dockerGpuLocalInference: typeof import("./onboard/docker-gpu-local-inference") = require("./onboard/docker-gpu-local-inference");
 const dockerGpuSandboxCreate: typeof import("./onboard/docker-gpu-sandbox-create") = require("./onboard/docker-gpu-sandbox-create");
 const dockerDriverGatewayLaunch: typeof import("./onboard/docker-driver-gateway-launch") = require("./onboard/docker-driver-gateway-launch");
-const { findReadableNvidiaCdiSpecFiles, getDockerCdiSpecDirs, parseDockerCdiSpecDirs }: typeof import("./onboard/docker-cdi") = require("./onboard/docker-cdi");
+const { findReadableNvidiaCdiSpecFiles, parseDockerCdiSpecDirs }: typeof import("./onboard/docker-cdi") = require("./onboard/docker-cdi");
 const { buildSandboxGpuCreateArgs, getSandboxReadyTimeoutSecs }: typeof import("./onboard/sandbox-gpu-create") = require("./onboard/sandbox-gpu-create");
 const {
   isValidProxyHost,
@@ -287,6 +287,11 @@ const {
 const { pruneKnownHostsEntries }: typeof import("./onboard/known-hosts") = require("./onboard/known-hosts");
 const onboardPromptHelpers: typeof import("./onboard/prompt-helpers") = require("./onboard/prompt-helpers");
 const { createOpenclawSetup }: typeof import("./onboard/openclaw-setup") = require("./onboard/openclaw-setup");
+const {
+  resolveSandboxGpuFlagFromOptions,
+  sandboxGpuRemediationLines,
+  validateSandboxGpuPreflight,
+}: typeof import("./onboard/sandbox-gpu-preflight") = require("./onboard/sandbox-gpu-preflight");
 const openshellVersion: typeof import("./onboard/openshell-version") = require("./onboard/openshell-version");
 const {
   getBlueprintMaxOpenshellVersion,
@@ -583,58 +588,6 @@ function step(n: number, total: number, msg: string): void {
   console.log("");
   console.log(`  [${n}/${total}] ${msg}`);
   console.log(`  ${"─".repeat(50)}`);
-}
-
-function resolveSandboxGpuFlagFromOptions(
-  opts: Pick<OnboardOptions, "sandboxGpu" | "gpu" | "noGpu">,
-): SandboxGpuFlag {
-  const requestedGpuPassthrough = opts.gpu === true;
-  const optedOutGpuPassthrough = opts.noGpu === true;
-  const sandboxGpuFlag = opts.sandboxGpu ?? null;
-  if (requestedGpuPassthrough && optedOutGpuPassthrough) {
-    console.error("  --gpu and --no-gpu cannot both be set.");
-    process.exit(1);
-  }
-  if (
-    (requestedGpuPassthrough && sandboxGpuFlag === "disable") ||
-    (optedOutGpuPassthrough && sandboxGpuFlag === "enable")
-  ) {
-    console.error("  --gpu/--no-gpu conflict with the sandbox GPU flags.");
-    process.exit(1);
-  }
-  if (sandboxGpuFlag) return sandboxGpuFlag;
-  if (requestedGpuPassthrough) return "enable";
-  if (optedOutGpuPassthrough) return "disable";
-  return null;
-}
-
-function sandboxGpuRemediationLines(): string[] {
-  return [
-    "Install/configure NVIDIA Container Toolkit CDI, then restart Docker:",
-    "  sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml",
-    "  sudo systemctl restart docker",
-    "Or force CPU sandbox behavior with NEMOCLAW_SANDBOX_GPU=0.",
-  ];
-}
-
-function validateSandboxGpuPreflight(config: SandboxGpuConfig): void {
-  if (config.errors.length > 0) {
-    console.error("");
-    for (const error of config.errors) console.error(`  ✗ ${error}`);
-    process.exit(1);
-  }
-  if (!config.sandboxGpuEnabled) return;
-  if (process.platform !== "linux") return;
-
-  const cdiSpecDirs = getDockerCdiSpecDirs();
-  const cdiSpecFiles = findReadableNvidiaCdiSpecFiles(cdiSpecDirs);
-  if (cdiSpecFiles.length === 0) {
-    console.error("");
-    console.error("  ✗ Docker CDI GPU support was not detected.");
-    for (const line of sandboxGpuRemediationLines()) console.error(`    ${line}`);
-    process.exit(1);
-  }
-  console.log(`  ✓ Docker CDI GPU support detected (${cdiSpecFiles.join(", ")})`);
 }
 
 function getOpenshellBinary(): string {
