@@ -49,6 +49,40 @@ function runCheck(root: string, args: string[] = []) {
   });
 }
 
+describe("rebuild/upgrade parity map records", () => {
+  it("parity_map_should_classify_all_rebuild_upgrade_legacy_assertions", () => {
+    const inventory = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "test/e2e/docs/parity-inventory.generated.json"), "utf8")) as {
+      entrypoints: Array<{ script: string; assertions: Array<{ text: string }> }>;
+    };
+    const mapText = fs.readFileSync(path.join(REPO_ROOT, "test/e2e/docs/parity-map.yaml"), "utf8");
+    for (const script of [
+      "test-rebuild-openclaw.sh",
+      "test-rebuild-hermes.sh",
+      "test-upgrade-stale-sandbox.sh",
+      "test-openshell-gateway-upgrade.sh",
+    ]) {
+      const entry = inventory.entrypoints.find((item) => path.basename(item.script) === script);
+      expect(entry, `missing inventory for ${script}`).toBeTruthy();
+      expect(mapText).toContain(`  ${script}:`);
+      for (const assertion of entry?.assertions ?? []) {
+        expect(mapText, `${script} missing ${assertion.text}`).toContain(assertion.text);
+      }
+    }
+    for (const id of [
+      "suite.rebuild.workspace_state_preserved",
+      "suite.rebuild.agent_version_upgraded",
+      "suite.rebuild.inference_still_works",
+      "suite.rebuild.policy_presets_preserved",
+      "suite.rebuild.hermes_config_preserved",
+      "suite.upgrade.sandbox_registry_preserved",
+      "suite.upgrade.gateway_version_upgraded",
+      "suite.upgrade.survivor_agent_reachable",
+    ]) {
+      expect(mapText).toContain(id);
+    }
+  });
+});
+
 describe("parity map schema validation", () => {
   let tmp: string;
 
