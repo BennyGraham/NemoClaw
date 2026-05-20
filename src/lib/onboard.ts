@@ -5168,6 +5168,7 @@ async function createSandbox(
   // run() calls process.exit() on failure (bypassing normal control flow), so
   // we register a process 'exit' handler to guarantee cleanup in all cases.
   let buildCtx: string, stagedDockerfile: string;
+  let usingAgentDockerfile = false;
   if (fromDockerfile) {
     const fromResolved = path.resolve(fromDockerfile);
     if (!fs.existsSync(fromResolved)) {
@@ -5238,6 +5239,7 @@ async function createSandbox(
     const agentBuild = agentOnboard.createAgentSandbox(agent);
     buildCtx = agentBuild.buildCtx;
     stagedDockerfile = agentBuild.stagedDockerfile;
+    usingAgentDockerfile = true;
   } else {
     ({ buildCtx, stagedDockerfile } = stageOptimizedSandboxBuildContext(ROOT));
   }
@@ -5417,30 +5419,34 @@ async function createSandbox(
   // Pull the base image and resolve its digest so the Dockerfile is pinned to
   // exactly what we just fetched. This prevents stale :latest tags from
   // silently reusing a cached old image after NemoClaw upgrades (#1904).
-  const resolved = pullAndResolveBaseImageDigest({
-    requireOpenshellSandboxAbi: isLinuxDockerDriverGatewayEnabled(),
-  });
-  if (resolved?.digest) {
-    console.log(`  Pinning base image to ${resolved.digest.slice(0, 19)}...`);
-  } else if (resolved) {
-    console.log(`  Using sandbox base image ${resolved.ref}`);
-  } else {
-    // Check if the image exists locally before falling back to unpinned :latest.
-    // On a first-time install behind a firewall with no cached image, warn early
-    // so the user knows the build will likely fail.
-    const localCheck = dockerImageInspect(`${SANDBOX_BASE_IMAGE}:${SANDBOX_BASE_TAG}`, {
-      ignoreError: true,
-      suppressOutput: true,
-    });
-    if (localCheck.status === 0) {
-      console.warn("  Warning: could not pull base image from registry; using cached :latest.");
+  const resolved = usingAgentDockerfile
+    ? null
+    : pullAndResolveBaseImageDigest({
+        requireOpenshellSandboxAbi: isLinuxDockerDriverGatewayEnabled(),
+      });
+  if (!usingAgentDockerfile) {
+    if (resolved?.digest) {
+      console.log(`  Pinning base image to ${resolved.digest.slice(0, 19)}...`);
+    } else if (resolved) {
+      console.log(`  Using sandbox base image ${resolved.ref}`);
     } else {
-      console.warn(
-        `  Warning: base image ${SANDBOX_BASE_IMAGE}:${SANDBOX_BASE_TAG} is not available locally.`,
-      );
-      console.warn("  The build will fail unless Docker can pull the image during build.");
-      console.warn("  If offline, pull the image manually first:");
-      console.warn(`    docker pull ${SANDBOX_BASE_IMAGE}:${SANDBOX_BASE_TAG}`);
+      // Check if the image exists locally before falling back to unpinned :latest.
+      // On a first-time install behind a firewall with no cached image, warn early
+      // so the user knows the build will likely fail.
+      const localCheck = dockerImageInspect(`${SANDBOX_BASE_IMAGE}:${SANDBOX_BASE_TAG}`, {
+        ignoreError: true,
+        suppressOutput: true,
+      });
+      if (localCheck.status === 0) {
+        console.warn("  Warning: could not pull base image from registry; using cached :latest.");
+      } else {
+        console.warn(
+          `  Warning: base image ${SANDBOX_BASE_IMAGE}:${SANDBOX_BASE_TAG} is not available locally.`,
+        );
+        console.warn("  The build will fail unless Docker can pull the image during build.");
+        console.warn("  If offline, pull the image manually first:");
+        console.warn(`    docker pull ${SANDBOX_BASE_IMAGE}:${SANDBOX_BASE_TAG}`);
+      }
     }
   }
   const buildId = String(Date.now());
