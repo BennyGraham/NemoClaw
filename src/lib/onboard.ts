@@ -291,6 +291,7 @@ const {
 } = resumeConfig;
 const { pruneKnownHostsEntries }: typeof import("./onboard/known-hosts") = require("./onboard/known-hosts");
 const onboardPromptHelpers: typeof import("./onboard/prompt-helpers") = require("./onboard/prompt-helpers");
+const providerRecovery: typeof import("./onboard/provider-recovery") = require("./onboard/provider-recovery");
 const { createOpenclawSetup }: typeof import("./onboard/openclaw-setup") = require("./onboard/openclaw-setup");
 const {
   resolveSandboxGpuFlagFromOptions,
@@ -4757,131 +4758,14 @@ function providerNameToOptionKey(
   name: string | null | undefined,
   opts: { hasNimContainer?: boolean } = {},
 ): string | null {
-  if (!name) return null;
-  if (name === "nvidia-router") return "routed";
-  if (name === "ollama-local") return "ollama";
-  // Local NIM and standalone vLLM both persist as provider="vllm-local". NIM
-  // is positively identified by a nimContainer record; the absence of one in
-  // registry/session recovery reliably means standalone vLLM (the standalone
-  // path never records a container), so default to "vllm" there. Live-gateway
-  // recovery doesn't carry container info either, but the caller's
-  // option-availability check still gates on whether vllm is actually running.
-  if (name === "vllm-local") return opts.hasNimContainer ? "nim-local" : "vllm";
-  // `nvidia-nim` is a legacy alias for cloud NVIDIA Endpoints (see
-  // setupInference: it routes nvidia-nim through REMOTE_PROVIDER_CONFIG.build),
-  // not a marker for Local NIM. Local NIM persists as vllm-local + nimContainer.
-  if (name === "nvidia-nim") return "build";
-  for (const [key, cfg] of Object.entries(REMOTE_PROVIDER_CONFIG)) {
-    if ((cfg as { providerName?: string }).providerName === name) return key;
-  }
-  return null;
+  return providerRecovery.providerNameToOptionKey(REMOTE_PROVIDER_CONFIG, name, opts);
 }
 
-function readLiveInference(
-  sandboxName: string | null | undefined,
-): { provider: string | null; model: string | null } | null {
-  if (!sandboxName) return null;
-  try {
-    const { defaultSandbox, sandboxes } = registry.listSandboxes();
-    // The gateway holds one active inference config at a time. Trust the
-    // live read for the default sandbox, or when the registry has no
-    // entries (rebuild path: destroy wiped the entry but the gateway
-    // config persists). Other non-default sandboxes have a stored config
-    // that the gateway will swap to on their next connect.
-    const trustGateway = sandboxName === defaultSandbox || sandboxes.length === 0;
-    if (!trustGateway) return null;
-    const output = runCaptureOpenshell(["inference", "get"], { ignoreError: true });
-    return parseGatewayInference(output);
-  } catch {
-    return null;
-  }
-}
-
-function readRecordedProvider(sandboxName: string | null | undefined): string | null {
-  if (!sandboxName) return null;
-  try {
-    const entry = registry.getSandbox(sandboxName);
-    if (entry && typeof entry.provider === "string" && entry.provider) {
-      return entry.provider;
-    }
-  } catch {
-    // fall through to session
-  }
-  try {
-    const session = onboardSession.loadSession();
-    if (
-      session &&
-      session.sandboxName === sandboxName &&
-      typeof session.provider === "string" &&
-      session.provider
-    ) {
-      return session.provider;
-    }
-  } catch {
-    // fall through to live gateway
-  }
-  const live = readLiveInference(sandboxName);
-  if (live && typeof live.provider === "string" && live.provider) {
-    return live.provider;
-  }
-  return null;
-}
-
-function readRecordedNimContainer(sandboxName: string | null | undefined): string | null {
-  if (!sandboxName) return null;
-  try {
-    const entry = registry.getSandbox(sandboxName);
-    if (entry && typeof entry.nimContainer === "string" && entry.nimContainer) {
-      return entry.nimContainer;
-    }
-  } catch {
-    // fall through to session
-  }
-  try {
-    const session = onboardSession.loadSession();
-    if (
-      session &&
-      session.sandboxName === sandboxName &&
-      typeof session.nimContainer === "string" &&
-      session.nimContainer
-    ) {
-      return session.nimContainer;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-function readRecordedModel(sandboxName: string | null | undefined): string | null {
-  if (!sandboxName) return null;
-  try {
-    const entry = registry.getSandbox(sandboxName);
-    if (entry && typeof entry.model === "string" && entry.model) {
-      return entry.model;
-    }
-  } catch {
-    // fall through to session
-  }
-  try {
-    const session = onboardSession.loadSession();
-    if (
-      session &&
-      session.sandboxName === sandboxName &&
-      typeof session.model === "string" &&
-      session.model
-    ) {
-      return session.model;
-    }
-  } catch {
-    // fall through to live gateway
-  }
-  const live = readLiveInference(sandboxName);
-  if (live && typeof live.model === "string" && live.model) {
-    return live.model;
-  }
-  return null;
-}
+const { readLiveInference, readRecordedProvider, readRecordedNimContainer, readRecordedModel } =
+  providerRecovery.createProviderRecoveryHelpers({
+    parseGatewayInference,
+    runCaptureOpenshell,
+  });
 
 type OllamaModelSelectionOutcome =
   | { outcome: "selected"; model: string }
