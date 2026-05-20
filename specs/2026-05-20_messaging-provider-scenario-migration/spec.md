@@ -303,7 +303,7 @@ Migrate high-value token-rotation and channel lifecycle assertions into scenario
 - Lifecycle assertions are represented as expected-state or post-onboard checks, not hidden setup logic.
 - Unsupported legacy lifecycle matrix cases are marked `deferred` with runner/context requirements.
 
-## Phase 4: Security and Compatible Endpoint Assertions
+## Phase 4: Security and Compatible Endpoint Assertions [COMPLETED: a91d2d697]
 
 Migrate high-risk Telegram injection and compatible-endpoint assertions where the scenario framework can provide the required state.
 
