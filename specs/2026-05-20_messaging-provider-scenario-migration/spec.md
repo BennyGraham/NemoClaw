@@ -266,7 +266,7 @@ Create the shared primitive library and local tests that validate helper behavio
 - Helper tests pass without Docker, OpenShell, or real provider secrets.
 - No suite script performs install/onboard/discovery work.
 
-## Phase 2: Provider Expected-State Suites
+## Phase 2: Provider Expected-State Suites [COMPLETED: 10006d3b0]
 
 Replace placeholder messaging suite aliases with real provider expected-state checks.
 
