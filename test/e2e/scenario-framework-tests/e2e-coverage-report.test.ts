@@ -118,7 +118,7 @@ describe("coverage report", () => {
   });
 
 
-  it("test_should_report_scoped_lifecycle_parity_at_or_above_100_percent", () => {
+  it("test_should_report_scoped_lifecycle_parity_sections", () => {
     const meta = loadMetadataFromDir(E2E_DIR);
     const md = renderCoverageReport(meta);
     expect(md).toMatch(/lifecycle/);

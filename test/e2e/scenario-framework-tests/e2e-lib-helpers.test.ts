@@ -456,8 +456,14 @@ describe("sandbox lifecycle validation helper", () => {
   });
 
   it("test_should_apply_timeout_to_command_execution", () => {
-    const r = runBash(`. "${VALIDATION_SUITES}/lib/sandbox_lifecycle.sh"; sandbox_lifecycle_run_with_timeout 1 bash -c 'sleep 5'`);
-    expect(r.status).not.toBe(0);
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "e2e-life-timeout-"));
+    try {
+      const bin = path.join(tmp, "bin"); fs.mkdirSync(bin);
+      fs.writeFileSync(path.join(bin, "timeout"), "#!/usr/bin/env bash\necho timed out >&2\nexit 124\n", { mode: 0o755 });
+      const r = runBash(`set -e; unset E2E_DRY_RUN; . "${VALIDATION_SUITES}/lib/sandbox_lifecycle.sh"; sandbox_lifecycle_run_with_timeout 1 bash -c 'sleep 5'`, { PATH: `${bin}:${process.env.PATH}` });
+      expect(r.status).toBe(124);
+      expect(r.stderr).toMatch(/timed out/);
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   });
 
   it("test_should_validate_list_status_logs_exec_with_mocked_commands", () => {

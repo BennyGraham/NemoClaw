@@ -4638,12 +4638,12 @@ scripts:
       gap_domain: sandbox-lifecycle
       runner_requirement: sandbox runner with NemoClaw/OpenShell CLIs
     - legacy: nemoclaw on PATH
-      status: mapped
-      id: validation.sandbox_lifecycle.gateway_health
+      status: deferred
+      reason: prerequisite coverage is not asserted by validation.sandbox_lifecycle.gateway_health
+      owner: e2e-maintainers
       layer: validation
       gap_domain: sandbox-lifecycle
-      owner: e2e-maintainers
-      reusable: true
+      runner_requirement: sandbox runner with NemoClaw/OpenShell CLIs
     - legacy: Gateway never came up after onboard
       status: deferred
       reason: live legacy behavior requires non-deterministic infrastructure; retained for bucket parity tracking
@@ -9513,12 +9513,12 @@ scripts:
       gap_domain: sandbox-lifecycle
       runner_requirement: sandbox runner with NemoClaw/OpenShell CLIs
     - legacy: 'nemoclaw on PATH: $(command -v nemoclaw)'
-      status: mapped
-      id: validation.sandbox_lifecycle.gateway_health
+      status: deferred
+      reason: prerequisite coverage is not asserted by validation.sandbox_lifecycle.gateway_health
+      owner: e2e-maintainers
       layer: validation
       gap_domain: sandbox-lifecycle
-      owner: e2e-maintainers
-      reusable: true
+      runner_requirement: sandbox runner with NemoClaw/OpenShell CLIs
     - legacy: nemoclaw not found on PATH after install
       status: deferred
       reason: live legacy behavior requires non-deterministic infrastructure; retained for bucket parity tracking
@@ -9780,11 +9780,10 @@ scripts:
       runner_requirement: sandbox runner with NemoClaw/OpenShell CLIs
     - legacy: Sandbox pod did not reach Running/Ready after restart
       status: mapped
-      id: validation.sandbox_operations.openshell_exec_ok
+      id: validation.sandbox_operations.restart_pod_ready
       layer: validation
       gap_domain: sandbox-lifecycle
       owner: e2e-maintainers
-      reusable: true
     - legacy: NemoClaw registry still contains '$SANDBOX_NAME' after restart
       status: deferred
       reason: live legacy behavior requires non-deterministic infrastructure; retained for bucket parity tracking
@@ -10471,12 +10470,12 @@ scripts:
       gap_domain: sandbox-lifecycle
       runner_requirement: sandbox runner with NemoClaw/OpenShell CLIs
     - legacy: NemoClaw installed
-      status: mapped
-      id: validation.sandbox_snapshot.marker_written
+      status: deferred
+      reason: prerequisite coverage is not asserted by validation.sandbox_snapshot.marker_written
+      owner: e2e-maintainers
       layer: validation
       gap_domain: sandbox-lifecycle
-      owner: e2e-maintainers
-      reusable: true
+      runner_requirement: sandbox runner with NemoClaw/OpenShell CLIs
     - legacy: Failed to write marker file
       status: deferred
       reason: live legacy behavior requires non-deterministic infrastructure; retained for bucket parity tracking
@@ -10646,19 +10645,19 @@ scripts:
       gap_domain: sandbox-lifecycle
       runner_requirement: sandbox runner with NemoClaw/OpenShell CLIs
     - legacy: No credentials in snapshot directories
-      status: mapped
-      id: validation.sandbox_snapshot.create_succeeds
+      status: deferred
+      reason: snapshot credential-leak coverage is not asserted by validation.sandbox_snapshot.create_succeeds
+      owner: e2e-maintainers
       layer: validation
       gap_domain: sandbox-lifecycle
-      owner: e2e-maintainers
-      reusable: true
+      runner_requirement: dedicated snapshot credential leak assertion
     - legacy: 'Credentials found: $CRED_LEAKS'
-      status: mapped
-      id: validation.sandbox_snapshot.create_succeeds
+      status: deferred
+      reason: snapshot credential-leak coverage is not asserted by validation.sandbox_snapshot.create_succeeds
+      owner: e2e-maintainers
       layer: validation
       gap_domain: sandbox-lifecycle
-      owner: e2e-maintainers
-      reusable: true
+      runner_requirement: dedicated snapshot credential leak assertion
     - legacy: 'Backup directory missing: $BACKUP_DIR'
       status: deferred
       reason: live legacy behavior requires non-deterministic infrastructure; retained for bucket parity tracking

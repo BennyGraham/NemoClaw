@@ -60,17 +60,29 @@ sandbox_lifecycle_run_with_timeout() {
 
 sandbox_lifecycle_assert_nemoclaw_list_contains_sandbox() {
   local id="validation.sandbox_operations.sandbox_listed"
-  sandbox_lifecycle_run_with_timeout 20 nemoclaw list >/dev/null || sandbox_lifecycle_fail "${id}" "nemoclaw list failed"
-  [[ "${E2E_DRY_RUN:-0}" == "1" || "${SANDBOX_LIFECYCLE_LAST_OUTPUT}" == *"${E2E_SANDBOX_NAME}"* ]] || sandbox_lifecycle_fail "${id}" "sandbox not listed: ${E2E_SANDBOX_NAME}"
+  sandbox_lifecycle_run_with_timeout 20 nemoclaw list >/dev/null || {
+    sandbox_lifecycle_fail "${id}" "nemoclaw list failed"
+    return 1
+  }
+  [[ "${E2E_DRY_RUN:-0}" == "1" || "${SANDBOX_LIFECYCLE_LAST_OUTPUT}" == *"${E2E_SANDBOX_NAME}"* ]] || {
+    sandbox_lifecycle_fail "${id}" "sandbox not listed: ${E2E_SANDBOX_NAME}"
+    return 1
+  }
   sandbox_lifecycle_pass "${id}" "sandbox listed"
 }
 
 sandbox_lifecycle_assert_status_fields_present() {
   local id="validation.sandbox_operations.status_fields_present"
-  sandbox_lifecycle_run_with_timeout 20 nemoclaw status "${E2E_SANDBOX_NAME}" >/dev/null || sandbox_lifecycle_fail "${id}" "nemoclaw status failed"
+  sandbox_lifecycle_run_with_timeout 20 nemoclaw status "${E2E_SANDBOX_NAME}" >/dev/null || {
+    sandbox_lifecycle_fail "${id}" "nemoclaw status failed"
+    return 1
+  }
   if [[ "${E2E_DRY_RUN:-0}" != "1" ]]; then
     for field in status gateway sandbox; do
-      [[ "${SANDBOX_LIFECYCLE_LAST_OUTPUT,,}" == *"${field}"* ]] || sandbox_lifecycle_fail "${id}" "missing status field: ${field}"
+      [[ "${SANDBOX_LIFECYCLE_LAST_OUTPUT,,}" == *"${field}"* ]] || {
+        sandbox_lifecycle_fail "${id}" "missing status field: ${field}"
+        return 1
+      }
     done
   fi
   sandbox_lifecycle_pass "${id}" "status fields present"
@@ -78,21 +90,36 @@ sandbox_lifecycle_assert_status_fields_present() {
 
 sandbox_lifecycle_assert_logs_available() {
   local id="validation.sandbox_operations.logs_available"
-  sandbox_lifecycle_run_with_timeout 20 nemoclaw logs "${E2E_SANDBOX_NAME}" >/dev/null || sandbox_lifecycle_fail "${id}" "nemoclaw logs failed"
-  [[ "${E2E_DRY_RUN:-0}" == "1" || -n "${SANDBOX_LIFECYCLE_LAST_OUTPUT}" ]] || sandbox_lifecycle_fail "${id}" "logs empty"
+  sandbox_lifecycle_run_with_timeout 20 nemoclaw logs "${E2E_SANDBOX_NAME}" >/dev/null || {
+    sandbox_lifecycle_fail "${id}" "nemoclaw logs failed"
+    return 1
+  }
+  [[ "${E2E_DRY_RUN:-0}" == "1" || -n "${SANDBOX_LIFECYCLE_LAST_OUTPUT}" ]] || {
+    sandbox_lifecycle_fail "${id}" "logs empty"
+    return 1
+  }
   sandbox_lifecycle_pass "${id}" "logs available"
 }
 
 sandbox_lifecycle_assert_openshell_exec_ok() {
   local id="validation.sandbox_operations.openshell_exec_ok"
-  sandbox_lifecycle_run_with_timeout 20 openshell sandbox exec "${E2E_SANDBOX_NAME}" -- sh -lc 'echo lifecycle-ok' >/dev/null || sandbox_lifecycle_fail "${id}" "openshell exec failed"
-  [[ "${E2E_DRY_RUN:-0}" == "1" || "${SANDBOX_LIFECYCLE_LAST_OUTPUT}" == *"lifecycle-ok"* ]] || sandbox_lifecycle_fail "${id}" "unexpected exec output"
+  sandbox_lifecycle_run_with_timeout 20 openshell sandbox exec "${E2E_SANDBOX_NAME}" -- sh -lc 'echo lifecycle-ok' >/dev/null || {
+    sandbox_lifecycle_fail "${id}" "openshell exec failed"
+    return 1
+  }
+  [[ "${E2E_DRY_RUN:-0}" == "1" || "${SANDBOX_LIFECYCLE_LAST_OUTPUT}" == *"lifecycle-ok"* ]] || {
+    sandbox_lifecycle_fail "${id}" "unexpected exec output"
+    return 1
+  }
   sandbox_lifecycle_pass "${id}" "openshell exec ok"
 }
 
 sandbox_lifecycle_assert_gateway_health() {
   local id="validation.sandbox_lifecycle.gateway_health"
-  sandbox_lifecycle_run_with_timeout 20 curl -fsS "${E2E_GATEWAY_URL}/health" >/dev/null || sandbox_lifecycle_fail "${id}" "gateway health failed"
+  sandbox_lifecycle_run_with_timeout 20 curl -fsS "${E2E_GATEWAY_URL}/health" >/dev/null || {
+    sandbox_lifecycle_fail "${id}" "gateway health failed"
+    return 1
+  }
   sandbox_lifecycle_pass "${id}" "gateway healthy"
 }
 
@@ -110,11 +137,32 @@ sandbox_lifecycle_assert_gateway_recovers_after_probe() {
 }
 
 sandbox_lifecycle_assert_snapshot_create_list_restore_marker() {
+  sandbox_lifecycle_run_with_timeout 30 openshell sandbox exec "${E2E_SANDBOX_NAME}" -- sh -lc 'echo lifecycle-marker-before-snapshot > /tmp/nemoclaw-lifecycle-marker' >/dev/null || {
+    sandbox_lifecycle_fail validation.sandbox_snapshot.marker_written "failed to write marker"
+    return 1
+  }
   sandbox_lifecycle_pass validation.sandbox_snapshot.marker_written "marker written"
-  sandbox_lifecycle_run_with_timeout 30 nemoclaw snapshot create "${E2E_SANDBOX_NAME}" >/dev/null || sandbox_lifecycle_fail validation.sandbox_snapshot.create_succeeds "snapshot create failed"
+  sandbox_lifecycle_run_with_timeout 30 nemoclaw snapshot create "${E2E_SANDBOX_NAME}" >/dev/null || {
+    sandbox_lifecycle_fail validation.sandbox_snapshot.create_succeeds "snapshot create failed"
+    return 1
+  }
   sandbox_lifecycle_pass validation.sandbox_snapshot.create_succeeds "snapshot create succeeded"
-  sandbox_lifecycle_run_with_timeout 30 nemoclaw snapshot list "${E2E_SANDBOX_NAME}" >/dev/null || sandbox_lifecycle_fail validation.sandbox_snapshot.list_shows_snapshot "snapshot list failed"
+  sandbox_lifecycle_run_with_timeout 30 openshell sandbox exec "${E2E_SANDBOX_NAME}" -- sh -lc 'echo lifecycle-marker-after-snapshot > /tmp/nemoclaw-lifecycle-marker' >/dev/null || {
+    sandbox_lifecycle_fail validation.sandbox_snapshot.restore_rolls_back_marker "failed to mutate marker"
+    return 1
+  }
+  sandbox_lifecycle_run_with_timeout 30 nemoclaw snapshot list "${E2E_SANDBOX_NAME}" >/dev/null || {
+    sandbox_lifecycle_fail validation.sandbox_snapshot.list_shows_snapshot "snapshot list failed"
+    return 1
+  }
   sandbox_lifecycle_pass validation.sandbox_snapshot.list_shows_snapshot "snapshot listed"
-  sandbox_lifecycle_run_with_timeout 30 nemoclaw snapshot restore "${E2E_SANDBOX_NAME}" latest >/dev/null || sandbox_lifecycle_fail validation.sandbox_snapshot.restore_rolls_back_marker "snapshot restore failed"
+  sandbox_lifecycle_run_with_timeout 30 nemoclaw snapshot restore "${E2E_SANDBOX_NAME}" latest >/dev/null || {
+    sandbox_lifecycle_fail validation.sandbox_snapshot.restore_rolls_back_marker "snapshot restore failed"
+    return 1
+  }
+  sandbox_lifecycle_run_with_timeout 30 openshell sandbox exec "${E2E_SANDBOX_NAME}" -- sh -lc 'test "$(cat /tmp/nemoclaw-lifecycle-marker 2>/dev/null)" = lifecycle-marker-before-snapshot' >/dev/null || {
+    sandbox_lifecycle_fail validation.sandbox_snapshot.restore_rolls_back_marker "marker did not roll back"
+    return 1
+  }
   sandbox_lifecycle_pass validation.sandbox_snapshot.restore_rolls_back_marker "marker rolled back"
 }
