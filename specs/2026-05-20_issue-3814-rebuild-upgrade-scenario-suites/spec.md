@@ -148,7 +148,7 @@ Potential environment/context expectations:
    - the PR is opened and all added tests pass; and
    - a re-review of legacy E2E onboarding/rebuild/upgrade coverage shows 100% or greater parity.
 
-## Phase 1: Legacy Assertion Inventory and Parity Baseline
+## Phase 1: [COMPLETED: 9aac1144c]  Legacy Assertion Inventory and Parity Baseline
 
 ### Goal
 
@@ -178,7 +178,7 @@ Establish the exact legacy assertion baseline for rebuild/upgrade coverage and d
 - No relevant legacy assertion is left unreviewed.
 - Proposed mapped/deferred/retired decisions are ready to encode in `parity-map.yaml`.
 
-## Phase 2: Rebuild/Upgrade Primitive Library
+## Phase 2: [COMPLETED: 9aac1144c]  Rebuild/Upgrade Primitive Library
 
 ### Goal
 
@@ -207,7 +207,7 @@ Add reusable shell helpers for rebuild/upgrade suite steps.
 - Helpers do not install, onboard, rebuild, or rediscover setup state.
 - Unit-style shell/helper tests or framework tests cover missing-context and success/failure paths using fakes.
 
-## Phase 3: Scenario Suite Steps and Suite Metadata
+## Phase 3: [COMPLETED: 9aac1144c]  Scenario Suite Steps and Suite Metadata
 
 ### Goal
 
@@ -231,7 +231,7 @@ Wire rebuild/upgrade-specific checks into the scenario suite framework.
 - Suite scripts are executable, shellcheck-compatible, and source the primitive library.
 - `run-scenario.sh <affected-id> --plan-only` still succeeds.
 
-## Phase 4: Parity Map and Coverage Report Integration
+## Phase 4: [COMPLETED: 9aac1144c]  Parity Map and Coverage Report Integration
 
 ### Goal
 
@@ -259,7 +259,7 @@ Make rebuild/upgrade migration auditable and visible in the parity tooling.
 - Duplicate stable IDs are intentional and marked reusable where appropriate.
 - No relevant legacy assertion remains uncategorized.
 
-## Phase 5: PR Validation and 100%+ Parity Review
+## Phase 5: [COMPLETED: 9aac1144c]  PR Validation and 100%+ Parity Review
 
 ### Goal
 
