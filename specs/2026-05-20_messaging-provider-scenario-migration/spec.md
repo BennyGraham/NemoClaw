@@ -285,7 +285,7 @@ Replace placeholder messaging suite aliases with real provider expected-state ch
 - Scenario schema and resolver tests pass.
 - Provider suite scripts can be skipped or fail clearly when required live context is absent.
 
-## Phase 3: Token Rotation and Channel Lifecycle Suites
+## Phase 3: Token Rotation and Channel Lifecycle Suites [COMPLETED: 92e10aff4]
 
 Migrate high-value token-rotation and channel lifecycle assertions into scenario-compatible suites.
 
