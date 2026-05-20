@@ -56,7 +56,8 @@ _e2e_inference_curl_json() {
 _e2e_inference_status() {
   local sandbox="$1"
   local url="$2"
-  e2e_sandbox_exec "${sandbox}" -- curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 20 "${url}"
+  shift 2
+  e2e_sandbox_exec "${sandbox}" -- curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 20 "$@" "${url}"
 }
 
 e2e_inference_routing_assert_chat_completion() {
@@ -106,15 +107,27 @@ e2e_inference_routing_assert_auth_proxy() {
     _e2e_inference_plan "${assertion_id}" "auth-proxy ${mode} request; sensitive context redacted"
     return 0
   fi
-  local sandbox status
+  local sandbox status token
   sandbox="$(_e2e_inference_sandbox_name)"
-  status="$(_e2e_inference_status "${sandbox}" "https://inference.local/v1/models")"
   case "${mode}" in
-    invalid | unauthenticated) [[ "${status}" =~ ^(401|403)$ ]] ;;
-    valid) [[ "${status}" =~ ^2[0-9][0-9]$ ]] ;;
+    unauthenticated)
+      status="$(_e2e_inference_status "${sandbox}" "https://inference.local/v1/models")"
+      [[ "${status}" =~ ^(401|403)$ ]] || return 1
+      ;;
+    invalid)
+      status="$(_e2e_inference_status "${sandbox}" "https://inference.local/v1/models" -H 'Authorization: Bearer invalid-token')"
+      [[ "${status}" =~ ^(401|403)$ ]] || return 1
+      ;;
+    valid)
+      e2e_context_require E2E_OLLAMA_AUTH_TOKEN
+      token="$(e2e_context_get E2E_OLLAMA_AUTH_TOKEN)"
+      status="$(_e2e_inference_status "${sandbox}" "https://inference.local/v1/models" -H "Authorization: Bearer ${token}")"
+      [[ "${status}" =~ ^2[0-9][0-9]$ ]] || return 1
+      ;;
     *)
       echo "e2e_inference_routing: unknown auth proxy mode ${mode}" >&2
       return 2
       ;;
   esac
+  e2e_pass "${assertion_id}"
 }
