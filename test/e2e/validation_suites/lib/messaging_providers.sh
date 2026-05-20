@@ -138,6 +138,20 @@ e2e_messaging_bridge_url() {
   printf '%s\n' "${url}"
 }
 
+e2e_messaging_assert_gateway_path() {
+  local provider expected actual
+  provider="${1:-$(e2e_messaging_provider_name)}"
+  expected="$(e2e_context_get E2E_MESSAGING_GATEWAY_PATH)"
+  actual="$(e2e_messaging_bridge_url)"
+  if [[ -z "${actual}" ]]; then
+    e2e_fail "expected-state.messaging.${provider}.gateway-path missing bridge URL"
+  fi
+  if [[ -n "${expected}" && "${actual}" != *"${expected}"* ]]; then
+    e2e_fail "expected-state.messaging.${provider}.gateway-path expected ${expected}, got ${actual}"
+  fi
+  e2e_pass "expected-state.messaging.${provider}.gateway-path provider gateway path configured"
+}
+
 e2e_messaging_assert_provider_attached() {
   local provider surface
   provider="$(e2e_messaging_provider_name)"
