@@ -22,7 +22,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 ## Phase 1: Legacy Assertion Inventory and Parity Baseline - Validation Scenarios
 
-### Scenario 1.1: Legacy rebuild/upgrade assertions are fully reviewed [STATUS: pending]
+### Scenario 1.1: Legacy rebuild/upgrade assertions are fully reviewed [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Happy Path
 
@@ -37,7 +37,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 **Tools Required**: Bash, Vitest.
 
-### Scenario 1.2: Uncategorized legacy assertion is rejected [STATUS: pending]
+### Scenario 1.2: Uncategorized legacy assertion is rejected [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Sad Path
 
@@ -56,7 +56,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 ## Phase 2: Rebuild/Upgrade Primitive Library - Validation Scenarios
 
-### Scenario 2.1: Primitive library is sourceable and side-effect free [STATUS: pending]
+### Scenario 2.1: Primitive library is sourceable and side-effect free [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Happy Path
 
@@ -71,7 +71,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 **Tools Required**: Bash.
 
-### Scenario 2.2: Missing required context fails clearly [STATUS: pending]
+### Scenario 2.2: Missing required context fails clearly [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Sad Path
 
@@ -86,7 +86,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 **Tools Required**: Bash, Vitest.
 
-### Scenario 2.3: Helper checks work against fake context and command shims [STATUS: pending]
+### Scenario 2.3: Helper checks work against fake context and command shims [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Happy Path
 
@@ -105,7 +105,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 ## Phase 3: Scenario Suite Steps and Suite Metadata - Validation Scenarios
 
-### Scenario 3.1: Rebuild and upgrade suites resolve domain-specific steps [STATUS: pending]
+### Scenario 3.1: Rebuild and upgrade suites resolve domain-specific steps [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Happy Path
 
@@ -120,7 +120,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 **Tools Required**: Bash, Vitest.
 
-### Scenario 3.2: Affected scenarios still support plan-only rendering [STATUS: pending]
+### Scenario 3.2: Affected scenarios still support plan-only rendering [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Happy Path
 
@@ -135,7 +135,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 **Tools Required**: Bash.
 
-### Scenario 3.3: Suite script with missing context fails before hidden rediscovery [STATUS: pending]
+### Scenario 3.3: Suite script with missing context fails before hidden rediscovery [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Sad Path
 
@@ -154,7 +154,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 ## Phase 4: Parity Map and Coverage Report Integration - Validation Scenarios
 
-### Scenario 4.1: Strict parity-map validation passes [STATUS: pending]
+### Scenario 4.1: Strict parity-map validation passes [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Happy Path
 
@@ -169,7 +169,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 **Tools Required**: Bash, `npx tsx`.
 
-### Scenario 4.2: Duplicate assertion IDs are rejected unless reusable [STATUS: pending]
+### Scenario 4.2: Duplicate assertion IDs are rejected unless reusable [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Sad Path
 
@@ -184,7 +184,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 **Tools Required**: Vitest.
 
-### Scenario 4.3: Coverage report shows rebuild/upgrade disposition counts [STATUS: pending]
+### Scenario 4.3: Coverage report shows rebuild/upgrade disposition counts [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Happy Path
 
@@ -203,7 +203,7 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 ## Phase 5: PR Validation and 100%+ Parity Review - Validation Scenarios
 
-### Scenario 5.1: Targeted local validation passes [STATUS: pending]
+### Scenario 5.1: Targeted local validation passes [STATUS: passed] [VALIDATED: 75c30d61e]
 
 **Type**: Happy Path
 
@@ -239,9 +239,9 @@ Test Spec: `specs/2026-05-20_issue-3814-rebuild-upgrade-scenario-suites/tests.md
 
 | Phase | Happy | Sad | Total | Passed | Failed | Pending |
 |-------|-------|-----|-------|--------|--------|---------|
-| Phase 1 | 1 | 1 | 2 | 0 | 0 | 2 |
-| Phase 2 | 2 | 1 | 3 | 0 | 0 | 3 |
-| Phase 3 | 2 | 1 | 3 | 0 | 0 | 3 |
-| Phase 4 | 2 | 1 | 3 | 0 | 0 | 3 |
-| Phase 5 | 1 | 1 | 2 | 0 | 0 | 2 |
-| **Total** | **8** | **5** | **13** | **0** | **0** | **13** |
+| Phase 1 | 1 | 1 | 2 | 2 | 0 | 0 |
+| Phase 2 | 2 | 1 | 3 | 3 | 0 | 0 |
+| Phase 3 | 2 | 1 | 3 | 3 | 0 | 0 |
+| Phase 4 | 2 | 1 | 3 | 3 | 0 | 0 |
+| Phase 5 | 1 | 1 | 2 | 1 | 0 | 1 |
+| **Total** | **8** | **5** | **13** | **12** | **0** | **1** |
