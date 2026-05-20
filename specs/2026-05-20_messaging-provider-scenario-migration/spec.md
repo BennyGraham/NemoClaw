@@ -98,11 +98,11 @@ flowchart TD
 
 ### Primitive Library
 
-Create `test/e2e/validation_suites/lib/messaging_providers.sh` as the shared domain API for suite scripts.
+Create `test/e2e/validation_suites/lib/messaging_providers.sh` as the shared domain API for suite scripts. This library should directly source and reuse `test/e2e/runtime/lib/context.sh` and `test/e2e/runtime/lib/logging.sh` rather than reimplementing context parsing or PASS/FAIL output.
 
 Required capabilities:
 
-- Load and validate `$E2E_CONTEXT_DIR/context.env`.
+- Load and validate `$E2E_CONTEXT_DIR/context.env` through `e2e_context_require` / `e2e_context_get`.
 - Resolve active sandbox name, agent, provider, messaging channel, and expected config paths.
 - Derive provider names for Telegram, Discord, Slack, and WhatsApp QR-only cases covered by the legacy messaging scripts.
 - Inspect provider existence via OpenShell.
@@ -111,9 +111,9 @@ Required capabilities:
   - Hermes: `/sandbox/.hermes/.env`
 - Verify placeholder-based credential wiring rather than raw token material.
 - Verify raw credentials do not appear in sandbox env/config/process surfaces where feasible.
-- Verify messaging bridge reachability through existing or extended bridge assertions.
+- Verify messaging bridge reachability by wrapping or extending `test/e2e/validation_suites/assert/messaging-bridge-reachable.sh`.
 - Parse or verify token-rotation signals without cross-provider false positives.
-- Provide common assertion-result helpers so scripts emit stable assertion IDs consistently.
+- Emit results through existing `e2e_pass` / `e2e_fail` logging helpers, with stable assertion IDs included in the message text.
 
 ### Stable Assertion ID Convention
 
@@ -145,7 +145,7 @@ Example IDs:
 
 ### Suite Structure
 
-Add scripts under `test/e2e/validation_suites/messaging/`:
+Add scripts under `test/e2e/validation_suites/messaging/` only for assertions that are wired in `suites.yaml` during this migration:
 
 ```text
 test/e2e/validation_suites/
@@ -162,16 +162,12 @@ test/e2e/validation_suites/
     ├── discord/
     │   └── 00-discord-gateway-path.sh
     ├── slack/
-    │   └── 00-slack-dual-provider-state.sh
-    ├── lifecycle/
-    │   └── 00-channel-stop-start-state.sh
-    ├── token-rotation/
-    │   └── 00-provider-rotation-isolated.sh
-    └── compatible-endpoint/
-        └── 00-custom-endpoint-through-messaging.sh
+    │   └── 00-slack-provider-state.sh
+    └── token-rotation/
+        └── 00-provider-rotation-isolated.sh
 ```
 
-Exact file names may be adjusted during implementation, but scripts should remain small and map clearly to assertions.
+Defer lifecycle or compatible-endpoint scripts until a scenario can provide the required state; represent those gaps in `parity-map.yaml` instead of adding unwired placeholder scripts. Exact file names may be adjusted during implementation, but scripts should remain small and map clearly to assertions.
 
 ### Suite YAML Changes
 
@@ -254,7 +250,8 @@ Create the shared primitive library and local tests that validate helper behavio
 ### Implementation Tasks
 
 - Add `test/e2e/validation_suites/lib/messaging_providers.sh`.
-- Implement context loading from `$E2E_CONTEXT_DIR/context.env`.
+- Implement context loading by sourcing `test/e2e/runtime/lib/context.sh` and using `e2e_context_require` / `e2e_context_get`.
+- Source `test/e2e/runtime/lib/logging.sh` for assertion output.
 - Implement provider-name derivation helpers.
 - Implement config path and channel key helpers for OpenClaw and Hermes.
 - Implement credential placeholder and no-secret-leak helper interfaces.

@@ -16,7 +16,7 @@ Use TDD around the existing scenario framework tests in `test/e2e/scenario-frame
 1. `test_should_source_messaging_provider_library_in_isolation`
    - **Input**: Source the helper library in a clean shell.
    - **Expected**: Shell exits 0 without requiring live context until a context-dependent function is invoked.
-   - **Covers**: Helper library can be sourced in isolation.
+   - **Covers**: Helper library can be sourced in isolation and safely reuses existing runtime helpers.
 2. `test_should_fail_with_clear_diagnostic_when_context_missing`
    - **Input**: Invoke context loader without `$E2E_CONTEXT_DIR/context.env`.
    - **Expected**: Non-zero exit and diagnostic naming `E2E_CONTEXT_DIR` or `context.env`.
@@ -37,6 +37,7 @@ Use TDD around the existing scenario framework tests in `test/e2e/scenario-frame
 **Test Implementation Notes:**
 - Use temporary directories for context fixtures.
 - Execute helpers via `bash -c` from Vitest.
+- Reuse the existing `runBash` helper pattern and runtime `context.sh` expectations already present in `e2e-lib-helpers.test.ts`.
 - Keep fixtures synthetic and deterministic.
 
 ## Phase 2: Provider Expected-State Suites - Test Guide
@@ -57,9 +58,9 @@ Use TDD around the existing scenario framework tests in `test/e2e/scenario-frame
    - **Expected**: All listed Telegram/Discord/Slack OpenClaw and Hermes scenarios include matching suite IDs.
    - **Covers**: Scenario YAML changes.
 3. `test_should_accept_stable_messaging_assertion_ids`
-   - **Input**: New suite metadata/assertion output fixtures.
-   - **Expected**: IDs follow `<layer>.<domain>.<behavior>` and use approved messaging/security domains.
-   - **Covers**: Stable assertion ID convention.
+   - **Input**: New suite metadata/assertion output fixtures or dry-run output from messaging scripts.
+   - **Expected**: IDs follow `<layer>.<domain>.<behavior>` and use approved messaging/security domains in existing `PASS:` / `FAIL:` output.
+   - **Covers**: Stable assertion ID convention without introducing a parallel result format.
 4. `test_should_plan_only_each_affected_provider_scenario`
    - **Input**: Affected scenario IDs with `run-scenario.sh <id> --plan-only`.
    - **Expected**: Each plan-only run exits 0.
@@ -68,6 +69,7 @@ Use TDD around the existing scenario framework tests in `test/e2e/scenario-frame
 **Test Implementation Notes:**
 - Plan-only tests may be shell-driven and should not require secrets.
 - Add skip/fail-clear assertions for absent live context at suite-script level.
+- Assert that only wired suite scripts are required to exist; deferred lifecycle and compatible-endpoint gaps belong in parity metadata until scenario state is available.
 
 ## Phase 3: Token Rotation and Channel Lifecycle Suites - Test Guide
 
