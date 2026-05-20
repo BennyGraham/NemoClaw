@@ -303,6 +303,7 @@ const {
   persistMessagingChannelConfigToSession,
 } = messagingConfig;
 const sandboxAgent: typeof import("./onboard/sandbox-agent") = require("./onboard/sandbox-agent");
+const sandboxReuse: typeof import("./onboard/sandbox-reuse") = require("./onboard/sandbox-reuse");
 const {
   RESERVED_SANDBOX_NAMES,
   formatSandboxAgentName,
@@ -591,20 +592,12 @@ const { getGatewayReuseSnapshot, selectNamedGatewayForReuseIfNeeded } =
     cliDisplayName,
   });
 
-function getSandboxReuseState(sandboxName: string | null) {
-  if (!sandboxName) return "missing";
-  const getOutput = runCaptureOpenshell(["sandbox", "get", sandboxName], { ignoreError: true });
-  const listOutput = runCaptureOpenshell(["sandbox", "list"], { ignoreError: true });
-  return getSandboxStateFromOutputs(sandboxName, getOutput, listOutput);
-}
-
-function repairRecordedSandbox(sandboxName: string | null): void {
-  if (!sandboxName) return;
-  note(`  [resume] Cleaning up recorded sandbox '${sandboxName}' before recreating it.`);
-  runOpenshell(["forward", "stop", String(DASHBOARD_PORT)], { ignoreError: true });
-  runOpenshell(["sandbox", "delete", sandboxName], { ignoreError: true });
-  registry.removeSandbox(sandboxName);
-}
+const { getSandboxReuseState, repairRecordedSandbox } = sandboxReuse.createSandboxReuseHelpers({
+  runCaptureOpenshell,
+  runOpenshell,
+  getSandboxStateFromOutputs,
+  note,
+});
 
 const { streamSandboxCreate } = sandboxCreateStream;
 
