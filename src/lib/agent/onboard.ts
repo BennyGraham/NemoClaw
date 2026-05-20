@@ -31,7 +31,7 @@ export interface OnboardContext {
   buildSandboxConfigSyncScript: (config: LooseObject) => string;
   writeSandboxConfigSyncFile: (script: string) => string;
   cleanupTempDir: (file: string, prefix: string) => void;
-  startRecordedStep: (stepName: string, updates: LooseObject) => void;
+  startRecordedStep: (stepName: string, updates: LooseObject) => Promise<void>;
   skippedStepMessage: (stepName: string, sandboxName: string) => void;
 }
 
@@ -424,7 +424,7 @@ export async function handleAgentSetup(
     }
   }
 
-  startRecordedStep("agent_setup", { sandboxName, provider, model });
+  await startRecordedStep("agent_setup", { sandboxName, provider, model });
   step(7, 8, `Setting up ${agent.displayName} inside sandbox`);
 
   const binaryAvailability = verifyAgentBinaryAvailable(sandboxName, agent, runCaptureOpenshell);
