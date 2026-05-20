@@ -801,8 +801,21 @@ def _has_installed_wechat_plugin_metadata() -> bool:
     return False
 
 
+def _has_preinstalled_wechat_plugin_signal() -> bool:
+    return os.environ.get("NEMOCLAW_OPENCLAW_WECHAT_PLUGIN_PREINSTALLED", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _seed_wechat_accounts_if_available(config: dict) -> None:
-    if not _has_plugin_install(config, "openclaw-weixin") and not _has_installed_wechat_plugin_metadata():
+    if (
+        not _has_plugin_install(config, "openclaw-weixin")
+        and not _has_installed_wechat_plugin_metadata()
+        and not _has_preinstalled_wechat_plugin_signal()
+    ):
         return
 
     seed_script = Path(__file__).resolve().with_name("seed-wechat-accounts.py")

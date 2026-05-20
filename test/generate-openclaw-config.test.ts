@@ -335,6 +335,23 @@ describe("generate-openclaw-config.py: config generation", () => {
     expect(config.channels?.wechat).toBeUndefined();
   });
 
+  it("seeds channels.openclaw-weixin when the Dockerfile marks the plugin preinstalled", () => {
+    const channels = Buffer.from(JSON.stringify(["wechat"])).toString("base64");
+    const wechatConfig = Buffer.from(
+      JSON.stringify({ accountId: "primary", baseUrl: "https://example", userId: "u1" }),
+    ).toString("base64");
+    const config = runConfigScript({
+      NEMOCLAW_MESSAGING_CHANNELS_B64: channels,
+      NEMOCLAW_WECHAT_CONFIG_B64: wechatConfig,
+      NEMOCLAW_OPENCLAW_WECHAT_PLUGIN_PREINSTALLED: "1",
+    });
+
+    expect(config.channels?.["openclaw-weixin"]?.accounts?.primary).toEqual({
+      enabled: true,
+    });
+    expect(config.channels?.wechat).toBeUndefined();
+  });
+
   it("omits channels.openclaw-weixin when no accountId was captured", () => {
     // No QR-login result → seed step bails on the empty accountId and
     // leaves openclaw.json untouched, so the bridge stays dormant.
