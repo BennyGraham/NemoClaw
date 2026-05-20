@@ -143,6 +143,7 @@ function stateFilePath(sandboxName: string): string {
 //   "locked"          — shields up has been run and verified
 //   "temporarily_unlocked" — shields down after a prior shields up
 type ShieldsMode = "mutable_default" | "locked" | "temporarily_unlocked";
+type ShieldsPostureMode = ShieldsMode | "error";
 
 interface ShieldsState {
   shieldsDown?: boolean;
@@ -152,6 +153,21 @@ interface ShieldsState {
   shieldsDownPolicy?: string | null;
   shieldsPolicySnapshotPath?: string | null;
   updatedAt?: string;
+}
+
+type LoadedShieldsState = ShieldsState & {
+  _hasStateFile: boolean;
+  _isCorrupt?: boolean;
+  _corruptError?: string;
+};
+
+interface ShieldsPosture {
+  mode: ShieldsPostureMode;
+  detail: string;
+  statusText: string;
+  locked: boolean;
+  mutable: boolean;
+  state: LoadedShieldsState;
 }
 
 /**
@@ -173,11 +189,44 @@ function deriveShieldsMode(
   return "mutable_default";
 }
 
-function loadShieldsState(sandboxName: string): ShieldsState & {
-  _hasStateFile: boolean;
-  _isCorrupt?: boolean;
-  _corruptError?: string;
-} {
+function describeShieldsMode(mode: ShieldsPostureMode): Omit<ShieldsPosture, "state"> {
+  switch (mode) {
+    case "mutable_default":
+      return {
+        mode,
+        detail: "not configured (default mutable state)",
+        statusText: "NOT CONFIGURED (default mutable state)",
+        locked: false,
+        mutable: true,
+      };
+    case "locked":
+      return {
+        mode,
+        detail: "up (lockdown active)",
+        statusText: "UP (lockdown active)",
+        locked: true,
+        mutable: false,
+      };
+    case "temporarily_unlocked":
+      return {
+        mode,
+        detail: "down (temporarily unlocked)",
+        statusText: "DOWN (temporarily unlocked)",
+        locked: false,
+        mutable: true,
+      };
+    case "error":
+      return {
+        mode,
+        detail: "error (state file is corrupt)",
+        statusText: "ERROR (state file is corrupt)",
+        locked: false,
+        mutable: true,
+      };
+  }
+}
+
+function loadShieldsState(sandboxName: string): LoadedShieldsState {
   const filePath = stateFilePath(sandboxName);
   if (!fs.existsSync(filePath)) return { _hasStateFile: false };
   try {
@@ -199,6 +248,17 @@ function loadShieldsState(sandboxName: string): ShieldsState & {
       _corruptError: message,
     };
   }
+}
+
+function getShieldsPosture(
+  sandboxName: string,
+  allowInlineRecovery = false,
+): ShieldsPosture {
+  const state = recoverExpiredAutoRestoreGate(sandboxName, allowInlineRecovery);
+  const mode = state._isCorrupt
+    ? "error"
+    : deriveShieldsMode(state, state._hasStateFile);
+  return { ...describeShieldsMode(mode), state };
 }
 
 function saveShieldsState(
@@ -821,11 +881,7 @@ function recoverExpiredAutoRestoreInline(
 function recoverExpiredAutoRestoreGate(
   sandboxName: string,
   allowInlineRecovery = true,
-): ShieldsState & {
-  _hasStateFile: boolean;
-  _isCorrupt?: boolean;
-  _corruptError?: string;
-} {
+): LoadedShieldsState {
   const state = loadShieldsState(sandboxName);
   if (!allowInlineRecovery) return state;
   if (
@@ -1179,7 +1235,8 @@ function shieldsUp(sandboxName: string): void {
 function shieldsStatus(sandboxName: string, allowInlineRecovery = true): void {
   validateName(sandboxName, "sandbox name");
 
-  const state = recoverExpiredAutoRestoreGate(sandboxName, allowInlineRecovery);
+  const posture = getShieldsPosture(sandboxName, allowInlineRecovery);
+  const { state } = posture;
   if (state._isCorrupt) {
     console.error("  Shields: ERROR (state file is corrupt)");
     console.error(
@@ -1190,19 +1247,18 @@ function shieldsStatus(sandboxName: string, allowInlineRecovery = true): void {
     );
     process.exit(1);
   }
-  const mode = deriveShieldsMode(state, state._hasStateFile);
 
-  switch (mode) {
+  switch (posture.mode) {
     case "mutable_default":
       // NC-2227-02: Fresh sandbox with no shields history — do NOT claim locked
-      console.log("  Shields: NOT CONFIGURED (default mutable state)");
+      console.log(`  Shields: ${posture.statusText}`);
       console.log(
         "  Config is mutable. Run `nemoclaw <sandbox> shields up` to opt into lockdown.",
       );
       return;
 
     case "locked":
-      console.log("  Shields: UP (lockdown active)");
+      console.log(`  Shields: ${posture.statusText}`);
       console.log(
         `  Policy:  restrictive${state.shieldsPolicySnapshotPath ? " (snapshot preserved)" : ""}`,
       );
@@ -1223,7 +1279,7 @@ function shieldsStatus(sandboxName: string, allowInlineRecovery = true): void {
           ? Math.max(0, state.shieldsDownTimeout - elapsed)
           : null;
 
-      console.log("  Shields: DOWN (temporarily unlocked)");
+      console.log(`  Shields: ${posture.statusText}`);
       console.log(`  Since:   ${state.shieldsDownAt ?? "unknown"}`);
       if (remaining !== null) {
         const mins = Math.floor(remaining / 60);
@@ -1242,10 +1298,10 @@ function shieldsStatus(sandboxName: string, allowInlineRecovery = true): void {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns true if shields are currently down (temporarily unlocked).
- * NC-2227-02: Fresh sandboxes (no state file, mutable_default) return
- * true since the config IS mutable. Only returns false when shields
- * have been explicitly locked via `shields up`.
+ * Legacy mutability predicate. Fresh sandboxes and temporarily unlocked
+ * sandboxes both return true because their config is mutable; user-facing
+ * callers should use getShieldsPosture() so fresh state is labeled as
+ * "not configured" instead of "down".
  */
 function isShieldsDown(sandboxName: string, allowInlineRecovery = false): boolean {
   const state = recoverExpiredAutoRestoreGate(sandboxName, allowInlineRecovery);
@@ -1263,6 +1319,7 @@ export {
   shieldsUp,
   shieldsStatus,
   isShieldsDown,
+  getShieldsPosture,
   killTimer,
   deriveShieldsMode,
   parseDuration,
