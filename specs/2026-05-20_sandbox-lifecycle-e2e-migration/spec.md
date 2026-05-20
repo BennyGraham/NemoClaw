@@ -412,7 +412,7 @@ Create the reusable helper layer that suite steps will call for lifecycle, opera
 - Helper tests cover success and failure paths for the core assertions.
 - Shellcheck-compatible style is preserved.
 
-## Phase 3: Lifecycle Suite Integration
+## Phase 3: Lifecycle Suite Integration [COMPLETED: c757bff]
 
 ### Objective
 
