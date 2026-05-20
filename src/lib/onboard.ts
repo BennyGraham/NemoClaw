@@ -296,6 +296,7 @@ const {
   versionGte,
 } = openshellVersion;
 const { toSessionUpdates }: typeof import("./onboard/session-updates") = require("./onboard/session-updates");
+const gatewayReuse: typeof import("./onboard/gateway-reuse") = require("./onboard/gateway-reuse");
 const messagingConfig: typeof import("./onboard/messaging-config") = require("./onboard/messaging-config");
 const {
   getStoredMessagingChannelConfig,
@@ -581,57 +582,16 @@ const {
   isSelectedGateway,
   isGatewayHealthy,
   getGatewayReuseState,
-  shouldSelectNamedGatewayForReuse,
   getSandboxStateFromOutputs,
 } = gatewayState;
 
-type GatewayReuseSnapshot = {
-  gatewayStatus: string;
-  gwInfo: string;
-  activeGatewayInfo: string;
-  gatewayReuseState: ReturnType<typeof getGatewayReuseState>;
-};
-
-function getGatewayReuseSnapshot(): GatewayReuseSnapshot {
-  const gatewayStatus = runCaptureOpenshell(["status"], { ignoreError: true });
-  const gwInfo = runCaptureOpenshell(["gateway", "info", "-g", GATEWAY_NAME], {
-    ignoreError: true,
+const { getGatewayReuseSnapshot, selectNamedGatewayForReuseIfNeeded } =
+  gatewayReuse.createGatewayReuseHelpers({
+    gatewayName: GATEWAY_NAME,
+    runCaptureOpenshell,
+    runOpenshell,
+    cliDisplayName,
   });
-  const activeGatewayInfo = runCaptureOpenshell(["gateway", "info"], { ignoreError: true });
-  return {
-    gatewayStatus,
-    gwInfo,
-    activeGatewayInfo,
-    gatewayReuseState: getGatewayReuseState(gatewayStatus, gwInfo, activeGatewayInfo),
-  };
-}
-
-function selectNamedGatewayForReuseIfNeeded(snapshot: GatewayReuseSnapshot): GatewayReuseSnapshot {
-  if (
-    !shouldSelectNamedGatewayForReuse(
-      snapshot.gatewayStatus,
-      snapshot.gwInfo,
-      snapshot.activeGatewayInfo,
-    )
-  ) {
-    return snapshot;
-  }
-
-  const selectResult = runOpenshell(["gateway", "select", GATEWAY_NAME], {
-    ignoreError: true,
-    suppressOutput: true,
-  });
-  if (selectResult.status !== 0) {
-    return snapshot;
-  }
-
-  const refreshed = getGatewayReuseSnapshot();
-  if (refreshed.gatewayReuseState === "healthy") {
-    process.env.OPENSHELL_GATEWAY = GATEWAY_NAME;
-    console.log(`  ✓ Selected existing ${cliDisplayName()} gateway`);
-  }
-  return refreshed;
-}
 
 function getSandboxReuseState(sandboxName: string | null) {
   if (!sandboxName) return "missing";
