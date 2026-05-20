@@ -296,6 +296,7 @@ const {
 }: typeof import("./onboard/prompt-helpers") = require("./onboard/prompt-helpers");
 const providerRecovery: typeof import("./onboard/provider-recovery") = require("./onboard/provider-recovery");
 const { createOpenclawSetup }: typeof import("./onboard/openclaw-setup") = require("./onboard/openclaw-setup");
+const { createOpenshellCliHelpers }: typeof import("./onboard/openshell-cli") = require("./onboard/openshell-cli");
 const {
   resolveSandboxGpuFlagFromOptions,
   sandboxGpuRemediationLines,
@@ -566,6 +567,24 @@ async function promptYesNoOrDefault(
 
 // ── Helpers ──────────────────────────────────────────────────────
 
+const {
+  getOpenshellBinary,
+  openshellShellCommand,
+  openshellArgv,
+  runOpenshell,
+  runCaptureOpenshell,
+  safeOpenShellArgument,
+  getGatewayPortArg,
+  getDockerDriverGatewayEndpointArg,
+} = createOpenshellCliHelpers({
+  getCachedBinary: () => OPENSHELL_BIN,
+  setCachedBinary: (binary: string) => {
+    OPENSHELL_BIN = binary;
+  },
+  getGatewayPort: () => GATEWAY_PORT,
+  getDockerDriverGatewayEndpoint,
+});
+
 // Gateway state functions — delegated to src/lib/state/gateway.ts
 const {
   isSandboxReady,
@@ -598,54 +617,6 @@ function step(n: number, total: number, msg: string): void {
   console.log("");
   console.log(`  [${n}/${total}] ${msg}`);
   console.log(`  ${"─".repeat(50)}`);
-}
-
-function getOpenshellBinary(): string {
-  if (OPENSHELL_BIN) return OPENSHELL_BIN;
-  const resolved = resolveOpenshell();
-  if (typeof resolved !== "string" || resolved.length === 0) {
-    console.error("  openshell CLI not found.");
-    console.error("  Install manually: https://github.com/NVIDIA/OpenShell/releases");
-    process.exit(1);
-  }
-  OPENSHELL_BIN = resolved;
-  return OPENSHELL_BIN;
-}
-
-function openshellShellCommand(args: string[], options: { openshellBinary?: string } = {}): string {
-  const openshellBinary = options.openshellBinary || getOpenshellBinary();
-  return [shellQuote(openshellBinary), ...args.map((arg) => shellQuote(arg))].join(" ");
-}
-
-function openshellArgv(args: string[], options: { openshellBinary?: string } = {}): string[] {
-  const openshellBinary = options.openshellBinary || getOpenshellBinary();
-  return [openshellBinary, ...args];
-}
-
-function runOpenshell(args: string[], opts: RunnerOptions & { openshellBinary?: string } = {}) {
-  return run(openshellArgv(args, opts), opts);
-}
-
-function runCaptureOpenshell(
-  args: string[],
-  opts: RunnerOptions & { openshellBinary?: string } = {},
-) {
-  return runCapture(openshellArgv(args, opts), opts);
-}
-
-function safeOpenShellArgument(value: string, label: string): string {
-  if (!/^[A-Za-z0-9._~:/-]+$/.test(value)) {
-    throw new Error(`Invalid ${label}: contains characters unsafe for OpenShell CLI args`);
-  }
-  return value;
-}
-
-function getGatewayPortArg(): string {
-  return safeOpenShellArgument(String(GATEWAY_PORT), "gateway port");
-}
-
-function getDockerDriverGatewayEndpointArg(): string {
-  return safeOpenShellArgument(getDockerDriverGatewayEndpoint(), "gateway endpoint");
 }
 
 const { executeSandboxCommandForVerification }: typeof import("./onboard/sandbox-verification-exec") =
