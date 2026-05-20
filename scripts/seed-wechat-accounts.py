@@ -91,12 +91,23 @@ def _state_dir() -> pathlib.Path:
     return pathlib.Path(raw.strip()).resolve()
 
 
+def _legacy_wechat_extension_path() -> pathlib.Path:
+    return _state_dir() / "extensions" / WECHAT_PLUGIN_ID
+
+
+def _wechat_npm_package_path() -> pathlib.Path:
+    return _state_dir() / "npm" / "node_modules" / "@tencent-weixin" / "openclaw-weixin"
+
+
 def _wechat_plugin_install_path(install_record: object | None = None) -> str:
     if isinstance(install_record, dict):
         install_path = install_record.get("installPath")
         if isinstance(install_path, str) and install_path.strip():
             return install_path.strip()
-    return str(_state_dir() / "extensions" / WECHAT_PLUGIN_ID)
+    npm_path = _wechat_npm_package_path()
+    if npm_path.exists():
+        return str(npm_path)
+    return str(_legacy_wechat_extension_path())
 
 
 def _decode_config() -> dict:
@@ -150,11 +161,17 @@ def _read_json_file(path: pathlib.Path) -> dict:
 
 
 def _metadata_files() -> Iterable[pathlib.Path]:
+    matches: list[pathlib.Path] = []
+    package_dir = _wechat_npm_package_path()
+    for filename in ("openclaw.plugin.json", "package.json"):
+        candidate = package_dir / filename
+        if candidate.exists():
+            matches.append(candidate)
+
     extensions_dir = _state_dir() / "extensions"
     if not extensions_dir.exists():
-        return []
+        return matches
 
-    matches: list[pathlib.Path] = []
     for root, dirs, files in os.walk(extensions_dir):
         dirs[:] = [
             item

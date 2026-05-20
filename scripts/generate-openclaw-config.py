@@ -771,6 +771,26 @@ def _has_plugin_install(config: dict, plugin_id: str) -> bool:
 
 
 def _has_installed_wechat_plugin_metadata() -> bool:
+    package_dir = (
+        Path(os.path.expanduser("~/.openclaw"))
+        / "npm"
+        / "node_modules"
+        / "@tencent-weixin"
+        / "openclaw-weixin"
+    )
+    for filename in ("openclaw.plugin.json", "package.json"):
+        path = package_dir / filename
+        try:
+            metadata = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(metadata, dict) and (
+            metadata.get("id") == "openclaw-weixin"
+            or metadata.get("name") == "@tencent-weixin/openclaw-weixin"
+            or "openclaw-weixin" in str(path).lower()
+        ):
+            return True
+
     extensions_dir = Path(os.path.expanduser("~/.openclaw/extensions"))
     if not extensions_dir.exists():
         return False
