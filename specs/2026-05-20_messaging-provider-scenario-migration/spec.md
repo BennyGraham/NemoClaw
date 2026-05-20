@@ -321,7 +321,7 @@ Migrate high-risk Telegram injection and compatible-endpoint assertions where th
 - Brave search assertions are not incorrectly counted as messaging-provider coverage.
 - Framework tests cover new metadata and suite wiring.
 
-## Phase 5: Parity Map and Coverage Report Integration
+## Phase 5: Parity Map and Coverage Report Integration [COMPLETED: fe8419383]
 
 Make the migrated, deferred, and retired coverage visible and accurate.
 
