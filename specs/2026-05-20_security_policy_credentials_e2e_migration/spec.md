@@ -234,7 +234,7 @@ Migrate the highest-value credential storage, listing, migration, and sanitizati
 - Scenario framework tests for helper behavior, suite schema, and parity-map metadata pass.
 - `run-suites.sh security-credentials` succeeds in `E2E_DRY_RUN=1` with a temp context, and plan-only scenario execution still succeeds.
 
-## Phase 3: Security Policy, Shields, and Gateway Health Migration
+## Phase 3: Security Policy, Shields, and Gateway Health Migration [COMPLETED: dbe570714]
 
 Migrate the policy/shields/gateway health coverage into post-onboard suite assertions.
 
