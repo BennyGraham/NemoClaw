@@ -389,6 +389,7 @@ import { decidePolicyCarryForward } from "./onboard/policy-carryforward";
 import { getSuggestedPolicyPresets } from "./onboard/policy-presets";
 import {
   computeSetupPresetSuggestions as computeSetupPresetSuggestionsImpl,
+  isStaleBuiltinBravePolicyPreset,
   setupPoliciesWithSelection as setupPoliciesWithSelectionImpl,
   type SetupPolicySelectionOptions,
   type SetupPresetSuggestionOptions,
@@ -10026,11 +10027,13 @@ async function onboard(opts: OnboardOptions = {}): Promise<void> {
       policyPresetSupportOptions,
       customPolicyPresetNames,
     );
-    if (!webSearchConfig && !customPolicyPresetNames.has("brave")) {
-      recordedPolicyPresetsForSupport = recordedPolicyPresetsForSupport.filter(
-        (name) => name !== "brave",
-      );
-    }
+    recordedPolicyPresetsForSupport = recordedPolicyPresetsForSupport.filter(
+      (name) =>
+        !isStaleBuiltinBravePolicyPreset(name, {
+          webSearchConfig,
+          customPresetNames: customPolicyPresetNames,
+        }),
+    );
     if (recordedPolicyPresets) {
       recordedPolicyPresetsForSupport = mergeRequiredHermesToolGatewayPolicyPresets(
         recordedPolicyPresetsForSupport,

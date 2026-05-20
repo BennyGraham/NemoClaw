@@ -71,6 +71,20 @@ export type SetupPolicySelectionDeps = {
   env?: NodeJS.ProcessEnv;
 };
 
+export function isStaleBuiltinBravePolicyPreset(
+  name: string,
+  options: {
+    webSearchConfig?: WebSearchConfig | null;
+    customPresetNames?: ReadonlySet<string> | null;
+  } = {},
+): boolean {
+  return (
+    name === "brave" &&
+    !options.webSearchConfig &&
+    !options.customPresetNames?.has(name)
+  );
+}
+
 export function computeSetupPresetSuggestions(
   deps: {
     policies: PoliciesApi;
@@ -86,7 +100,7 @@ export function computeSetupPresetSuggestions(
   const suggestions = deps.tiers
     .resolveTierPresets(tierName)
     .map((preset) => preset.name)
-    .filter((name) => name !== "brave" || !!webSearchConfig)
+    .filter((name) => !isStaleBuiltinBravePolicyPreset(name, { webSearchConfig }))
     .filter((name) => deps.policies.setupPolicyPresetSupported(name, supportOptions))
     .filter((name) => !known || known.has(name));
   const add = (name: string) => {
@@ -142,7 +156,7 @@ export async function setupPoliciesWithSelection(
     customPresetNames,
   );
   const isStaleBuiltinBrave = (name: string) =>
-    name === "brave" && !webSearchConfig && !customPresetNames.has(name);
+    isStaleBuiltinBravePolicyPreset(name, { webSearchConfig, customPresetNames });
   const filterSupportedPresetNames = (presetNames: string[]) =>
     presetNames.filter(
       (name) =>
