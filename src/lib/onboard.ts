@@ -9078,7 +9078,16 @@ async function recordRepairEvent(
 }
 
 async function recordSessionComplete(updates: SessionUpdates = {}): Promise<Session> {
-  return getOnboardRuntime().completeSession(updates);
+  const runtime = getOnboardRuntime();
+  const current = await runtime.session();
+  if (current.machine.state === "finalizing") {
+    await runtime.transition("post_verify");
+    return runtime.complete(updates);
+  }
+  if (current.machine.state === "post_verify") {
+    return runtime.complete(updates);
+  }
+  return runtime.completeSession(updates);
 }
 
 const ONBOARD_STEP_INDEX: Record<string, { number: number; title: string }> = {
