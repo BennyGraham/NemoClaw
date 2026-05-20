@@ -432,8 +432,8 @@ import {
 } from "./messaging-channel-config";
 import { streamGatewayStart } from "./onboard/gateway";
 import {
-  HERMES_TOOL_GATEWAY_PRESET_NAMES,
   mergeRequiredHermesToolGatewayPolicyPresets,
+  normalizeHermesToolGatewaySelections,
   setupHermesToolGateways,
   stringSetsEqual,
 } from "./onboard/hermes-managed-tools";
@@ -657,17 +657,6 @@ const {
 } = urlUtils;
 const { hydrateCredentialEnv }: typeof import("./onboard/credential-env") =
   require("./onboard/credential-env");
-
-function normalizeHermesToolGatewaySelections(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  const selected = new Set<string>();
-  for (const preset of value) {
-    if (typeof preset === "string" && HERMES_TOOL_GATEWAY_PRESET_NAMES.has(preset)) {
-      selected.add(preset);
-    }
-  }
-  return [...selected].sort();
-}
 
 const {
   summarizeCurlFailure,
