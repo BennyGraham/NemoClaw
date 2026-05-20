@@ -13,7 +13,6 @@ import { dockerBuild, dockerImageInspect } from "../adapters/docker";
 import { getAgentBranding } from "../cli/branding";
 import { getProviderSelectionConfig } from "../inference/config";
 import type { JsonObject as LooseObject } from "../core/json-types";
-import * as onboardSession from "../state/onboard-session";
 import { ROOT, redact, run, shellQuote } from "../runner";
 import {
   buildLocalBaseTag,
@@ -32,6 +31,8 @@ export interface OnboardContext {
   writeSandboxConfigSyncFile: (script: string) => string;
   cleanupTempDir: (file: string, prefix: string) => void;
   startRecordedStep: (stepName: string, updates: LooseObject) => Promise<void>;
+  recordStepComplete: (stepName: string, updates: LooseObject) => Promise<unknown>;
+  recordStepFailed: (stepName: string, message: string | null) => Promise<unknown>;
   skippedStepMessage: (stepName: string, sandboxName: string) => void;
 }
 
@@ -350,13 +351,14 @@ export function collectHermesStartupDiagnostics(
 /**
  * Record and print an agent setup failure before exiting the onboarding flow.
  */
-function failAgentSetup(
+async function failAgentSetup(
   sandboxName: string,
   agent: AgentDefinition,
   message: string,
   details: string[] = [],
-): never {
-  onboardSession.markStepFailed(
+  recordStepFailed: OnboardContext["recordStepFailed"],
+): Promise<never> {
+  await recordStepFailed(
     "agent_setup",
     details.length > 0 ? `${message}\n${details.join("\n")}` : message,
   );
@@ -406,6 +408,8 @@ export async function handleAgentSetup(
     writeSandboxConfigSyncFile,
     cleanupTempDir,
     startRecordedStep,
+    recordStepComplete,
+    recordStepFailed,
     skippedStepMessage,
   } = ctx;
 
@@ -418,7 +422,7 @@ export async function handleAgentSetup(
       );
       if (isHealthProbeOk(result)) {
         skippedStepMessage("agent_setup", sandboxName);
-        onboardSession.markStepComplete("agent_setup", { sandboxName, provider, model });
+        await recordStepComplete("agent_setup", { sandboxName, provider, model });
         return;
       }
     }
@@ -433,6 +437,8 @@ export async function handleAgentSetup(
       sandboxName,
       agent,
       describeAgentBinaryFailure(sandboxName, agent, binaryAvailability),
+      [],
+      recordStepFailed,
     );
   }
 
@@ -486,13 +492,14 @@ export async function handleAgentSetup(
         agent,
         `${agent.displayName} gateway did not respond within ${timeoutSecs}s`,
         diagnostics,
+        recordStepFailed,
       );
     }
   } else {
     console.log(`  \u2713 ${agent.displayName} configured inside sandbox`);
   }
 
-  onboardSession.markStepComplete("agent_setup", { sandboxName, provider, model });
+  await recordStepComplete("agent_setup", { sandboxName, provider, model });
 }
 
 /**

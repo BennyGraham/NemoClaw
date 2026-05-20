@@ -9674,6 +9674,9 @@ async function onboard(opts: OnboardOptions = {}): Promise<void> {
           writeSandboxConfigSyncFile,
           cleanupTempDir,
           startRecordedStep,
+          recordStepComplete,
+          recordStepFailed: (stepName: string, message: string | null) =>
+            getOnboardRuntime().markStepFailed(stepName, message),
           skippedStepMessage,
         }),
         ensureAgentDashboardForward,
