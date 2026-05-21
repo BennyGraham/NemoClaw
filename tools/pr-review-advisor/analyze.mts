@@ -364,15 +364,14 @@ async function waitForRequiredChecksBeforeAnalysis(headSha: string, baseRef: str
   while (true) {
     try {
       lastState = await fetchRequiredCheckWaitState({ repo, token, prNumber, requiredContexts });
-      const shaNote = lastState.headRefOid && lastState.headRefOid !== headSha
-        ? ` latest PR head is ${lastState.headRefOid.slice(0, 12)}, workflow head is ${headSha.slice(0, 12)}.`
-        : "";
+      assertPrHeadStillCurrent(lastState.headRefOid, headSha);
       if (lastState.pendingContexts.length === 0) {
-        logProgress(`Required-check wait complete.${shaNote}`);
+        logProgress("Required-check wait complete.");
         return;
       }
-      logProgress(`Required-check wait pending: ${lastState.pendingContexts.join(", ")}.${shaNote}`);
+      logProgress(`Required-check wait pending: ${lastState.pendingContexts.join(", ")}.`);
     } catch (error: unknown) {
+      if (isStaleAdvisorRunError(error)) throw error;
       logProgress(`Required-check wait poll failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 
@@ -384,6 +383,24 @@ async function waitForRequiredChecksBeforeAnalysis(headSha: string, baseRef: str
     }
     await sleep(Math.min(pollMs, remainingMs));
   }
+}
+
+export function assertPrHeadStillCurrent(latestHeadSha: string | undefined, workflowHeadSha: string): void {
+  if (!latestHeadSha || latestHeadSha === workflowHeadSha) return;
+  throw new StaleAdvisorRunError(
+    `PR head advanced from ${workflowHeadSha.slice(0, 12)} to ${latestHeadSha.slice(0, 12)}; rerun advisor on the latest commit.`,
+  );
+}
+
+class StaleAdvisorRunError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StaleAdvisorRunError";
+  }
+}
+
+function isStaleAdvisorRunError(error: unknown): boolean {
+  return error instanceof StaleAdvisorRunError;
 }
 
 function currentPrNumber(): number | undefined {
@@ -715,7 +732,14 @@ function countLines(text: string): number {
 }
 
 function deriveCiGateStatus(statuses: CheckStatusSummary[], requiredContexts: string[]): GateStatus {
-  if (statuses.length === 0) return { status: "unknown", evidence: "No statusCheckRollup data was available." };
+  if (statuses.length === 0) {
+    return requiredContexts.length > 0
+      ? {
+        status: "pending",
+        evidence: `Required status context(s) pending or missing: ${requiredContexts.join(", ")}. Non-required contexts still pending: 0; failed: 0.`,
+      }
+      : { status: "unknown", evidence: "No statusCheckRollup data was available." };
+  }
 
   if (requiredContexts.length > 0) {
     const failedRequired = failedRequiredContexts(requiredContexts, statuses);

@@ -9,6 +9,7 @@ import YAML from "yaml";
 
 import { buildComment } from "../tools/pr-review-advisor/comment.mts";
 import {
+  assertPrHeadStillCurrent,
   buildSystemPrompt,
   classifyMonolithDelta,
   classifyTestDepth,
@@ -303,6 +304,13 @@ describe("PR review advisor", () => {
     }
   });
 
+  it("aborts when the PR head advances during required-check wait", () => {
+    expect(() => assertPrHeadStillCurrent("def456789012", "abc123456789")).toThrow(
+      "PR head advanced from abc123456789 to def456789012",
+    );
+    expect(() => assertPrHeadStillCurrent("abc123456789", "abc123456789")).not.toThrow();
+  });
+
   it("bases the CI gate on required contexts when they are known", () => {
     const gates = deriveGateStatus(
       {
@@ -333,6 +341,18 @@ describe("PR review advisor", () => {
     expect(gates.ci.status).toBe("pass");
     expect(gates.ci.evidence).toContain("2 required status context(s) completed");
     expect(gates.ci.evidence).toContain("Non-required contexts still pending: 1");
+  });
+
+  it("keeps empty required-check rollups pending instead of unknown", () => {
+    const gates = deriveGateStatus(
+      { graphQl: { data: { repository: { pullRequest: { statusCheckRollup: { contexts: { nodes: [] } } } } } } } as never,
+      [],
+      [],
+      ["checks", "commit-lint"],
+    );
+
+    expect(gates.ci.status).toBe("pending");
+    expect(gates.ci.evidence).toContain("Required status context(s) pending or missing: checks, commit-lint");
   });
 
   it("fails the CI gate when required contexts fail", () => {
