@@ -30,6 +30,13 @@ const GET_PROCESS_OLLAMA_PATH =
 const GET_PROCESS_OLLAMA_ID =
   "Get-Process ollama -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Id";
 
+const GET_KNOWN_OLLAMA_INSTALL_PATH =
+  "$candidates = @(); " +
+  "if ($env:LOCALAPPDATA) { $candidates += (Join-Path $env:LOCALAPPDATA 'Programs\\Ollama\\ollama.exe') }; " +
+  "if ($env:ProgramFiles) { $candidates += (Join-Path $env:ProgramFiles 'Ollama\\ollama.exe') }; " +
+  "if (${env:ProgramFiles(x86)}) { $candidates += (Join-Path ${env:ProgramFiles(x86)} 'Ollama\\ollama.exe') }; " +
+  "$candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1";
+
 const GET_NETTCP_OLLAMA_LISTEN =
   "Get-NetTCPConnection -LocalPort 11434 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalAddress";
 
@@ -46,7 +53,15 @@ function probeInstalledPath(): string {
   // the live process so the restart launcher in windows.ts can target
   // the verified executable instead of falling back to a broken PATH
   // lookup (#3949).
-  return powershell(GET_PROCESS_OLLAMA_PATH);
+  const processPath = powershell(GET_PROCESS_OLLAMA_PATH);
+  if (processPath.length > 0) return processPath;
+  // Some WSL-launched PowerShell sessions can see the Windows ollama PID
+  // but cannot read the Path property. Only after observing the live
+  // daemon, fall back to fixed installer locations so the restart path
+  // still has an explicit executable to launch.
+  const pid = powershell(GET_PROCESS_OLLAMA_ID);
+  if (!pid) return "";
+  return powershell(GET_KNOWN_OLLAMA_INSTALL_PATH);
 }
 
 function probeLoopbackOnly(): boolean {
