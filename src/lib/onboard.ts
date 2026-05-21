@@ -193,6 +193,18 @@ const {
 
 const onboardProviders = require("./onboard/providers");
 const hermesProviderAuth = require("./hermes-provider-auth");
+const hermesAuth: typeof import("./onboard/hermes-auth") = require("./onboard/hermes-auth");
+const {
+  HERMES_AUTH_METHOD_API_KEY,
+  HERMES_AUTH_METHOD_OAUTH,
+  HERMES_NOUS_API_KEY_CREDENTIAL_ENV,
+  HERMES_NOUS_API_KEY_HELP_URL,
+  getRequestedHermesAuthMethod,
+  hermesAuthMethodLabel,
+  normalizeHermesAuthMethod,
+} = hermesAuth;
+
+type HermesAuthMethod = import("./onboard/hermes-auth").HermesAuthMethod;
 
 function getHermesToolGatewayBroker(): any {
   return require("./hermes-tool-gateway-broker");
@@ -491,13 +503,6 @@ const RESET = USE_COLOR ? "\x1b[0m" : "";
 let OPENSHELL_BIN: string | null = null;
 const GATEWAY_NAME = "nemoclaw";
 const BACK_TO_SELECTION = "__NEMOCLAW_BACK_TO_SELECTION__";
-type HermesAuthMethod = "oauth" | "api_key";
-const HERMES_AUTH_METHOD_OAUTH: HermesAuthMethod = "oauth";
-const HERMES_AUTH_METHOD_API_KEY: HermesAuthMethod = "api_key";
-const HERMES_NOUS_API_KEY_CREDENTIAL_ENV =
-  hermesProviderAuth.HERMES_NOUS_API_KEY_CREDENTIAL_ENV || "NOUS_API_KEY";
-const HERMES_NOUS_API_KEY_HELP_URL = "https://portal.nousresearch.com/manage-subscription";
-
 const OPENCLAW_LAUNCH_AGENT_PLIST = "~/Library/LaunchAgents/ai.openclaw.gateway.plist";
 
 const BRAVE_SEARCH_HELP_URL = "https://brave.com/search/api/";
@@ -640,44 +645,6 @@ const {
   summarizeProbeFailure,
   runCurlProbe,
 } = httpProbe;
-
-function normalizeHermesAuthMethod(value: string | null | undefined): HermesAuthMethod | null {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-]+/g, "_");
-  if (!normalized) return null;
-  if (normalized === "oauth" || normalized === "nous_oauth" || normalized === "nous_portal_oauth") {
-    return HERMES_AUTH_METHOD_OAUTH;
-  }
-  if (
-    normalized === "api" ||
-    normalized === "key" ||
-    normalized === "api_key" ||
-    normalized === "apikey" ||
-    normalized === "nous_api_key"
-  ) {
-    return HERMES_AUTH_METHOD_API_KEY;
-  }
-  return null;
-}
-
-function hermesAuthMethodLabel(method: HermesAuthMethod | null | undefined): string {
-  return method === HERMES_AUTH_METHOD_API_KEY ? "Nous API Key" : "Nous Portal OAuth";
-}
-
-function getRequestedHermesAuthMethod(): HermesAuthMethod | null {
-  const raw =
-    process.env.NEMOCLAW_HERMES_AUTH_METHOD ||
-    process.env.NEMOCLAW_HERMES_AUTH ||
-    process.env.NEMOCLAW_NOUS_AUTH_METHOD ||
-    "";
-  const method = normalizeHermesAuthMethod(raw);
-  if (!raw || method) return method;
-  console.error(`  Unsupported Hermes Provider auth method: ${raw}`);
-  console.error("  Valid values: oauth, nous-portal-oauth, api-key, nous-api-key");
-  process.exit(1);
-}
 
 async function promptHermesAuthMethod(): Promise<HermesAuthMethod | typeof BACK_TO_SELECTION> {
   const methods: Array<{ key: HermesAuthMethod; label: string }> = [
