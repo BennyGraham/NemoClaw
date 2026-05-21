@@ -508,16 +508,18 @@ else
   fail "[LOCAL] Direct Ollama: empty response"
 fi
 
-# 5b: Inference through sandbox → provider route → Ollama. The Docker GPU
-# patch uses host networking so the sandbox can reconnect to OpenShell after
-# recreation; in that mode NemoClaw bakes a direct loopback Ollama URL into
-# OpenClaw to avoid OpenShell's inference.local TCP relay path.
+# 5b: Inference through sandbox → provider route → Ollama. When the Docker GPU
+# patch preserves the original sandbox network, inference still goes through
+# inference.local; use docker exec only to avoid depending on OpenShell exec
+# after the container is recreated. Host-network GPU patch runs are the only
+# mode where OpenClaw is configured with a direct loopback Ollama URL.
 SANDBOX_INFERENCE_URL="https://inference.local/v1/chat/completions"
 SANDBOX_INFERENCE_EXEC="openshell"
-if grep -Fq "OpenClaw local inference will use direct sandbox URL" "$INSTALL_LOG" \
-  || grep -Fq "Docker-driver GPU patch active" "$INSTALL_LOG"; then
+if grep -Fq "OpenClaw local inference will use direct sandbox URL" "$INSTALL_LOG"; then
   OLLAMA_HOST_PORT="${NEMOCLAW_OLLAMA_PORT:-11434}"
   SANDBOX_INFERENCE_URL="http://127.0.0.1:${OLLAMA_HOST_PORT}/v1/chat/completions"
+  SANDBOX_INFERENCE_EXEC="docker"
+elif grep -Fq "Docker-driver GPU patch active" "$INSTALL_LOG"; then
   SANDBOX_INFERENCE_EXEC="docker"
 fi
 info "[LOCAL] Sandbox inference test → ${SANDBOX_INFERENCE_URL} → Ollama on GPU..."
@@ -526,7 +528,7 @@ sandbox_response=""
 TIMEOUT_CMD=""
 command -v timeout >/dev/null 2>&1 && TIMEOUT_CMD="timeout 120"
 sandbox_payload=$(python3 -c 'import json, sys; print(json.dumps({"model": sys.argv[1], "messages": [{"role": "user", "content": "Reply with exactly one word: PONG"}], "max_tokens": 200}))' "$CONFIGURED_MODEL")
-sandbox_curl_cmd=$(printf "curl -s --max-time 90 %q -H %q -d %q" \
+sandbox_curl_cmd=$(printf "curl -sS --max-time 90 %q -H %q -d %q" \
   "$SANDBOX_INFERENCE_URL" \
   "Content-Type: application/json" \
   "$sandbox_payload")
