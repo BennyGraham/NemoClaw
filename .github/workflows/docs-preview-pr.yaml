@@ -65,16 +65,9 @@ jobs:
           PREVIEW_ID: pr-${{ github.event.pull_request.number }}
         working-directory: ./fern
         run: |
-          set +e
           OUTPUT=$(fern generate --docs --preview --id "$PREVIEW_ID" 2>&1)
-          FERN_STATUS=$?
-          set -e
           echo "$OUTPUT"
-          if [ "$FERN_STATUS" -ne 0 ]; then
-            echo "::error::Fern docs preview generation failed with exit code ${FERN_STATUS}."
-            exit "$FERN_STATUS"
-          fi
-          URL=$(echo "$OUTPUT" | grep -oP 'Published docs to \K.*(?= \()' || true)
+          URL=$(echo "$OUTPUT" | grep -oP 'Published docs to \K.*(?= \()')
           if [ -z "$URL" ]; then
             echo "::error::Failed to generate preview URL. See fern output above."
             exit 1
