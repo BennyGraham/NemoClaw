@@ -123,13 +123,29 @@ temp_file="$3"
 mkdir -p "$skill_dir"
 cp "$temp_file" "$skill_file"
 
-# Mirror into $HOME/.openclaw/skills so OpenClaw tools resolve the same SKILL.md (see agent ENOENT on /home/sandbox/.openclaw/skills/...).
+# Mirror into $HOME/.openclaw/skills so OpenClaw tools resolve the same
+# SKILL.md.  OpenShell sets $HOME to the sandbox working directory
+# (/sandbox), but the `sandbox` user's passwd entry points to
+# /home/sandbox — the openclaw agent's managed-skills loader resolves via
+# os.homedir() (getpwnam), not $HOME.  Mirror to both so the skill is
+# reachable regardless of which path the consumer uses.
 skill_id="$(basename "$skill_dir")"
 home_root="${HOME:-/home/sandbox}"
 home_skill_dir="${home_root}/.openclaw/skills/${skill_id}"
 home_skill_file="${home_skill_dir}/SKILL.md"
 mkdir -p "$home_skill_dir"
 cp "$temp_file" "$home_skill_file"
+
+# If the passwd home differs from $HOME, mirror there too so tools that
+# resolve the home directory via getpwnam (e.g. Node os.homedir()) find
+# the skill.  This covers the OpenShell case where $HOME=/sandbox but
+# getent reports /home/sandbox.
+passwd_home="$(getent passwd "$(id -un)" 2>/dev/null | cut -d: -f6 || true)"
+if [ -n "$passwd_home" ] && [ "$passwd_home" != "$home_root" ]; then
+  alt_skill_dir="${passwd_home}/.openclaw/skills/${skill_id}"
+  mkdir -p "$alt_skill_dir"
+  cp "$temp_file" "${alt_skill_dir}/SKILL.md"
+fi
 
 rm -f "$temp_file"
 
