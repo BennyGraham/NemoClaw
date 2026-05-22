@@ -1,0 +1,19 @@
+preset:
+  name: reminders
+  description: "Read-only macOS Reminders host bridge"
+
+network_policies:
+  reminders:
+    name: reminders
+    endpoints:
+      - host: reminders.local
+        port: 8765
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "/health" }
+          - allow: { method: GET, path: "/status" }
+          - allow: { method: GET, path: "/list" }
+          - allow: { method: GET, path: "/today" }
+    binaries:
+      - { path: /usr/bin/curl }
